@@ -1,4 +1,7 @@
+scribble = require('scribbletune')
+
 parsing = require('../lib/parsing')
+builder = require('../lib/builder')
 
 sample = '''
 
@@ -40,3 +43,9 @@ describe 'parser', ->
     expect(@ast.lines[11].input).toEqual ['c4', 'd4']
     expect(@ast.lines[13].input).toEqual 'x'.repeat(16).split('')
     expect(@ast.lines[15].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
+
+describe 'builder', ->
+  it 'can execute scribbletune code from ast', ->
+    code = builder(parsing(sample))
+
+    scribble.midi code.Piano[0]

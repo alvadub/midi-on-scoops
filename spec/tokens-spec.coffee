@@ -71,7 +71,14 @@ describe 'tokenizer', ->
     expect(tokenize('CMaj FMaj GMaj')).toEqual ['CMaj', 'FMaj', 'GMaj']
     expect(tokenize('CMaj FMaj GMaj CMaj')).toEqual ['CMaj', 'FMaj', 'GMaj', 'CMaj']
 
+  it 'should handle unpacked-chords', ->
+    expect(tokenize('a3,c4,e4')).toEqual [['a3', 'c4', 'e4']]
+    expect(tokenize('a3|c4|e4')).toEqual [['a3', 'c4', 'e4']]
+    expect(tokenize('a3+c4+e4')).toEqual [['a3', 'c4', 'e4']]
+
   it 'can unfold notes by chord-names', ->
+    expect(tokenize('Dmin7 ..')).toEqual [['d4', 'f4', 'a4', 'c5']]
+    expect(tokenize('Dmin7 .. 0..2')).toEqual [['d4', 'f4']]
     expect(tokenize('Dmin7 GMaj7 Bb')).toEqual ['Dmin7', 'GMaj7', 'Bb']
     expect(tokenize('Dmin7 ... GMaj7 Bb')).toEqual scribble.chord('Dmin7').concat('GMaj7', 'Bb')
     expect(tokenize('Dmin7 ... GMaj7 ... Bmajb')).toEqual scribble.chord('Dmin7').concat(scribble.chord('GMaj7')).concat('Bmajb')

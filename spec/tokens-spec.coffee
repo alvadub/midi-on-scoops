@@ -92,6 +92,16 @@ describe 'tokenizer', ->
     expect(tokenize('Dmin7... GMaj7... Bmajb')).toEqual Dmin7.concat(GMaj7).concat([Bmajb])
     expect(tokenize('Dmin7... GMaj7... Bmajb...')).toEqual Dmin7.concat(GMaj7).concat(Bmajb)
 
+  it 'can expands, divide and duplicate regular chords', ->
+    Cmin4 = scribble.chord('Cmin4')
+    Fmin3 = scribble.chord('Fmin3')
+
+    expect(tokenize('Cmin4 * 2 Fmin3 * 2')).toEqual [Cmin4, Cmin4, Fmin3, Fmin3]
+
+    # FIXME: define meaning for...
+    expect(tokenize('Cmin4 / 2 Fmin3 * 2')).toEqual [Cmin4, Fmin3, Fmin3]
+    expect(tokenize('Cmin4 * 2 Fmin3 / 2')).toEqual [Cmin4, Cmin4, Fmin3]
+
   it 'can slice and duplicate unfolded chords', ->
     CMaj = scribble.chord('CMaj')
     Dmin7 = scribble.chord('Dmin7')

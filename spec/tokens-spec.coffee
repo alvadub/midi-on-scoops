@@ -12,10 +12,9 @@ describe 'tokenizer', ->
     expect(-> tokenize('x / 2')).toThrow()
     expect(-> tokenize('2 / x')).toThrow()
     expect(-> tokenize('1 2 * x')).toThrow()
-    expect(-> tokenize('ERR ...')).toThrow()
-    expect(-> tokenize('CMaj..')).toThrow()
-    expect(-> tokenize('CMaj...')).toThrow()
+    expect(-> tokenize('ERR ..')).toThrow()
     expect(-> tokenize('CMaj ... / 2')).toThrow()
+    expect(-> tokenize('Dmin7 ... * 2')).toThrow()
     expect(-> tokenize('im not exists')).toThrow()
     expect(-> tokenize('1 / 2 / 3 / 4 / 5')).toThrow()
     expect(-> tokenize('1 * 2 * 3 * 4 * 5')).toThrow()
@@ -66,10 +65,14 @@ describe 'tokenizer', ->
     expect(tokenize('c major 4 0..2')).toEqual scribble.mode('c', undefined, 4).slice(0, 2)
 
   it 'should handle scribble-chords', ->
-    expect(tokenize('CMaj')).toEqual ['CMaj']
-    expect(tokenize('CMaj FMaj')).toEqual ['CMaj', 'FMaj']
-    expect(tokenize('CMaj FMaj GMaj')).toEqual ['CMaj', 'FMaj', 'GMaj']
-    expect(tokenize('CMaj FMaj GMaj CMaj')).toEqual ['CMaj', 'FMaj', 'GMaj', 'CMaj']
+    CMaj = scribble.chord('CMaj')
+    FMaj = scribble.chord('FMaj')
+    GMaj = scribble.chord('GMaj')
+
+    expect(tokenize('CMaj')).toEqual [CMaj]
+    expect(tokenize('CMaj FMaj')).toEqual [CMaj, FMaj]
+    expect(tokenize('CMaj FMaj GMaj')).toEqual [CMaj, FMaj, GMaj]
+    expect(tokenize('CMaj FMaj GMaj CMaj')).toEqual [CMaj, FMaj, GMaj, CMaj]
 
   it 'should handle unpacked-chords', ->
     expect(tokenize('a3,c4,e4')).toEqual [['a3', 'c4', 'e4']]
@@ -77,16 +80,42 @@ describe 'tokenizer', ->
     expect(tokenize('a3+c4+e4')).toEqual [['a3', 'c4', 'e4']]
 
   it 'can unfold notes by chord-names', ->
-    expect(tokenize('Dmin7 ..')).toEqual [['d4', 'f4', 'a4', 'c5']]
-    expect(tokenize('Dmin7 .. 0..2')).toEqual [['d4', 'f4']]
-    expect(tokenize('Dmin7 GMaj7 Bb')).toEqual ['Dmin7', 'GMaj7', 'Bb']
-    expect(tokenize('Dmin7 ... GMaj7 Bb')).toEqual scribble.chord('Dmin7').concat('GMaj7', 'Bb')
-    expect(tokenize('Dmin7 ... GMaj7 ... Bmajb')).toEqual scribble.chord('Dmin7').concat(scribble.chord('GMaj7')).concat('Bmajb')
-    expect(tokenize('Dmin7 ... GMaj7 ... Bmajb ...')).toEqual scribble.chord('Dmin7').concat(scribble.chord('GMaj7')).concat(scribble.chord('Bmajb'))
+    Dmin7 = scribble.chord('Dmin7')
+    GMaj7 = scribble.chord('GMaj7')
+    Bmajb = scribble.chord('Bmajb')
+
+    expect(tokenize('Dmin7..')).toEqual [Dmin7]
+    expect(tokenize('Dmin7.. 0..2')).toEqual [Dmin7.slice(0, 2)]
+    expect(tokenize('Dmin7 GMaj7 Bb')).toEqual [Dmin7, GMaj7, 'Bb']
+
+    expect(tokenize('Dmin7... GMaj7 Bb')).toEqual Dmin7.concat([GMaj7]).concat('Bb')
+    expect(tokenize('Dmin7... GMaj7... Bmajb')).toEqual Dmin7.concat(GMaj7).concat([Bmajb])
+    expect(tokenize('Dmin7... GMaj7... Bmajb...')).toEqual Dmin7.concat(GMaj7).concat(Bmajb)
 
   it 'can slice and duplicate unfolded chords', ->
-    expect(tokenize('CMaj ... 0..2')).toEqual scribble.chord('CMaj').slice(0, 2)
-    expect(tokenize('CMaj ... * 2 Dmin7 ... 0..7')).toEqual scribble.chord('CMaj').concat(scribble.chord('CMaj')).concat(scribble.chord('Dmin7').slice(0, 1))
+    CMaj = scribble.chord('CMaj')
+    Dmin7 = scribble.chord('Dmin7')
+
+    expect(tokenize('CMaj... 0..2')).toEqual CMaj.slice(0, 2)
+    expect(tokenize('CMaj... * 2 Dmin7... 0..7')).toEqual CMaj.concat(CMaj).concat(Dmin7).slice(0, 7)
+    expect(tokenize('CMaj.. CMaj.. * 5 0..5')).toEqual [CMaj].concat([CMaj]).concat([CMaj]).concat([CMaj]).concat([CMaj]).concat([CMaj]).slice(0, 5)
 
   it 'can handle ranges, slicing, duplicates, etc.', ->
     expect(tokenize('5 10..120 / 11 127x3')).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
+
+  # TODO: cypher stuff
+
+  # %Am: a3|c4|e4
+  #   %Gm: g3|c4|e4
+  #   %Fm: f3|c4|a4
+
+  #   ; of course we can abstract more large expressions
+  #   %prelude: %Am % % % %Gm % % %
+  #   %intro: %prelude * 4
+  #   %scale: 100..127 / 8
+
+  #   # Skanking
+
+  #   n: %prelude %Fm % % % %Am % % %
+  #   p: -----x-- * 16
+  #   a: %scale * 2

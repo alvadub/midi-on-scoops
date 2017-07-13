@@ -2,7 +2,7 @@ scribble = require('scribbletune')
 
 tokenize = require('../lib/tokenize')
 
-describe 'x', ->
+describe 'tokenizer', ->
   it 'can handle syntax errors', ->
     expect(-> tokenize()).toThrow()
     expect(-> tokenize('')).toThrow()
@@ -11,6 +11,9 @@ describe 'x', ->
     expect(-> tokenize('..')).toThrow()
     expect(-> tokenize('x / 2')).toThrow()
     expect(-> tokenize('2 / x')).toThrow()
+    expect(-> tokenize('CMaj..')).toThrow()
+    expect(-> tokenize('CMaj...')).toThrow()
+    expect(-> tokenize('CMaj ... / 2')).toThrow()
     expect(-> tokenize('im not exists')).toThrow()
 
   it 'can repeat tokens', ->
@@ -47,6 +50,22 @@ describe 'x', ->
     expect(tokenize('c 4')).toEqual scribble.mode('c', undefined, 4)
     expect(tokenize('c major')).toEqual scribble.mode('c', 'major')
     expect(tokenize('c major 4 0..2')).toEqual scribble.mode('c', undefined, 4).slice(0, 2)
+
+  it 'should handle scribble-chords', ->
+    expect(tokenize('CMaj')).toEqual ['CMaj']
+    expect(tokenize('CMaj FMaj')).toEqual ['CMaj', 'FMaj']
+    expect(tokenize('CMaj FMaj GMaj')).toEqual ['CMaj', 'FMaj', 'GMaj']
+    expect(tokenize('CMaj FMaj GMaj CMaj')).toEqual ['CMaj', 'FMaj', 'GMaj', 'CMaj']
+
+  it 'can unfold notes by chord-names', ->
+    expect(tokenize('Dmin7 GMaj7 Bb')).toEqual ['Dmin7', 'GMaj7', 'Bb']
+    expect(tokenize('Dmin7 ... GMaj7 Bb')).toEqual scribble.chord('Dmin7').concat('GMaj7', 'Bb')
+    expect(tokenize('Dmin7 ... GMaj7 ... Bmajb')).toEqual scribble.chord('Dmin7').concat(scribble.chord('GMaj7')).concat('Bmajb')
+    expect(tokenize('Dmin7 ... GMaj7 ... Bmajb ...')).toEqual scribble.chord('Dmin7').concat(scribble.chord('GMaj7')).concat(scribble.chord('Bmajb'))
+
+  it 'can slice and duplicate unfolded chords', ->
+    expect(tokenize('CMaj ... 0..2')).toEqual scribble.chord('CMaj').slice(0, 2)
+    expect(tokenize('CMaj ... * 2 Dmin7 ... 0..7')).toEqual scribble.chord('CMaj').concat(scribble.chord('CMaj')).concat(scribble.chord('Dmin7').slice(0, 1))
 
   it 'can handle ranges, slicing, duplicates, etc.', ->
     expect(tokenize('5 10..120 / 11 127x3')).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]

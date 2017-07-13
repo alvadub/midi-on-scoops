@@ -15,6 +15,8 @@ describe 'tokenizer', ->
     expect(-> tokenize('CMaj...')).toThrow()
     expect(-> tokenize('CMaj ... / 2')).toThrow()
     expect(-> tokenize('im not exists')).toThrow()
+    expect(-> tokenize('1 / 2 / 3 / 4 / 5')).toThrow()
+    expect(-> tokenize('1 * 2 * 3 * 4 * 5')).toThrow()
 
   it 'can repeat tokens', ->
     expect(tokenize('x*3')).toEqual ['x', 'x', 'x']
@@ -38,12 +40,14 @@ describe 'tokenizer', ->
     expect(tokenize('1')).toEqual [1]
     expect(tokenize('1 / 2')).toEqual [0.5]
     expect(tokenize('1 2 / 3')).toEqual [1, 2 / 3]
-    expect(tokenize('1 2 3 / 2')).toEqual [1, 2, 1.5]
+    expect(tokenize('1 2 3 / 4')).toEqual [1, 2, 3 / 4]
+    expect(tokenize('1 / 2 3 4 / 5')).toEqual [1 / 2, 3, 4 / 5]
 
   it 'can multiply numbers', ->
     expect(tokenize('1 * 2')).toEqual [2]
     expect(tokenize('1 2 * 3')).toEqual [1, 6]
     expect(tokenize('1 2 3 * 4')).toEqual [1, 2, 12]
+    expect(tokenize('1 * 2 3 4 * 5')).toEqual [2, 3, 20]
 
   it 'should handle scribble-modes', ->
     expect(tokenize('c')).toEqual scribble.mode('c')

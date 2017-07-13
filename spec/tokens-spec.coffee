@@ -11,6 +11,7 @@ describe 'tokenizer', ->
     expect(-> tokenize('..')).toThrow()
     expect(-> tokenize('x / 2')).toThrow()
     expect(-> tokenize('2 / x')).toThrow()
+    expect(-> tokenize('ERR ...')).toThrow()
     expect(-> tokenize('CMaj..')).toThrow()
     expect(-> tokenize('CMaj...')).toThrow()
     expect(-> tokenize('CMaj ... / 2')).toThrow()

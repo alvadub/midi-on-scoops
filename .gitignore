@@ -1,4 +1,6 @@
 *.log
+*.mid
+*.midi
 /build
 /external
 /coverage

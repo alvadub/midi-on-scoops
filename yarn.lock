@@ -902,6 +902,10 @@ jschardet@^1.4.2:
   version "1.4.2"
   resolved "https://registry.yarnpkg.com/jschardet/-/jschardet-1.4.2.tgz#2aa107f142af4121d145659d44f50830961e699a"
 
+jsmidgen@~0.1.4:
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/jsmidgen/-/jsmidgen-0.1.5.tgz#ad0afd6375eb12f51064025393ce3baec380585d"
+
 json-schema-traverse@^0.3.0:
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-0.3.1.tgz#349a6d44c53a51de89b40805c5d5e59b417d3340"
@@ -1311,6 +1315,12 @@ safe-buffer@~5.1.0, safe-buffer@~5.1.1:
 sax@>=0.6.0:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.4.tgz#2816234e2378bddc4e5354fab5caa895df7100d9"
+
+scribbletune@^0.9.1:
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/scribbletune/-/scribbletune-0.9.1.tgz#b970f0c3ecb32ababd8b825f252e4e119ca02d3d"
+  dependencies:
+    jsmidgen "~0.1.4"
 
 "semver@2 || 3 || 4 || 5":
   version "5.3.0"

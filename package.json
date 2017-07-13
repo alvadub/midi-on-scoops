@@ -17,7 +17,11 @@
     "eslint-config-airbnb-base": "^11.2.0",
     "eslint-plugin-import": "^2.7.0",
     "istanbul": "^0.4.5",
-    "jasmine-node": "2.0.0-beta4",
+    "jasmine-node": "2.0.0-beta4"
+  },
+  "dependencies": {
+    "jsmidgen": "^0.1.5",
+    "node-watch": "^0.5.5",
     "scribbletune": "^0.9.1"
   }
 }

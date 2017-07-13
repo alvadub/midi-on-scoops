@@ -1,0 +1,69 @@
+#!/bin/sh
+
+':' // ; exec "$(command -v nodejs || command -v node)" "$0" "$@"
+;
+
+'use strict';
+
+const fs = require('fs');
+const watch = require('node-watch');
+const spawn = require('child_process').spawn;
+
+const builder = require('../lib/builder');
+const parser = require('../lib/parsing');
+
+const children = [];
+
+function play(name) {
+  console.log('TRYING TO LOAD', name);
+
+  const text = fs.readFileSync(name).toString();
+  const ast = parser(text);
+  const code = builder(ast);
+
+  children.forEach((child, i) => {
+    children.splice(i, 1);
+    child.kill('SIGINT');
+  });
+
+  const audio = name.replace('.txt', '.mid');
+
+  code
+    .save(audio)
+    .then(() => {
+      console.log('PLAYING', audio);
+
+      const child = spawn('timidity', [audio], {
+        detached: true,
+      }, () => {
+        console.log('DONE PLAYING', audio);
+      });
+
+      children.push(child);
+    });
+}
+
+if (process.argv.slice(2)[0]) {
+  play(process.argv.slice(2)[0]);
+} else {
+  watch('music', { recursive: true, filter: /\.txt$/ }, (evt, name) => {
+    try {
+      play(name);
+    } catch (e) {
+      console.log('%s', e.message);
+    }
+
+    console.log('%s changed.', name);
+  });
+}
+
+process.on('SIGINT', () => {
+  process.stdout.write('\r\r');
+
+  children.forEach((child, i) => {
+    children.splice(i, 1);
+    child.kill('SIGINT');
+  });
+
+  process.exit(1);
+});

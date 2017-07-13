@@ -11,6 +11,7 @@ describe 'tokenizer', ->
     expect(-> tokenize('..')).toThrow()
     expect(-> tokenize('x / 2')).toThrow()
     expect(-> tokenize('2 / x')).toThrow()
+    expect(-> tokenize('1 2 * x')).toThrow()
     expect(-> tokenize('ERR ...')).toThrow()
     expect(-> tokenize('CMaj..')).toThrow()
     expect(-> tokenize('CMaj...')).toThrow()
@@ -49,6 +50,14 @@ describe 'tokenizer', ->
     expect(tokenize('1 2 * 3')).toEqual [1, 6]
     expect(tokenize('1 2 3 * 4')).toEqual [1, 2, 12]
     expect(tokenize('1 * 2 3 4 * 5')).toEqual [2, 3, 20]
+
+  it 'can handle number-ranges', ->
+    expect(tokenize('1..3')).toEqual [1, 2, 3]
+    expect(tokenize('1 2..3')).toEqual [1, 2, 3]
+    expect(tokenize('1 2..3 4')).toEqual [1, 2, 3, 4]
+    expect(tokenize('1 2..3 4..5')).toEqual [1, 2, 3, 4, 5]
+    expect(tokenize('1 2..3 4..5 6')).toEqual [1, 2, 3, 4, 5, 6]
+    expect(tokenize('1..2 3..4 5..6')).toEqual [1, 2, 3, 4, 5, 6]
 
   it 'should handle scribble-modes', ->
     expect(tokenize('c')).toEqual scribble.mode('c')

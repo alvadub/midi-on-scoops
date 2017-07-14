@@ -14,10 +14,9 @@ const parser = require('../lib/parsing');
 
 const children = [];
 
-// FIXME: better CLI (log-pose?)
-const src = 'music';
+const src = process.argv.slice(2)[0] || 'music';
 
-const prefix = '♫ MIDI on Scoops!';
+const prefix = '♫ MIDI on SCOOPS';
 const CLR = '\x1b[K';
 
 let tt;
@@ -34,25 +33,23 @@ function play(name) {
     child.kill('SIGINT');
   });
 
-  clearTimeout(tt);
-
   const audio = name.replace('.txt', '.mid');
+
+  clearTimeout(tt);
 
   code
     .save(audio)
     .then(() => {
-      process.stdout.write(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
+      setTimeout(() => {
+        process.stdout.write(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
+      }, 100);
 
       const child = spawn('timidity', [audio], {
-        detached: true,
+        detached: false,
       });
 
       child.on('close', () => {
         process.stdout.write(`\b  ( ${prefix} ) ⏏ Done playing: ${audio}${CLR}\r`);
-
-        tt = setTimeout(() => {
-          process.stdout.write(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
-        }, 3000);
       });
 
       children.push(child);
@@ -87,8 +84,8 @@ if (process.argv.slice(2)[0]) {
 process.on('SIGINT', () => {
   process.stdout.write('\r\r');
 
-  children.forEach((child, i) => {
-    children.splice(i, 1);
+  children.forEach((child, k) => {
+    children.splice(k, 1);
     child.kill('SIGINT');
   });
 

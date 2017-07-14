@@ -37,16 +37,18 @@ function play(name) {
   code
     .save(audio)
     .then(() => {
-      process.stdout.write(`\b  ( ${prefix} ) Playing ${audio} ...${CLR}\r`);
+      process.stdout.write(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
 
       const child = spawn('timidity', [audio], {
         detached: true,
-      }, () => {
-        process.stdout.write(`\b  ( ${prefix} ) Done playing ${audio}.${CLR}\r`);
       });
 
       child.on('close', () => {
-        process.stdout.write(`\b  ( ${prefix} ) Watching from ${src} ...${CLR}\r`);
+        process.stdout.write(`\b  ( ${prefix} ) ⏏ Done playing: ${audio}${CLR}\r`);
+
+        setTimeout(() => {
+          process.stdout.write(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
+        }, 3000);
       });
 
       children.push(child);
@@ -65,7 +67,7 @@ setInterval(() => {
 if (process.argv.slice(2)[0]) {
   play(process.argv.slice(2)[0]);
 } else {
-  process.stdout.write(`\b  ( ${prefix} ) Watching from ${src} ...${CLR}\r`);
+  process.stdout.write(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
 
   watch(src, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
     try {

@@ -20,22 +20,22 @@ describe 'tokenizer', ->
     expect(-> tokenize('1 * 2 * 3 * 4 * 5')).toThrow()
 
   it 'can repeat tokens', ->
-    expect(tokenize('x*3')).toEqual ['x', 'x', 'x']
-    expect(tokenize('x* 3')).toEqual ['x', 'x', 'x']
-    expect(tokenize('x *3')).toEqual ['x', 'x', 'x']
-    expect(tokenize('x * 3')).toEqual ['x', 'x', 'x']
+    expect(tokenize('x*3')).toEqual 'xxx'
+    expect(tokenize('x* 3')).toEqual 'xxx'
+    expect(tokenize('x *3')).toEqual 'xxx'
+    expect(tokenize('x * 3')).toEqual 'xxx'
 
   it 'should tokenize strings', ->
-    expect(tokenize('x_-')).toEqual ['x', '_', '-']
-    expect(tokenize('x_ -')).toEqual ['x', '_', '-']
-    expect(tokenize('x _-')).toEqual ['x', '_', '-']
-    expect(tokenize('x _ -')).toEqual ['x', '_', '-']
+    expect(tokenize('x_-')).toEqual 'x_-'
+    expect(tokenize('x_ -')).toEqual 'x_-'
+    expect(tokenize('x _-')).toEqual 'x_-'
+    expect(tokenize('x _ -')).toEqual 'x_-'
 
   it 'can repeat sub-strings', ->
-    expect(tokenize('x_- * 2')).toEqual ['x', '_', '-', 'x', '_', '-']
-    expect(tokenize('x_ - * 2')).toEqual ['x', '_', '-', '-']
-    expect(tokenize('x _- * 2')).toEqual ['x', '_', '-', '_', '-']
-    expect(tokenize('x _ - * 2')).toEqual ['x', '_', '-', '-']
+    expect(tokenize('x_- * 2')).toEqual 'x_-x_-'
+    expect(tokenize('x_ - * 2')).toEqual 'x_--'
+    expect(tokenize('x _- * 2')).toEqual 'x_-_-'
+    expect(tokenize('x _ - * 2')).toEqual 'x_--'
 
   it 'can divide numbers', ->
     expect(tokenize('1')).toEqual [1]
@@ -113,19 +113,5 @@ describe 'tokenizer', ->
   it 'can handle ranges, slicing, duplicates, etc.', ->
     expect(tokenize('5 10..120 / 11 127x3')).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
-  # TODO: cypher stuff
-
-  # %Am: a3|c4|e4
-  #   %Gm: g3|c4|e4
-  #   %Fm: f3|c4|a4
-
-  #   ; of course we can abstract more large expressions
-  #   %prelude: %Am % % % %Gm % % %
-  #   %intro: %prelude * 4
-  #   %scale: 100..127 / 8
-
-  #   # Skanking
-
-  #   n: %prelude %Fm % % % %Am % % %
-  #   p: -----x-- * 16
-  #   a: %scale * 2
+  it 'will return placeholders as-is on tokenization', ->
+    expect(tokenize('%Am % % %')).toEqual ['%Am', '%', '%', '%']

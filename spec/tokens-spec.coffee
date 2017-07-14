@@ -101,7 +101,6 @@ describe 'tokenizer', ->
   it 'should handle unpacked-chords', ->
     expect(tokenize('a3,c4,e4')).toEqual [['a3', 'c4', 'e4']]
     expect(tokenize('a3|c4|e4')).toEqual [['a3', 'c4', 'e4']]
-    expect(tokenize('a3+c4+e4')).toEqual [['a3', 'c4', 'e4']]
 
   it 'can unfold notes by chord-names', ->
     Dmin7 = scribble.chord('Dmin7')

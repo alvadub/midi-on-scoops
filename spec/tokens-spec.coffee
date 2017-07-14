@@ -15,10 +15,10 @@ describe 'tokenizer', ->
     expect(-> tokenize('ERR ..')).toThrow()
     expect(-> tokenize('CMaj ... / 2')).toThrow()
     expect(-> tokenize('Dmin7 ... * 2')).toThrow()
+    expect(-> tokenize('im not exists')).toThrow()
     expect(-> tokenize('1 / 2 / 3 / 4 / 5')).toThrow()
     expect(-> tokenize('1 * 2 * 3 * 4 * 5')).toThrow()
 
-    expect(tokenize('im not exists')).toEqual ['im', 'not', 'exists']
 
   it 'can repeat tokens', ->
     expect(tokenize('x*3')).toEqual 'xxx'
@@ -59,6 +59,9 @@ describe 'tokenizer', ->
     expect(tokenize('1 2..3 4..5 6')).toEqual [1, 2, 3, 4, 5, 6]
     expect(tokenize('1..2 3..4 5..6')).toEqual [1, 2, 3, 4, 5, 6]
 
+  it 'should handle regular notes', ->
+    expect(tokenize('c3 c3 c3 c4 f3 f3 f3 f4')).toEqual ['c3', 'c3', 'c3', 'c4', 'f3', 'f3', 'f3', 'f4']
+
   it 'should handle scribble-modes', ->
     expect(tokenize('c d e')).toEqual ['c', 'd', 'e']
 
@@ -66,6 +69,18 @@ describe 'tokenizer', ->
     expect(tokenize('c 4')).toEqual scribble.mode('c', undefined, 4)
     expect(tokenize('c major')).toEqual scribble.mode('c', 'major')
     expect(tokenize('c major 4 0..2')).toEqual scribble.mode('c', undefined, 4).slice(0, 2)
+
+    # FIXME: extensive check of expressions...
+    # console.log tokenize('c')
+    # console.log tokenize('3')
+    # console.log tokenize('c 3')
+    # console.log tokenize('c minor')
+    # console.log tokenize('c minor 3')
+    # console.log tokenize('c minor 3 0..2')
+    # console.log tokenize('c minor 3 0..2 f')
+    # console.log tokenize('c minor 3 0..2 f 3')
+    # console.log tokenize('c minor 3 0..2 f minor 3')
+    # console.log tokenize('c minor 3 0..2 f minor 3 0..2')
 
   it 'should handle scribble-chords', ->
     CMaj = scribble.chord('CMaj')

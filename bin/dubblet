@@ -14,8 +14,14 @@ const parser = require('../lib/parsing');
 
 const children = [];
 
+// FIXME: better CLI (log-pose?)
+const src = 'music';
+
+const prefix = '♫ MIDI on Scoops!';
+const CLR = '\x1b[K';
+
 function play(name) {
-  console.log('TRYING TO LOAD', name);
+  process.stdout.write(`\b  ( ${prefix} ) Loading ${name} ...${CLR}\r`);
 
   const text = fs.readFileSync(name).toString();
   const ast = parser(text);
@@ -31,29 +37,44 @@ function play(name) {
   code
     .save(audio)
     .then(() => {
-      console.log('PLAYING', audio);
+      process.stdout.write(`\b  ( ${prefix} ) Playing ${audio} ...${CLR}\r`);
 
       const child = spawn('timidity', [audio], {
         detached: true,
       }, () => {
-        console.log('DONE PLAYING', audio);
+        process.stdout.write(`\b  ( ${prefix} ) Done playing ${audio}.${CLR}\r`);
+      });
+
+      child.on('close', () => {
+        process.stdout.write(`\b  ( ${prefix} ) Watching from ${src} ...${CLR}\r`);
       });
 
       children.push(child);
     });
 }
 
+let i = 0;
+
+const chars = '\\|/-';
+
+setInterval(() => {
+  process.stdout.write(`\b${chars[i % chars.length]}\r`);
+  i++;
+}, 260);
+
 if (process.argv.slice(2)[0]) {
   play(process.argv.slice(2)[0]);
 } else {
-  watch('music', { recursive: true, filter: /\.txt$/ }, (evt, name) => {
+  process.stdout.write(`\b  ( ${prefix} ) Watching from ${src} ...${CLR}\r`);
+
+  watch(src, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
     try {
       play(name);
     } catch (e) {
-      console.log('%s', e.message);
+      process.stdout.write(`${e.message}\n`);
     }
 
-    console.log('%s changed.', name);
+    process.stdout.write(`\b  ( ${prefix} ) ${name} changed${CLR}\r`);
   });
 }
 

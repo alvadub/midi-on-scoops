@@ -14,13 +14,14 @@ const parser = require('../lib/parsing');
 
 const children = [];
 
-const bin = process.argv.slice(2)[1] || 'timidity';
-const src = process.argv.slice(2)[0] || 'music';
-
 const log = msg => process.stdout.write(msg);
 
+const musicDir = process.argv.slice(2)[0] || 'music';
 const prefix = '♫ MIDI on SCOOPS';
 const CLR = '\x1b[K';
+
+const bin = process.argv.slice(2)[1] || 'timidity';
+const argv = process.argv.slice(4);
 
 let tt;
 
@@ -38,7 +39,18 @@ function play(name) {
 
   clearTimeout(tt);
 
-  const audio = name.replace('.txt', '.mid');
+  const audio = `${ast.settings.name || name.replace('.txt', '')}.mid`;
+
+  let _bin;
+  let _argv;
+
+  if (ast.settings.spawn) {
+    _argv = ast.settings.spawn.split(' ');
+    _bin = _argv.shift();
+  } else {
+    _argv = argv.slice();
+    _bin = bin;
+  }
 
   code
     .save(audio)
@@ -47,7 +59,7 @@ function play(name) {
         log(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
       }, 100);
 
-      const child = spawn(bin, process.argv.slice(4).concat(audio), {
+      const child = spawn(_bin, _argv.concat(audio), {
         detached: false,
       });
 
@@ -56,6 +68,9 @@ function play(name) {
       });
 
       children.push(child);
+    })
+    .catch(e => {
+      log(`\n${e.stack}\n`);
     });
 }
 
@@ -71,9 +86,9 @@ setInterval(() => {
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.txt') > -1) {
   play(process.argv.slice(2)[0]);
 } else {
-  log(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
+  log(`\b  ( ${prefix} ) Watching from: ${musicDir} ...${CLR}\r`);
 
-  watch(src, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
+  watch(musicDir, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
     try {
       play(name);
     } catch (e) {

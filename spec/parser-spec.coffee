@@ -40,7 +40,7 @@ sample = '''
 
   notes: %prelude %intro
   pattern: -----x-- * 16
-  accentMap: %scale * 2
+  accentMap: %scale %
 
   @skip
 
@@ -49,8 +49,8 @@ sample = '''
 
   ; global or individual settings are allowed by using tags, e.g.
 
-  @tempo: 90 ; for this track only (local)
-  @instrument: 81 ; other tags are just local and just affect the selected track
+  @tempo: 90 ; this override the global tempo value
+  @instrument: 81 ; other tags are just local and only affect the selected track
 
   ; use `@skip` or `@only` to mute/solo any track,
   ; set the max-volume with `@level: 120` (global/local)

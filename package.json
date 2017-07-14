@@ -1,7 +1,10 @@
 {
-  "name": "dubblet",
-  "version": "0.0.0",
-  "main": "index.js",
+  "name": "midi-on-scoops",
+  "version": "0.1.0",
+  "main": "lib/builder.js",
+  "bin": {
+    "midi": "bin/midi",
+  },
   "license": "MIT",
   "scripts": {
     "dev": "jasmine-node spec --coffee --verbose --autoTest --watchFolders lib",

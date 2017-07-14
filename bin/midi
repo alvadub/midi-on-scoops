@@ -14,6 +14,7 @@ const parser = require('../lib/parsing');
 
 const children = [];
 
+const bin = process.argv.slice(2)[1] || 'timidity';
 const src = process.argv.slice(2)[0] || 'music';
 
 const prefix = '♫ MIDI on SCOOPS';
@@ -44,7 +45,7 @@ function play(name) {
         process.stdout.write(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
       }, 100);
 
-      const child = spawn('timidity', [audio], {
+      const child = spawn(bin, process.argv.slice(4).concat(audio), {
         detached: false,
       });
 
@@ -65,7 +66,7 @@ setInterval(() => {
   i++;
 }, 260);
 
-if (process.argv.slice(2)[0]) {
+if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.txt') > -1) {
   play(process.argv.slice(2)[0]);
 } else {
   process.stdout.write(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);

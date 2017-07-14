@@ -71,6 +71,7 @@ describe 'tokenizer', ->
     expect(tokenize('c major 4 0..2')).toEqual scribble.mode('c', undefined, 4).slice(0, 2)
 
     # FIXME: extensive check of expressions...
+
     # console.log tokenize('c')
     # console.log tokenize('3')
     # console.log tokenize('c 3')
@@ -81,6 +82,11 @@ describe 'tokenizer', ->
     # console.log tokenize('c minor 3 0..2 f 3')
     # console.log tokenize('c minor 3 0..2 f minor 3')
     # console.log tokenize('c minor 3 0..2 f minor 3 0..2')
+
+  it 'can multiple regular notes', ->
+    expect(tokenize('c4 * 2')).toEqual ['c4', 'c4']
+    expect(tokenize('c4 * 2 d3 * 3')).toEqual ['c4', 'c4', 'd3', 'd3', 'd3']
+    expect(tokenize('c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4').length).toEqual 16
 
   it 'should handle scribble-chords', ->
     CMaj = scribble.chord('CMaj')

@@ -73,7 +73,7 @@ if (process.argv.slice(2)[0]) {
     try {
       play(name);
     } catch (e) {
-      process.stdout.write(`${e.message}\n`);
+      process.stdout.write(`${e.stack}\n`);
     }
 
     process.stdout.write(`\b  ( ${prefix} ) ${name} changed${CLR}\r`);

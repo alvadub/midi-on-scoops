@@ -14,11 +14,12 @@ Since technology is a good solution because it's already cheap, I would like to 
 
 ## Libraries
 
-[MIDI.js](https://galactic.ink/midi-js/) for all the hardcore-stuff on the web-browser.
-[MIDI.js Soundfonts](https://github.com/gleitz/midi-js-soundfonts) standard sound-fonts free to use (cc).
-[Scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily.
-[soundfont-player](https://github.com/danigb/soundfont-player) as light-weight alternative to MIDI.js (preferred)
-[WebAudioFont](https://github.com/surikov/webaudiofont) prerendered sound-fonts for usage with MIDI.js*
+- [MIDI.js](https://galactic.ink/midi-js/) for all the hardcore-stuff on the web-browser.
+- [MIDI.js Soundfonts](https://github.com/gleitz/midi-js-soundfonts) standard sound-fonts free to use (cc).
+- [Scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily.
+- [soundfont-player](https://github.com/danigb/soundfont-player) as light-weight alternative to MIDI.js (preferred)
+- [WebAudioFont](https://github.com/surikov/webaudiofont) prerendered sound-fonts for usage with MIDI.js*
+- [Awesome Audio Viz](https://github.com/willianjusten/awesome-audio-visualization) a curated stuff for playing around...
 
 ## General syntax proposal
 

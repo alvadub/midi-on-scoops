@@ -17,13 +17,15 @@ const children = [];
 const bin = process.argv.slice(2)[1] || 'timidity';
 const src = process.argv.slice(2)[0] || 'music';
 
+const log = msg => process.stdout.write(msg);
+
 const prefix = '♫ MIDI on SCOOPS';
 const CLR = '\x1b[K';
 
 let tt;
 
 function play(name) {
-  process.stdout.write(`\b  ( ${prefix} ) Loading ${name} ...${CLR}\r`);
+  log(`\b  ( ${prefix} ) Loading ${name} ...${CLR}\r`);
 
   const text = fs.readFileSync(name).toString();
   const ast = parser(text);
@@ -34,15 +36,15 @@ function play(name) {
     child.kill('SIGINT');
   });
 
-  const audio = name.replace('.txt', '.mid');
-
   clearTimeout(tt);
+
+  const audio = name.replace('.txt', '.mid');
 
   code
     .save(audio)
     .then(() => {
       setTimeout(() => {
-        process.stdout.write(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
+        log(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
       }, 100);
 
       const child = spawn(bin, process.argv.slice(4).concat(audio), {
@@ -50,7 +52,7 @@ function play(name) {
       });
 
       child.on('close', () => {
-        process.stdout.write(`\b  ( ${prefix} ) ⏏ Done playing: ${audio}${CLR}\r`);
+        log(`\b  ( ${prefix} ) ⏏ Done playing: ${audio}${CLR}\r`);
       });
 
       children.push(child);
@@ -62,33 +64,35 @@ let i = 0;
 const chars = '\\|/-';
 
 setInterval(() => {
-  process.stdout.write(`\b${chars[i % chars.length]}\r`);
+  log(`\b${chars[i % chars.length]}\r`);
   i++;
 }, 260);
 
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.txt') > -1) {
   play(process.argv.slice(2)[0]);
 } else {
-  process.stdout.write(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
+  log(`\b  ( ${prefix} ) Watching from: ${src} ...${CLR}\r`);
 
   watch(src, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
     try {
       play(name);
     } catch (e) {
-      process.stdout.write(`\n${e.stack}\n`);
+      log(`\n${e.stack}\n`);
     }
 
-    process.stdout.write(`\b  ( ${prefix} ) ${name} changed${CLR}\r`);
+    log(`\b  ( ${prefix} ) ${name} changed${CLR}\r`);
   });
 }
 
 process.on('SIGINT', () => {
-  process.stdout.write('\r\r');
+  log('\r\r');
 
   children.forEach((child, k) => {
     children.splice(k, 1);
     child.kill('SIGINT');
   });
+
+  clearTimeout(tt);
 
   process.exit(1);
 });

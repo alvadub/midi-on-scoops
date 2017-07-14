@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "lib/builder.js",
   "bin": {
-    "midi": "bin/midi",
+    "midi": "bin/midi"
   },
   "license": "MIT",
   "scripts": {

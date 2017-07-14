@@ -71,8 +71,8 @@ describe 'parser', ->
     expect(@ast.tracks.Piano.options[2].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle contexts', ->
-    expect(@ast.settings).toEqual { tempo: '120' }
-    expect(@ast.tracks.Skanking.settings).toEqual { skip: true, tempo: '90', instrument: '81' }
+    expect(@ast.context).toEqual { tempo: '120' }
+    expect(@ast.tracks.Skanking.context).toEqual { skip: true, tempo: '90', instrument: '81' }
 
   it 'can handle expressions', ->
     expect(@ast.lines[12].input).toEqual ['c4', 'd4']
@@ -80,8 +80,7 @@ describe 'parser', ->
     expect(@ast.lines[16].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle substitutions', ->
-    expect(@ast.context['%scale'].input).toEqual [100, 103.375, 106.75, 110.125, 113.5, 116.875, 120.25, 123.625, 127]
-    expect(@ast.context['%prelude'].input).toEqual ['%Am', '%', '%Gm', '%', '%Am', '%', '%Gm', '%']
-    expect(@ast.context['%Am'].input).toEqual [['a3', 'c4', 'e4']]
-    expect(@ast.context['%Am'].comment).toEqual 'this is a chord'
+    expect(@ast.tracks.Piano.context['%scale']).toEqual [100, 103.375, 106.75, 110.125, 113.5, 116.875, 120.25, 123.625, 127]
+    expect(@ast.tracks.Piano.context['%prelude']).toEqual ['%Am', '%', '%Gm', '%', '%Am', '%', '%Gm', '%']
+    expect(@ast.tracks.Piano.context['%Am']).toEqual [['a3', 'c4', 'e4']]
     expect(@ast.tracks.Skanking.options[0].input).toEqual ['%prelude', '%intro']

@@ -21,22 +21,22 @@ describe 'tokenizer', ->
 
 
   it 'can repeat tokens', ->
-    expect(tokenize('x*3')).toEqual 'xxx'
-    expect(tokenize('x* 3')).toEqual 'xxx'
-    expect(tokenize('x *3')).toEqual 'xxx'
-    expect(tokenize('x * 3')).toEqual 'xxx'
+    expect(tokenize('x*3')).toEqual 'xxx'.split('')
+    expect(tokenize('x* 3')).toEqual 'xxx'.split('')
+    expect(tokenize('x *3')).toEqual 'xxx'.split('')
+    expect(tokenize('x * 3')).toEqual 'xxx'.split('')
 
   it 'should tokenize strings', ->
-    expect(tokenize('x_-')).toEqual 'x_-'
-    expect(tokenize('x_ -')).toEqual 'x_-'
-    expect(tokenize('x _-')).toEqual 'x_-'
-    expect(tokenize('x _ -')).toEqual 'x_-'
+    expect(tokenize('x_-')).toEqual 'x_-'.split('')
+    expect(tokenize('x_ -')).toEqual 'x_-'.split('')
+    expect(tokenize('x _-')).toEqual 'x_-'.split('')
+    expect(tokenize('x _ -')).toEqual 'x_-'.split('')
 
   it 'can repeat sub-strings', ->
-    expect(tokenize('x_- * 2')).toEqual 'x_-x_-'
-    expect(tokenize('x_ - * 2')).toEqual 'x_--'
-    expect(tokenize('x _- * 2')).toEqual 'x_-_-'
-    expect(tokenize('x _ - * 2')).toEqual 'x_--'
+    expect(tokenize('x_- * 2')).toEqual 'x_-x_-'.split('')
+    expect(tokenize('x_ - * 2')).toEqual 'x_--'.split('')
+    expect(tokenize('x _- * 2')).toEqual 'x_-_-'.split('')
+    expect(tokenize('x _ - * 2')).toEqual 'x_--'.split('')
 
   it 'can divide numbers', ->
     expect(tokenize('1')).toEqual [1]

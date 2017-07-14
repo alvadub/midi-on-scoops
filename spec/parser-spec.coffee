@@ -67,7 +67,7 @@ describe 'parser', ->
     expect(@ast.lines[5].label).toEqual 'Piano'
 
     expect(@ast.tracks.Piano.options[0].input).toEqual ['c4', 'd4']
-    expect(@ast.tracks.Piano.options[1].input).toEqual 'x'.repeat(16)
+    expect(@ast.tracks.Piano.options[1].input).toEqual 'x'.repeat(16).split('')
     expect(@ast.tracks.Piano.options[2].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle contexts', ->
@@ -76,7 +76,7 @@ describe 'parser', ->
 
   it 'can handle expressions', ->
     expect(@ast.lines[12].input).toEqual ['c4', 'd4']
-    expect(@ast.lines[14].input).toEqual 'x'.repeat(16)
+    expect(@ast.lines[14].input).toEqual 'x'.repeat(16).split('')
     expect(@ast.lines[16].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle substitutions', ->

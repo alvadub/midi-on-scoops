@@ -2,6 +2,8 @@ parsing = require('../lib/parsing')
 
 sample = '''
 
+  @tempo: 120 ; globally set before any track gets defined
+
   ; intrument tracks are declared as `# name`
 
   # Piano ; this is a comment (instrument's name)
@@ -39,18 +41,20 @@ sample = '''
   notes: %prelude %Fm % % % %Am % % %
   pattern: -----x-- * 16
   accentMap: %scale * 2
+  @skip
 
   ; using placeholders also relaxes the parser, allowing to express more advanced stuff
   ; by abstracting music fragments and details, just like coding :D
 
   ; global or individual settings are allowed by using tags, e.g.
 
-  @tempo ; you can place the `@tempo` tag anywhere in the file because it's global
-  @instrument 81 ; other tags are just local and just affect the selected track
+  @tempo: 90 ; for this track only (local)
+  @instrument: 81 ; other tags are just local and just affect the selected track
 
   ; use `@skip` or `@only` to mute/solo any track,
-  ; set the max-volume with `@level 120` (global/local)
-  ; assign an instrument wth `@instrument 81` (global/local, use MIDI-codes)
+  ; set the max-volume with `@level: 120` (global/local)
+  ; instrumment assignment works by using MIDI-codes, check the reference below:
+  ; http://www.ccarh.org/courses/253/handout/gminstruments/
 
 '''
 
@@ -59,19 +63,20 @@ describe 'parser', ->
     @ast = parsing(sample)
 
   it 'can handle tracks', ->
-    expect(@ast.lines[3].label).toEqual 'Piano'
+    expect(@ast.lines[5].label).toEqual 'Piano'
 
     expect(@ast.tracks.Piano.options[0].input).toEqual ['c4', 'd4']
     expect(@ast.tracks.Piano.options[1].input).toEqual 'x'.repeat(16)
     expect(@ast.tracks.Piano.options[2].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle contexts', ->
-    console.log @ast.tracks.Skanking.context
+    expect(@ast.settings).toEqual { tempo: '120' }
+    expect(@ast.tracks.Skanking.settings).toEqual { skip: true, tempo: '90', instrument: '81' }
 
   it 'can handle expressions', ->
-    expect(@ast.lines[10].input).toEqual ['c4', 'd4']
-    expect(@ast.lines[12].input).toEqual 'x'.repeat(16)
-    expect(@ast.lines[14].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
+    expect(@ast.lines[12].input).toEqual ['c4', 'd4']
+    expect(@ast.lines[14].input).toEqual 'x'.repeat(16)
+    expect(@ast.lines[16].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
 
   it 'can handle substitutions', ->
     expect(@ast.context['%scale'].input).toEqual [100, 103.375, 106.75, 110.125, 113.5, 116.875, 120.25, 123.625, 127]

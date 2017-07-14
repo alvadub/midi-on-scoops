@@ -32,15 +32,16 @@ sample = '''
   %Fm: f3|c4|a4
 
   ; of course we can abstract more large expressions
-  %prelude: %Am % % % %Gm % % %
-  %intro: %prelude * 4
+  %prelude: %Am % %Gm % %Am % %Gm %
+  %intro: %Fm % % % %Am % % %
   %scale: 100..127 / 8
 
   # Skanking
 
-  notes: %prelude %Fm % % % %Am % % %
+  notes: %prelude %intro
   pattern: -----x-- * 16
   accentMap: %scale * 2
+
   @skip
 
   ; using placeholders also relaxes the parser, allowing to express more advanced stuff
@@ -80,7 +81,7 @@ describe 'parser', ->
 
   it 'can handle substitutions', ->
     expect(@ast.context['%scale'].input).toEqual [100, 103.375, 106.75, 110.125, 113.5, 116.875, 120.25, 123.625, 127]
-    expect(@ast.context['%prelude'].input).toEqual ['%Am', '%', '%', '%', '%Gm', '%', '%', '%']
+    expect(@ast.context['%prelude'].input).toEqual ['%Am', '%', '%Gm', '%', '%Am', '%', '%Gm', '%']
     expect(@ast.context['%Am'].input).toEqual [['a3', 'c4', 'e4']]
     expect(@ast.context['%Am'].comment).toEqual 'this is a chord'
-    expect(@ast.tracks.Skanking.options[0].input).toEqual ['%prelude', '%Fm', '%', '%', '%', '%Am', '%', '%', '%']
+    expect(@ast.tracks.Skanking.options[0].input).toEqual ['%prelude', '%intro']

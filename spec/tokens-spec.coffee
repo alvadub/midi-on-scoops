@@ -135,6 +135,7 @@ describe 'tokenizer', ->
 
   it 'can handle ranges, slicing, duplicates, etc.', ->
     expect(tokenize('5 10..120 / 11 127x3')).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
+    expect(tokenize('c3 * 6 a#2 a#2 c3 * 6 d#3 d#3')).toEqual ['c3', 'c3', 'c3', 'c3', 'c3', 'c3', 'a#2', 'a#2', 'c3', 'c3', 'c3', 'c3', 'c3', 'c3', 'd#3', 'd#3']
 
   it 'will return placeholders as-is on tokenization', ->
     expect(tokenize('%Am % % %')).toEqual ['%Am', '%', '%', '%']

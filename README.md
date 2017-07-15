@@ -30,16 +30,23 @@ Each expression would generate a value or an array of values, sub-expressions ar
 
 Once done, all expressions are concatenated into a single array where possible.
 
+    # track 1
+
+    @instrument: 1
+
+    %sequence: x--- *16
+    %range: 10..120 /11
+
     notes: c3 d3
-    pattern: x *16
-    accentMap: 5 10..120 /11 127x3
+    pattern: %sequence
+    accentMap: 5 %range 127x3
 
 The code above would produce the next scribbletune's settings:
 
 ```js
 {
   notes: ['c3', 'd3'],
-  pattern: 'x'.repeat(16),
+  pattern: 'x---'.repeat(16),
   accentMap: [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127],
 }
 ```

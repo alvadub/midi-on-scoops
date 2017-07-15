@@ -28,11 +28,13 @@ sample = '''
   %y: Cmin3 ; chords are supported as-is, they also support
   ; `spread...` and `unfold..` operations from modes and chords
   ; spread will expand and merge its values on the final expression
-  ; unfold will do the same... ????
+  ; unfold will expand and keep open for slicing, once done its merged too
 
   ; assign notes for this track
   notes: %x
   pattern: %a
+
+  ; you can mute/solo tracks by adding `@skip` and `@only` tags on any track
 
 '''
 

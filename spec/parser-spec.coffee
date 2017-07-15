@@ -2,85 +2,41 @@ parsing = require('../lib/parsing')
 
 sample = '''
 
-  @tempo: 120 ; globally set before any track gets defined
+  ; this line is a comment, it can appear anywhere on a single line
+  @tempo: 120 ; here you can set the tempo for the song
 
-  ; intrument tracks are declared as `# name`
+  ; blank lines are ignored, global variables can be placed here, before any track
 
-  # Piano ; this is a comment (instrument's name)
+  ; here we are storing a pattern 4/4 pattern timeline
+  %1: x---x---x---x--- x---x---x---x--- x---x---x---x--- x---x---x---x---
 
-  ; blank lines are ignored
-  ; PREFIX: ARG1 ARG2 ...
+  ; also we can store other variables (`%` is used for repetition)
+  %a: %1 % % %
 
-  ; `c major 4` would call `scribble.scale('c', 'major', 4)`
-  ; `0..2` would apply `.slice(0, 2)`
-  notes: c major 4 0..2
+  ; tracks starts with `#`
+  # title
 
-  pattern: x * 16 ; this translates to `'x'.repeat(16)`
+  ; you can set the instrument for this track
+  @instrument: 1 ; use 0-index based values,
+  ; see: http://www.ccarh.org/courses/253/handout/gminstruments/
 
-  accentMap: 5 10..120 / 11 127x3
-  ; `10..120 / 11` will result in `[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]`
-  ; `127x3` will result in `[127, 127, 127]`
+  ; you can set the volume for this track
+  @level: 90
 
-  ; so, ranges followed by division are used to generate values
-  ; otherwise, a range would slice the current value on its position...
+  ; store local variables (also global variables are available here)
+  %x: c3 *16 ; this will duplicate `c3` 16th times
+  %y: Cmin3 ; chords are supported as-is, they also support
+  ; `spread...` and `unfold..` operations from modes and chords
+  ; spread will expand and merge its values on the final expression
+  ; unfold will do the same... ????
 
-  ; in order to avoid duplication we can use `%id` for placing reusable expressions,
-  ; additionally a single `%` can be used for repeat the last given value, e.g.
-
-  %Am: a3|c4|e4 ; this is a chord
-  %Gm: g3|c4|e4
-  %Fm: f3|c4|a4
-
-  ; of course we can abstract more large expressions
-  %prelude: %Am % %Gm % %Am % %Gm %
-  %intro: %Fm % % % %Am % % %
-  %scale: 100..127 / 8
-
-  # Skanking
-
-  notes: %prelude %intro
-  pattern: -----x-- * 16
-  accentMap: %scale %
-
-  @skip
-
-  ; using placeholders also relaxes the parser, allowing to express more advanced stuff
-  ; by abstracting music fragments and details, just like coding :D
-
-  ; global or individual settings are allowed by using tags, e.g.
-
-  @tempo: 90 ; this override the global tempo value
-  @instrument: 81 ; other tags are just local and only affect the selected track
-
-  ; use `@skip` or `@only` to mute/solo any track,
-  ; set the max-volume with `@level: 120` (global/local)
-  ; instrumment assignment works by using MIDI-codes, check the reference below:
-  ; http://www.ccarh.org/courses/253/handout/gminstruments/
+  ; assign notes for this track
+  notes: %x
+  pattern: %a
 
 '''
 
 describe 'parser', ->
-  beforeEach ->
+  it 'can handle the syntax described', ->
     @ast = parsing(sample)
-
-  it 'can handle tracks', ->
-    expect(@ast.lines[5].label).toEqual 'Piano'
-
-    expect(@ast.tracks.Piano.params[0].input).toEqual ['c4', 'd4']
-    expect(@ast.tracks.Piano.params[1].input).toEqual 'x'.repeat(16).split('')
-    expect(@ast.tracks.Piano.params[2].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
-
-  it 'can handle contexts', ->
-    expect(@ast.settings).toEqual { tempo: '120' }
-    expect(@ast.tracks.Skanking.settings).toEqual { skip: true, tempo: '90', instrument: '81' }
-
-  it 'can handle expressions', ->
-    expect(@ast.lines[12].input).toEqual ['c4', 'd4']
-    expect(@ast.lines[14].input).toEqual 'x'.repeat(16).split('')
-    expect(@ast.lines[16].input).toEqual [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127]
-
-  it 'can handle substitutions', ->
-    expect(@ast.tracks.Piano.context['%scale']).toEqual [100, 103.375, 106.75, 110.125, 113.5, 116.875, 120.25, 123.625, 127]
-    expect(@ast.tracks.Piano.context['%prelude']).toEqual ['%Am', '%', '%Gm', '%', '%Am', '%', '%Gm', '%']
-    expect(@ast.tracks.Piano.context['%Am']).toEqual [['a3', 'c4', 'e4']]
-    expect(@ast.tracks.Skanking.params[0].input).toEqual ['%prelude', '%intro']
+    #console.log JSON.stringify(@ast, null, 2)

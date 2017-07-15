@@ -1,0 +1,13 @@
+sudo: required
+dist: trusty
+language: node_js
+node_js:
+  - 4
+  - 6
+  - 7
+script:
+  - 'yarn test'
+after_success:
+  - 'yarn cover:up'
+notifications:
+  email: false

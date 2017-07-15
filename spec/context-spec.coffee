@@ -4,9 +4,19 @@ reducer = require('../lib/reducer')
 describe 'reducer', ->
   it 'can resolve expressions', ->
     context =
-      '%x': ['b3', ['a2', 'b2']]
+      '%a': 'a2'
+      '%x': ['%a', ['a2', 'b2']]
       '%Am': [['a3', 'c4', 'e3']]
       '%Cm': ['c3', 'd#3', 'g3']
+
+    expect(reducer([
+      {type: 'param', value: '%Am'}
+      {type: 'param', value: '%x'}
+    ], context)).toEqual [
+      context['%Am'][0]
+      'a2'
+      ['a2', 'b2']
+    ]
 
     expect(reducer([
       {type: 'chord', value: scribble.chord('Fmin3'), unfold: true}
@@ -48,6 +58,17 @@ describe 'reducer', ->
       {type: 'number', value: [1, 2, 3, 4, 5]}
       {type: 'divide', value: 2}
     ])).toEqual [1 / 2, 2 / 2, 3 / 2, 4 / 2, 5 / 2]
+
+    # FIXME: consider dividing the octave or midi-value (?)
+    # expect(reducer([
+    #   {type: 'chord', value: ['c2', 'e3', 'g2']}
+    #   {type: 'divide', value: 2}
+    # ])).toEqual []
+
+    # expect(reducer([
+    #   {type: 'note', value: 'c4'}
+    #   {type: 'divide', value: 2}
+    # ])).toEqual []
 
     expect(reducer([
       {type: 'note', value: 'c3', repeat: 3}

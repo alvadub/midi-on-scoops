@@ -6,7 +6,7 @@ Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping
 
 I spent lots of time using DAWs just for settings up pet projects, sandboxes, laboratories, etc.
 
-Just having fun and brainstorming is difficult because I don't have enough physical instruments for playing music.
+Just having fun and brainstorming is difficult because I don't have enough instruments for playing music.
 
 Since technology is a good solution because it's already cheap, I would like to have a "tool" for writing DUB in text format.
 

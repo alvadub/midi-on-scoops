@@ -25,6 +25,17 @@ const argv = process.argv.slice(4);
 
 let tt;
 
+function exit() {
+  children.forEach((child, k) => {
+    children.splice(k, 1);
+    child.kill('SIGINT');
+  });
+
+  clearTimeout(tt);
+
+  process.exit(1);
+}
+
 function play(name) {
   log(`\b  ( ${prefix} ) Loading ${name} ...${CLR}\r`);
 
@@ -39,13 +50,18 @@ function play(name) {
 
   clearTimeout(tt);
 
-  const audio = `${ast.settings.name || name.replace('.txt', '')}.mid`;
+  if (ast.settings.pause) {
+    setTimeout(() => {
+      log(`\b  ( ${prefix} ) ❚❚ Pause: ${name}${CLR}\r`);
+    }, 100);
+    return;
+  }
 
   let _bin;
   let _argv;
 
-  if (ast.settings.spawn) {
-    _argv = ast.settings.spawn.split(' ');
+  if (ast.settings.playback) {
+    _argv = ast.settings.playback.split(' ');
     _bin = _argv.shift();
   } else {
     _argv = argv.slice();
@@ -53,21 +69,25 @@ function play(name) {
   }
 
   code
-    .save(audio)
-    .then(() => {
+    .save(name.replace('.dub', ''))
+    .then(outFiles => {
+      outFiles.forEach(midi => {
+        let cmd = [_bin].concat(_argv);
+
+        if (midi.settings.playback) {
+          cmd = midi.settings.playback.split(' ');
+        }
+
+        log(`\b  ( ${prefix} ) + ${midi.filepath}${CLR}\n`);
+
+        children.push(spawn(cmd[0], cmd.slice(1).concat(midi.filepath), {
+          detached: false,
+        }));
+      });
+
       setTimeout(() => {
-        log(`\b  ( ${prefix} ) ► Playing: ${audio}${CLR}\r`);
+        log(`\b  ( ${prefix} ) ► Playing: ${name}${CLR}\r`);
       }, 100);
-
-      const child = spawn(_bin, _argv.concat(audio), {
-        detached: false,
-      });
-
-      child.on('close', () => {
-        log(`\b  ( ${prefix} ) ⏏ Done playing: ${audio}${CLR}\r`);
-      });
-
-      children.push(child);
     })
     .catch(e => {
       log(`\n${e.stack}\n`);
@@ -83,12 +103,12 @@ setInterval(() => {
   i++;
 }, 260);
 
-if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.txt') > -1) {
+if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
   play(process.argv.slice(2)[0]);
 } else {
   log(`\b  ( ${prefix} ) Watching from: ${musicDir} ...${CLR}\r`);
 
-  watch(musicDir, { recursive: true, filter: /\.txt$/ }, (evt, name) => {
+  watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
     try {
       play(name);
     } catch (e) {
@@ -101,13 +121,5 @@ if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.txt') > -1) {
 
 process.on('SIGINT', () => {
   log('\r\r');
-
-  children.forEach((child, k) => {
-    children.splice(k, 1);
-    child.kill('SIGINT');
-  });
-
-  clearTimeout(tt);
-
-  process.exit(1);
+  exit();
 });

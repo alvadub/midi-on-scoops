@@ -37,7 +37,7 @@ function exit() {
 }
 
 function play(name) {
-  log(`\b  ( ${prefix} ) Loading ${name} ...${CLR}\r`);
+  log(`\b        Loading ${name} ...${CLR}\r`);
 
   const text = fs.readFileSync(name).toString();
   const ast = parser(text);
@@ -52,7 +52,7 @@ function play(name) {
 
   if (ast.settings.pause) {
     setTimeout(() => {
-      log(`\b  ( ${prefix} ) ❚❚ Pause: ${name}${CLR}\r`);
+      log(`\b        ❚❚ Pause: ${name}${CLR}\r`);
     }, 100);
     return;
   }
@@ -95,7 +95,7 @@ function play(name) {
       const _length = Object.keys(ast.tracks).length;
 
       setTimeout(() => {
-        log(`\b  ( ${prefix} ) ► Playing: ${name} (${destFiles.length} track${
+        log(`\b        ► Playing: ${name} (${destFiles.length} track${
           destFiles.length === 1 ? '' : 's'
         }${_length !== destFiles.length ? `, ${_length} clip${
           _length === 1 ? '' : 's'
@@ -103,7 +103,7 @@ function play(name) {
       }, 100);
 
       return Promise.all(deferred).then(() => {
-        log(`\b  ( ${prefix} ) ⏏ Stopped playing: ${name}${CLR}\r`);
+        log(`\b        ⏏ Stopped playing: ${name}${CLR}\r`);
       });
     })
     .catch(e => {
@@ -116,14 +116,14 @@ let i = 0;
 const chars = '\\|/-';
 
 setInterval(() => {
-  log(`\b${chars[i % chars.length]}\r`);
+  log(`\b${chars[i % chars.length]} ( ${prefix} )\r`);
   i++;
 }, 260);
 
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
   play(process.argv.slice(2)[0]).then(() => setTimeout(exit, 100));
 } else {
-  log(`\b  ( ${prefix} ) Watching from: ${musicDir} ...${CLR}\r`);
+  log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
 
   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
     try {
@@ -132,7 +132,7 @@ if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
       log(`\n${e.stack}\n`);
     }
 
-    log(`\b  ( ${prefix} ) ${name} changed${CLR}\r`);
+    log(`\b        ${name} changed${CLR}\r`);
   });
 }
 

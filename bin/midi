@@ -43,10 +43,10 @@ function play(name) {
   const ast = parser(text);
   const code = builder(ast);
 
-  children.forEach((child, i) => {
-    children.splice(i, 1);
-    child.kill('SIGINT');
-  });
+  children.splice(0, children.length)
+    .forEach(child => {
+      child.kill('SIGINT');
+    });
 
   clearTimeout(tt);
 

@@ -17,7 +17,7 @@ const children = [];
 const log = msg => process.stdout.write(msg);
 
 const musicDir = process.argv.slice(2)[0] || 'music';
-const prefix = '♫ MIDI on SCOOPS';
+const prefix = '♫';
 const CLR = '\x1b[K';
 
 const bin = process.argv.slice(2)[1] || 'timidity';
@@ -77,8 +77,6 @@ function play(name) {
         if (midi.settings.playback) {
           cmd = midi.settings.playback.split(' ');
         }
-
-        log(`\b  ( ${prefix} ) + ${midi.filepath}${CLR}\n`);
 
         children.push(spawn(cmd[0], cmd.slice(1).concat(midi.filepath), {
           detached: false,

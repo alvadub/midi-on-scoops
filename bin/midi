@@ -70,8 +70,8 @@ function play(name) {
 
   code
     .save(name.replace('.dub', ''))
-    .then(outFiles => {
-      outFiles.forEach(midi => {
+    .then(destFiles => {
+      destFiles.forEach(midi => {
         let cmd = [_bin].concat(_argv);
 
         if (midi.settings.playback) {
@@ -83,8 +83,14 @@ function play(name) {
         }));
       });
 
+      const _length = Object.keys(ast.tracks).length;
+
       setTimeout(() => {
-        log(`\b  ( ${prefix} ) ► Playing: ${name}${CLR}\r`);
+        log(`\b  ( ${prefix} ) ► Playing: ${name} (${destFiles.length} track${
+          destFiles.length === 1 ? '' : 's'
+        }${_length !== destFiles.length ? `, ${_length} clip${
+          _length === 1 ? '' : 's'
+        }` : ''})${CLR}\r`);
       }, 100);
     })
     .catch(e => {

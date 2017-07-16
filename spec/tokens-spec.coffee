@@ -254,6 +254,11 @@ describe 'tokenizer', ->
     ]
 
   it 'will return placeholders as-is on tokenization', ->
+    expect(tokenize('g3 *7 f2 %')).toEqual [
+      {type: 'note', value: 'g3'}
+      {type: 'multiply', value: 7}
+      {type: 'note', value: 'f2', repeat: 2}
+    ]
     expect(tokenize('%Am % % %')).toEqual [
-      {type: 'param', value: '%Am', repeat: 3}
+      {type: 'param', value: '%Am', repeat: 4}
     ]

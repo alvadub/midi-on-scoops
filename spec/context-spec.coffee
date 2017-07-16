@@ -10,6 +10,12 @@ describe 'reducer', ->
       '%Cm': ['c3', 'd#3', 'g3']
 
     expect(reducer([
+      {type: 'note', value: 'g1'},
+      {type: 'multiply', value: 7},
+      {type: 'note', value: 'f1', repeat: 2}
+    ], context)).toEqual ['g1', 'g1', 'g1', 'g1', 'g1', 'g1', 'g1', 'f1', 'f1']
+
+    expect(reducer([
       {type: 'param', value: '%Am'}
       {type: 'param', value: '%x'}
     ], context)).toEqual [

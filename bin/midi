@@ -68,9 +68,11 @@ function play(name) {
     _bin = bin;
   }
 
-  code
+  return code
     .save(name.replace('.dub', ''))
     .then(destFiles => {
+      const deferred = [];
+
       destFiles.forEach(midi => {
         let cmd = [_bin].concat(_argv);
 
@@ -78,9 +80,16 @@ function play(name) {
           cmd = midi.settings.playback.split(' ');
         }
 
-        children.push(spawn(cmd[0], cmd.slice(1).concat(midi.filepath), {
+        const child = spawn(cmd[0], cmd.slice(1).concat(midi.filepath), {
           detached: false,
+        });
+
+        deferred.push(new Promise((resolve, reject) => {
+          child.on('close', resolve);
+          child.on('error', reject);
         }));
+
+        children.push(child);
       });
 
       const _length = Object.keys(ast.tracks).length;
@@ -92,6 +101,10 @@ function play(name) {
           _length === 1 ? '' : 's'
         }` : ''})${CLR}\r`);
       }, 100);
+
+      return Promise.all(deferred).then(() => {
+        log(`\b  ( ${prefix} ) ⏏ Stopped playing: ${name}${CLR}\r`);
+      });
     })
     .catch(e => {
       log(`\n${e.stack}\n`);
@@ -108,7 +121,7 @@ setInterval(() => {
 }, 260);
 
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
-  play(process.argv.slice(2)[0]);
+  play(process.argv.slice(2)[0]).then(() => setTimeout(exit, 100));
 } else {
   log(`\b  ( ${prefix} ) Watching from: ${musicDir} ...${CLR}\r`);
 

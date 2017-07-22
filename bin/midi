@@ -127,7 +127,9 @@ if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
 
   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
     try {
-      play(name);
+      if (evt === 'update') {
+        play(name);
+      }
     } catch (e) {
       log(`\n${e.stack}\n`);
     }

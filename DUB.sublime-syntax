@@ -1,0 +1,68 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/3/syntax.html
+file_extensions:
+  - dub
+scope: text.dub
+contexts:
+  main:
+    # comments starts with ";"
+    - match: ';'
+      scope: punctuation.definition.comment.dub
+      push: line_comment
+
+    # all note-like symbols
+    - match: '\b[a-gA-G]\w*?\d+\b'
+      scope: constant.numeric.dub
+
+    # numeric values
+    - match: '(\b| )[/*-]?[\d.]+(?!\w)\b'
+      scope: storage.type
+
+    # placeholders
+    - match: '%(\w+)?'
+      scope: variable.parameter.dub
+
+    # annotations
+    - match: '^@\w+'
+      scope: keyword.dub
+
+    # pattern track (sustain, silence)
+    - match: '[_-]'
+      scope: comment.dub
+      push: track_pattern
+
+    # pattern track (attack)
+    - match: 'x'
+      scope: markup.inserted.dub
+      push: track_pattern
+
+    # track label -- treated as string
+    - match: '#'
+      scope: punctuation.definition.string.begin.dub
+      push: track_label
+
+  track_pattern:
+    # all hits are dimmed
+    - meta_scope: comment.dub
+    # but attack is highlighted
+    - match: 'x'
+      scope: markup.inserted.dub
+    # finish on any comment or track
+    - match: ($|(?=;)|(?![x_-]))
+      scope: punctuation.definition.string.end.dub
+      pop: true
+
+  track_label:
+    # highlight label
+    - meta_scope: entity.name.dub
+    # finish on any comment or end of line
+    - match: ($|(?=;))
+      scope: punctuation.definition.string.end.dub
+      pop: true
+
+  # finish comments on any end of line
+  line_comment:
+    - meta_scope: comment.line.dub
+    - match: $
+      pop: true

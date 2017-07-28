@@ -12,7 +12,7 @@ contexts:
       push: line_comment
 
     # all note-like symbols
-    - match: '\b[a-gA-G]\w*?\d+\b'
+    - match: '\b[a-gA-G]\w*?[#b]?\d+\b'
       scope: constant.numeric.dub
 
     # numeric values
@@ -20,7 +20,7 @@ contexts:
       scope: storage.type
 
     # placeholders
-    - match: '%(\w+)?'
+    - match: '%\w+'
       scope: variable.parameter.dub
 
     # annotations
@@ -31,6 +31,10 @@ contexts:
     - match: '[_-]'
       scope: comment.dub
       push: track_pattern
+
+    # pipes and repeats are dimmed
+    - match: '[|%]'
+      scope: comment.dub
 
     # pattern track (attack)
     - match: 'x'

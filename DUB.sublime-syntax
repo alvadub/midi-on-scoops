@@ -42,9 +42,13 @@ contexts:
       push: track_pattern
 
     # track label -- treated as string
-    - match: '#'
+    - match: '^#'
       scope: punctuation.definition.string.begin.dub
       push: track_label
+
+    # trap invalid syntax
+    - match: '^\s+.+?$'
+      scope: invalid.dub
 
   track_pattern:
     # all hits are dimmed

@@ -1,76 +1,59 @@
 %YAML 1.2
 ---
 # See http://www.sublimetext.com/docs/3/syntax.html
+name: DUB on SCOOPS
+
 file_extensions:
   - dub
+
 scope: text.dub
+
 contexts:
   main:
     # comments starts with ";"
     - match: ';'
-      scope: punctuation.definition.comment.dub
+      scope: comment
       push: line_comment
 
     # all note-like symbols
     - match: '\b[a-gA-G]\w*?[#b]?\d+\b'
-      scope: constant.numeric.dub
+      scope: support.type
 
     # numeric values
     - match: '(\b| )[/*-]?[\d.]+(?!\w)\b'
-      scope: storage.type
+      scope: constant
 
     # placeholders
     - match: '%\w+'
-      scope: variable.parameter.dub
+      scope: constant.numeric
 
     # annotations
-    - match: '^@\w+'
-      scope: keyword.dub
+    - match: '^@\w+|\b(track)\b'
+      scope: support.constant
 
     # pattern track (sustain, silence)
-    - match: '[_-]'
-      scope: comment.dub
-      push: track_pattern
-
-    # pipes and repeats are dimmed
-    - match: '[|%]'
-      scope: comment.dub
-
-    # pattern track (attack)
-    - match: 'x'
-      scope: markup.inserted.dub
-      push: track_pattern
+    - match: '[x_-]{4,}|[|%]'
+      scope: punctuation.definition.comment
 
     # track label -- treated as string
     - match: '^#'
-      scope: punctuation.definition.string.begin.dub
+      scope: string
       push: track_label
 
     # trap invalid syntax
     - match: '^\s+.+?$'
-      scope: invalid.dub
-
-  track_pattern:
-    # all hits are dimmed
-    - meta_scope: comment.dub
-    # but attack is highlighted
-    - match: 'x'
-      scope: markup.inserted.dub
-    # finish on any comment or track
-    - match: ($|(?=;)|(?![x_-]))
-      scope: punctuation.definition.string.end.dub
-      pop: true
+      scope: invalid
 
   track_label:
     # highlight label
-    - meta_scope: entity.name.dub
+    - meta_scope: string
     # finish on any comment or end of line
     - match: ($|(?=;))
-      scope: punctuation.definition.string.end.dub
+      scope: string
       pop: true
 
   # finish comments on any end of line
   line_comment:
-    - meta_scope: comment.line.dub
+    - meta_scope: comment
     - match: $
       pop: true

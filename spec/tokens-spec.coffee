@@ -152,9 +152,6 @@ describe 'tokenizer', ->
     ]
 
   it 'should handle unpacked-chords', ->
-    expect(tokenize('a3,c4,e4')).toEqual [
-      {type: 'chord', value: ['a3', 'c4', 'e4']}
-    ]
     expect(tokenize('a3|c4|e4')).toEqual [
       {type: 'chord', value: ['a3', 'c4', 'e4']}
     ]

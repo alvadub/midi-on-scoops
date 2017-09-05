@@ -5,7 +5,6 @@
 
 'use strict';
 
-const fs = require('fs');
 const watch = require('node-watch');
 const spawn = require('child_process').spawn;
 
@@ -39,8 +38,7 @@ function exit() {
 function play(name) {
   log(`\b        Loading ${name} ...${CLR}\r`);
 
-  const text = fs.readFileSync(name).toString();
-  const ast = parser(text);
+  const ast = parser(name);
   const code = builder(ast);
 
   children.splice(0, children.length)

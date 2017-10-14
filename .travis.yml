@@ -4,12 +4,12 @@ language: node_js
 node_js:
   - 4
   - 6
-  - 7
+  - 8
 install:
-   - yarn install --ignore-engines
+   - npm install --ignore-engines
 script:
-  - 'yarn test'
+  - 'npm test'
 after_success:
-  - 'yarn cover:up'
+  - 'npm run cover:up'
 notifications:
   email: false

@@ -105,7 +105,7 @@ function play(name) {
       });
     })
     .catch(e => {
-      log(`\n${e.stack}\n`);
+      log(`\n${e.message}\n`);
     });
 }
 
@@ -129,7 +129,7 @@ if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
         play(name);
       }
     } catch (e) {
-      log(`\n${e.stack}\n`);
+      log(`\n${e.message}\n`);
     }
 
     log(`\b        ${name} changed${CLR}\r`);

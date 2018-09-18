@@ -32,7 +32,7 @@ contexts:
       scope: support.constant
 
     # pattern track (sustain, silence, split)
-    - match: '[\[\]x_-]{4,}|[|%]'
+    - match: '[\[\]x_-]+?|[|%]'
       scope: punctuation.definition.comment
 
     # track label -- treated as string

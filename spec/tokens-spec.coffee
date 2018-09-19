@@ -156,6 +156,18 @@ describe 'tokenizer', ->
       {type: 'chord', value: ['a3', 'c4', 'e4']}
     ]
 
+  it 'should handle scribble-scales', ->
+    expect(tokenize('C2 phrygian ^ /2')).toEqual [
+      {type: 'scale', value: ['C2 phrygian']}
+      {type: 'divide', value: 2}
+    ]
+
+  it 'should handle scribble-progressions', ->
+    expect(tokenize('D4 minor + I IV V ii 0..2')).toEqual [
+      {type: 'progression', value: ['D4 minor', 'I IV V ii']}
+      {type: 'slice', value: [0, 2]}
+    ]
+
   it 'can unfold/spread notes by chord-names', ->
     expect(tokenize('Dmin7...')).toEqual [
       {type: 'chord', value: scribble.chord('Dmin7'), spread: true}

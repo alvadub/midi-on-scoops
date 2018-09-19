@@ -116,7 +116,7 @@ const chars = '\\|/-';
 
 setInterval(() => {
   log(`\b${chars[i % chars.length]} ( ${prefix} )\r`);
-  i++;
+  i += 1;
 }, 200);
 
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {

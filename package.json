@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "jasmine-node spec --coffee --verbose --autoTest --watchFolders lib",
-    "lint": "eslint lib && coffeelint spec",
+    "lint": "eslint bin lib && coffeelint spec",
     "spec": "jasmine-node spec --coffee --noStackTrace --captureExceptions",
     "cover": "istanbul cover --root lib --x '**/spec/**' -- jasmine-node --coffee spec",
     "cover:up": "codecov --file=coverage/lcov.info --disable=gcov -e TRAVIS_NODE_VERSION",
@@ -19,7 +19,7 @@
     "coffeelint": "^2.1.0",
     "eslint": "^5.6.0",
     "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-import": "^2.14.0",
     "jasmine-node": "^2.0.0-beta4"
   },
   "dependencies": {

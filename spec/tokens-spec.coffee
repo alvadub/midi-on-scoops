@@ -157,13 +157,13 @@ describe 'tokenizer', ->
     ]
 
   it 'should handle scribble-scales', ->
-    expect(tokenize('C2 phrygian.. ^ /2')).toEqual [
+    expect(tokenize('C2 phrygian.. ** /2')).toEqual [
       {type: 'scale', value: scribble.scale('C2 phrygian'), unfold: true}
       {type: 'divide', value: 2}
     ]
 
   it 'should handle scribble-progressions', ->
-    expect(tokenize('D4 minor... + I IV V ii 0..2')).toEqual [
+    expect(tokenize('D4 minor... ++ I IV V ii 0..2')).toEqual [
       {type: 'progression', value: ['DM-4', 'GM-4', 'AM-4', 'Em-4'], spread: true}
       {type: 'slice', value: [0, 2]}
     ]

@@ -25,10 +25,10 @@ describe 'reducer', ->
     ]
 
     expect(reducer([
-      {type: 'chord', value: scribble.chord('Fmin3'), unfold: true}
+      {type: 'chord', value: scribble.chord('Fm-3'), unfold: true}
       {type: 'slice', value: [0, 2]}
       {type: 'note', value: 'd3'}
-    ], context)).toEqual ['f3', 'g#3', 'd3']
+    ], context)).toEqual ['F3', 'Ab3', 'd3']
 
     expect(reducer([
       {type: 'number', value: 5}

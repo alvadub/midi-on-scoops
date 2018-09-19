@@ -129,7 +129,9 @@ setInterval(() => {
 }, 200);
 
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
-  play(process.argv.slice(2)[0]).then(() => setTimeout(exit, 100));
+  Promise.resolve()
+    .then(() => play(process.argv.slice(2)[0]))
+    .then(() => setTimeout(exit, 100));
 } else {
   log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
 

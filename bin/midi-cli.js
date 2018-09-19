@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const watch = require('node-watch');
 const spawn = require('child_process').spawn;
 
@@ -17,15 +18,11 @@ const CLR = '\x1b[K';
 const bin = process.argv.slice(2)[1] || 'timidity';
 const argv = process.argv.slice(4);
 
-let tt;
-
 function exit() {
   children.forEach((child, k) => {
     children.splice(k, 1);
     child.kill('SIGINT');
   });
-
-  clearTimeout(tt);
 
   process.exit(1);
 }
@@ -40,8 +37,6 @@ function play(name) {
     .forEach(child => {
       child.kill('SIGINT');
     });
-
-  clearTimeout(tt);
 
   if (ast.settings.pause) {
     setTimeout(() => {
@@ -66,18 +61,24 @@ function play(name) {
     .then(destFiles => {
       const deferred = [];
 
+      if (ast.settings.bundle) {
+        destFiles.splice(1, destFiles.length);
+      }
+
       destFiles.forEach(midi => {
         let cmd = [_bin].concat(_argv);
 
         if (midi.settings.playback) {
-          cmd = midi.settings.playback.split(' ');
+          cmd = midi.settings.playback.split(' ').map(x => {
+            if (/\.sf2/i.test(x)) {
+              return path.resolve(name, '..', x);
+            }
+
+            return x;
+          });
         }
 
         const args = cmd.slice(1).concat(midi.filepath);
-
-        if (cmd[0] === 'fluidsynth') {
-          args.push('-in');
-        }
 
         const child = spawn(cmd[0], args, {
           detached: false,
@@ -127,7 +128,7 @@ if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
     try {
       if (evt === 'update') {
-        play(name);
+        process.nextTick(() => play(name));
       }
     } catch (e) {
       log(`\n${e.message}\n`);

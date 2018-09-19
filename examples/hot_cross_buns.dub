@@ -1,0 +1,10 @@
+# Hot Cross Buns
+
+@instrument: 1
+
+%1: E4 D4
+%2: C4
+%3: C4 % % % D4 % % %
+
+notes: %1 %2 %1 %2 %3 %1 %2
+pattern: xx x- xx x- [xx][xx][xx][xx] xx x-

@@ -1,7 +1,9 @@
+*.sf2
 *.log
 *.mid
 *.midi
 /build
 /external
 /coverage
+/examples/*/*
 /node_modules

@@ -20,7 +20,7 @@ contexts:
       scope: support.type
 
     # numeric values
-    - match: '(\b| )[/*-]?[\d.]+(?!\w)\b'
+    - match: ' [/*-]?[\d.]+(?!\w)\b'
       scope: constant
 
     # placeholders

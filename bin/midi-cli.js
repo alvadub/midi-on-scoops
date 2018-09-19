@@ -30,8 +30,16 @@ function exit() {
 function play(name) {
   log(`\b        Loading ${name} ...${CLR}\r`);
 
-  const ast = parser(name);
-  const code = builder(ast);
+  let ast;
+  let code;
+
+  try {
+    ast = parser(name);
+    code = builder(ast);
+  } catch (e) {
+    log(`\n${e.message}\n`);
+    return;
+  }
 
   children.splice(0, children.length)
     .forEach(child => {

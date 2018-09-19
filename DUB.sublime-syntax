@@ -16,7 +16,7 @@ contexts:
       push: line_comment
 
     # all note-like symbols
-    - match: '\b[a-gA-G][#b]?\w+?\b'
+    - match: '(?!^)\b[a-gA-G][#b]?\d\w*?\b'
       scope: support.type
 
     # numeric values

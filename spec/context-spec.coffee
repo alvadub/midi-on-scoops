@@ -65,6 +65,18 @@ describe 'reducer', ->
       {type: 'divide', value: 2}
     ])).toEqual [1 / 2, 2 / 2, 3 / 2, 4 / 2, 5 / 2]
 
+    # FIXME: how apply filtering?
+
+    expect(reducer([
+      {type: 'scale', value: scribble.scale('C2 phrygian')}
+      {type: 'divide', value: 2}
+    ])).toEqual [['C2', 'Db2', 'Eb2', 'F2', 'G2', 'Ab2', 'Bb2']]
+
+    expect(reducer([
+      {type: 'progression', value: scribble.progression('D4 minor', 'I IV V ii')}
+      {type: 'slice', value: [0, 2]}
+    ])).toEqual ['DM-4 GM-4 AM-4 Em-4']
+
     # FIXME: consider dividing the octave or midi-value (?)
     # expect(reducer([
     #   {type: 'chord', value: ['c2', 'e3', 'g2']}

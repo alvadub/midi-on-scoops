@@ -12,8 +12,8 @@ describe 'tokenizer', ->
     expect(-> tokenize('2 / x')).toThrow()
     expect(-> tokenize('1 2 * x')).toThrow()
     expect(-> tokenize('ERR ..')).toThrow()
-    expect(-> tokenize('CMaj ... / 2')).toThrow()
-    expect(-> tokenize('Dmin7 ... * 2')).toThrow()
+    expect(-> tokenize('CM ... / 2')).toThrow()
+    expect(-> tokenize('Dm7 ... * 2')).toThrow()
     expect(-> tokenize('1 / 2 / 3 / 4 / 5')).toThrow()
     expect(-> tokenize('1 * 2 * 3 * 4 * 5')).toThrow()
 
@@ -132,23 +132,23 @@ describe 'tokenizer', ->
     expect(tokenize('c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4 c4').length).toEqual 16
 
   it 'should handle scribble-chords', ->
-    expect(tokenize('CMaj')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj')}
+    expect(tokenize('CM')).toEqual [
+      {type: 'chord', value: scribble.chord('CM')}
     ]
-    expect(tokenize('CMaj FMaj')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj')}
+    expect(tokenize('CM FMaj')).toEqual [
+      {type: 'chord', value: scribble.chord('CM')}
       {type: 'chord', value: scribble.chord('FMaj')}
     ]
-    expect(tokenize('CMaj FMaj GMaj')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj')}
-      {type: 'chord', value: scribble.chord('FMaj')}
-      {type: 'chord', value: scribble.chord('GMaj')}
-    ]
-    expect(tokenize('CMaj FMaj GMaj CMaj')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj')}
+    expect(tokenize('CM FMaj GMaj')).toEqual [
+      {type: 'chord', value: scribble.chord('CM')}
       {type: 'chord', value: scribble.chord('FMaj')}
       {type: 'chord', value: scribble.chord('GMaj')}
-      {type: 'chord', value: scribble.chord('CMaj')}
+    ]
+    expect(tokenize('CM FMaj GMaj CM')).toEqual [
+      {type: 'chord', value: scribble.chord('CM')}
+      {type: 'chord', value: scribble.chord('FMaj')}
+      {type: 'chord', value: scribble.chord('GMaj')}
+      {type: 'chord', value: scribble.chord('CM')}
     ]
 
   it 'should handle unpacked-chords', ->
@@ -157,51 +157,51 @@ describe 'tokenizer', ->
     ]
 
   it 'should handle scribble-scales', ->
-    expect(tokenize('C2 phrygian ^ /2')).toEqual [
-      {type: 'scale', value: ['C2 phrygian']}
+    expect(tokenize('C2 phrygian.. ^ /2')).toEqual [
+      {type: 'scale', value: scribble.scale('C2 phrygian'), unfold: true}
       {type: 'divide', value: 2}
     ]
 
   it 'should handle scribble-progressions', ->
-    expect(tokenize('D4 minor + I IV V ii 0..2')).toEqual [
-      {type: 'progression', value: ['D4 minor', 'I IV V ii']}
+    expect(tokenize('D4 minor... + I IV V ii 0..2')).toEqual [
+      {type: 'progression', value: 'DM-4 GM-4 AM-4 Em-4', spread: true}
       {type: 'slice', value: [0, 2]}
     ]
 
   it 'can unfold/spread notes by chord-names', ->
-    expect(tokenize('Dmin7...')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), spread: true}
+    expect(tokenize('Dm7...')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), spread: true}
     ]
-    expect(tokenize('Dmin7.. 0..2')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), unfold: true}
+    expect(tokenize('Dm7.. 0..2')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), unfold: true}
       {type: 'slice', value: [0, 2]}
     ]
-    expect(tokenize('Dmin7 GMaj7 Bb')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7')}
+    expect(tokenize('Dm7 GMaj7 Bb')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7')}
       {type: 'chord', value: scribble.chord('GMaj7')}
       {type: 'note', value: 'Bb'}
     ]
-    expect(tokenize('Dmin7... GMaj7 Bb')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), spread: true}
+    expect(tokenize('Dm7... GMaj7 Bb')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), spread: true}
       {type: 'chord', value: scribble.chord('GMaj7')}
       {type: 'note', value: 'Bb'}
     ]
-    expect(tokenize('Dmin7... GMaj7.. Bmajb')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), spread: true}
+    expect(tokenize('Dm7... GMaj7.. Bmajb')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), spread: true}
       {type: 'chord', value: scribble.chord('GMaj7'), unfold: true}
       {type: 'chord', value: scribble.chord('Bmajb')}
     ]
-    expect(tokenize('Dmin7... GMaj7... Bmajb..')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), spread: true}
+    expect(tokenize('Dm7... GMaj7... Bmajb..')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), spread: true}
       {type: 'chord', value: scribble.chord('GMaj7'), spread: true}
       {type: 'chord', value: scribble.chord('Bmajb'), unfold: true}
     ]
-    expect(tokenize('Dmin7... 0..2')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), spread: true}
+    expect(tokenize('Dm7... 0..2')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), spread: true}
       {type: 'range', value: [0, 2]}
     ]
-    expect(tokenize('Dmin7.. 0..2')).toEqual [
-      {type: 'chord', value: scribble.chord('Dmin7'), unfold: true}
+    expect(tokenize('Dm7.. 0..2')).toEqual [
+      {type: 'chord', value: scribble.chord('Dm7'), unfold: true}
       {type: 'slice', value: [0, 2]}
     ]
 
@@ -226,19 +226,19 @@ describe 'tokenizer', ->
     ]
 
   it 'can slice and duplicate unfolded chords', ->
-    expect(tokenize('CMaj... 0..2')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj'), spread: true}
+    expect(tokenize('CM... 0..2')).toEqual [
+      {type: 'chord', value: scribble.chord('CM'), spread: true}
       {type: 'range', value: [0, 2]}
     ]
-    expect(tokenize('CMaj... *2 Dmin7.. 0..7')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj'), spread: true}
+    expect(tokenize('CM... *2 Dm7.. 0..7')).toEqual [
+      {type: 'chord', value: scribble.chord('CM'), spread: true}
       {type: 'multiply', value: 2}
-      {type: 'chord', value: scribble.chord('Dmin7'), unfold: true}
+      {type: 'chord', value: scribble.chord('Dm7'), unfold: true}
       {type: 'slice', value: [0, 7]}
     ]
-    expect(tokenize('CMaj.. CMaj.. *5 0..5')).toEqual [
-      {type: 'chord', value: scribble.chord('CMaj'), unfold: true}
-      {type: 'chord', value: scribble.chord('CMaj'), unfold: true}
+    expect(tokenize('CM.. CM.. *5 0..5')).toEqual [
+      {type: 'chord', value: scribble.chord('CM'), unfold: true}
+      {type: 'chord', value: scribble.chord('CM'), unfold: true}
       {type: 'multiply', value: 5}
       {type: 'range', value: [0, 5]}
     ]

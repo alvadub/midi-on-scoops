@@ -5,6 +5,17 @@ const path = require('path');
 
 const { utils, convert } = require('../dist/dubber.cjs');
 
+function save(file, data) {
+  const output = `${file}.mid`;
+  const baseDir = path.dirname(output);
+  const fileName = path.basename(output);
+  const filepath = path.join(baseDir, 'output', fileName);
+
+  fs.outputFileSync(filepath, data, 'binary');
+
+  return filepath;
+}
+
 function write(tracks, options, fileName) {
   options = options || {};
 
@@ -32,13 +43,11 @@ function write(tracks, options, fileName) {
     const _tracks = [];
 
     function saveTrack(suffix) {
-      const filepath = path.join(fileName,
-        `${utils.normalize(name)}${suffix ? `_${suffix}` : ''}.mid`);
-
-      fs.outputFileSync(filepath, file.toBytes(), 'binary');
+      const output = path.join(fileName,
+        `${utils.normalize(name)}${suffix ? `_${suffix}` : ''}`);
 
       files.push({
-        filepath,
+        filepath: save(output, file.toBytes()),
         settings: _tracks.reduce((prev, cur) => utils.merge(prev, cur), {}),
       });
     }
@@ -112,10 +121,8 @@ function write(tracks, options, fileName) {
   });
 
   if (bundle) {
-    fs.outputFileSync(`${fileName}.mid`, bundle.toBytes(), 'binary');
-
     files.unshift({
-      filepath: `${fileName}.mid`,
+      filepath: save(fileName, bundle.toBytes()),
       settings: options,
     });
   }

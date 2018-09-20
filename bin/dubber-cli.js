@@ -101,18 +101,18 @@ async function play(name) {
           });
         }
 
-        const args = cmd.slice(1).concat(midi.filepath);
-
-        const child = spawn(cmd[0], args, {
-          detached: false,
-        });
-
         deferred.push(new Promise((resolve, reject) => {
+          const args = cmd.slice(1).concat(midi.filepath);
+
+          const child = spawn(cmd[0], args, {
+            detached: false,
+          });
+
           child.on('close', resolve);
           child.on('error', reject);
-        }));
 
-        children.push(child);
+          children.push(child);
+        }));
       });
 
       const _length = Object.keys(ast.tracks).length;

@@ -84,6 +84,9 @@ notes: e2
 pattern: [---x][-x] *32
 ```
 
+<details>
+<summary>MIDI Sound/Note Mappings</summary>
+
 - `d1` &mdash; Heart Bit
 - `d#1` &mdash; Zap
 - `g1` &mdash; Stick
@@ -138,3 +141,5 @@ pattern: [---x][-x] *32
 - `a5` &mdash; Open Triangle
 - `a#5` &mdash; Cabasa 2
 - `c6` &mdash; Curtain
+
+</details>

@@ -1,3 +1,4 @@
+
 # MIDI on SCOOPS
 
 Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping" approach.
@@ -61,6 +62,79 @@ When calling `midi` it will use `timidity` as default for MIDI playback.
 Use a different player by appending the arguments:
 
 ```bash
-$ midi music/src fluidsynth music/sf2/PC51f.sf2
+$ midi music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
 # under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
 ```
+
+### MIDI Drums
+
+To enable the Drumkit you must use the channel 9, e.g.
+
+```
+@tempo: 90
+
+# hat
+@channel: 9
+
+notes: f#2
+pattern: xxxx *16
+
+# snare
+notes: e2
+pattern: [---x][-x] *32
+```
+
+- `d1` &mdash; Heart Bit
+- `d#1` &mdash; Zap
+- `g1` &mdash; Stick
+- `a1` &mdash; Side Stick
+- `a#1` &mdash; Ring Bell
+- `b1` &mdash; Acoustic Bass Drum
+- `c2` &mdash; Bass Drum 1
+- `c#2` &mdash; Side Stick
+- `d2` &mdash; Acoustic Snare
+- `d#2` &mdash; Hand Clap
+- `e2` &mdash; Electric Snare
+- `f2` &mdash; Low Floor Tom
+- `f#2` &mdash; Closed Hi Hat
+- `g2` &mdash; High Floor Tom
+- `g#2` &mdash; Pedal Hi-Hat
+- `a2` &mdash; Low Tom
+- `a#2` &mdash; Open Hi-Hat
+- `b2` &mdash; Low-Mid Tom
+- `c3` &mdash; Hi-Mid Tom
+- `c#3` &mdash; Crash Cymbal 1
+- `d3` &mdash; High Tom
+- `d#3` &mdash; Ride Cymbal 1
+- `e3` &mdash; Chinese Cymbal
+- `f3` &mdash; Ride Bell
+- `f#3` &mdash; Tambourine
+- `g3` &mdash; Splash Cymbal
+- `g#3` &mdash; Cowbell
+- `a3` &mdash; Crash Cymbal 2
+- `a#3` &mdash; Vibraslap
+- `b3` &mdash; Ride Cymbal 2
+- `c4` &mdash; Hi Bongo
+- `c#4` &mdash; Low Bongo
+- `d4` &mdash; Mute Hi Conga
+- `d#4` &mdash; Open Hi Conga
+- `e4` &mdash; Low Conga
+- `f4` &mdash; High Timbale
+- `f#4` &mdash; Low Timbale
+- `g4` &mdash; High Agogo
+- `g#4` &mdash; Low Agogo
+- `a4` &mdash; Cabasa
+- `a#4` &mdash; Maracas
+- `b4` &mdash; Short Whistle
+- `c5` &mdash; Long Whistle
+- `c#5` &mdash; Short Guiro
+- `d5` &mdash; Long Guiro
+- `d#5` &mdash; Claves
+- `e5` &mdash; Hi Wood Block
+- `f5` &mdash; Low Wood Block
+- `f#5` &mdash; Mute Cuica
+- `g5` &mdash; Open Cuica
+- `g#5` &mdash; Mute Triangle
+- `a5` &mdash; Open Triangle
+- `a#5` &mdash; Cabasa 2
+- `c6` &mdash; Curtain

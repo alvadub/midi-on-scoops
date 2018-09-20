@@ -21,11 +21,7 @@ export const KEYWORDS = [
   'noteLength',
 ];
 
-export default async function parse(file, source, importer) {
-  if (!file || typeof file !== 'string') {
-    throw new Error(`Expecting a valid filepath, given '${file}'`);
-  }
-
+export default async function parse(source, importer) {
   const ast = {
     lines: [],
     tracks: {},
@@ -86,7 +82,7 @@ export default async function parse(file, source, importer) {
         }
 
         try {
-          const data = parse(sub, external);
+          const data = parse(sub, importer);
 
           if (currentTrack) {
             if (data.tracks[currentTrack]) {

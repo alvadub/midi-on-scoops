@@ -5,7 +5,7 @@ const path = require('path');
 const watch = require('node-watch');
 const spawn = require('child_process').spawn;
 
-const { parsing: parser } = require('../dist/dubber.cjs');
+const { parse } = require('../dist/dubber.cjs');
 const builder = require('./builder');
 
 const children = [];
@@ -49,7 +49,7 @@ async function play(name) {
   const importer = x => read(path.resolve(name, '..', x));
 
   try {
-    ast = await parser(name, read(name), importer);
+    ast = await parse(read(name), importer);
     code = builder(ast);
   } catch (e) {
     log(`\n${e.stack}\n`);

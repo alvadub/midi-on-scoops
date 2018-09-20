@@ -1,7 +1,7 @@
 const scribble = require('scribbletune');
 
 const utils = require('./utils');
-const reducer = require('./reducer');
+const reduce = require('./reduce');
 
 module.exports = ast => {
   const map = {};
@@ -12,7 +12,7 @@ module.exports = ast => {
     const config = {};
 
     props.forEach(field => {
-      config[field.prop] = reducer(field.input, context);
+      config[field.prop] = reduce(field.input, context);
     });
 
     // FIXME: stats?

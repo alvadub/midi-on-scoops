@@ -1,13 +1,13 @@
 import convert from './convert';
-import parsing from './parsing';
-import reducer from './reducer';
+import parse from './parse';
+import reduce from './reduce';
 import tokenize from './tokenize';
 import utils from './utils';
 
 export default {
   convert,
-  parsing,
-  reducer,
+  parse,
+  reduce,
   tokenize,
   utils,
 };

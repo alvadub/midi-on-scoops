@@ -1,21 +1,16 @@
-'use strict';
+import tokenize from './tokenize';
+import { merge } from './utils';
 
-const path = require('path');
-const fs = require('fs');
+export const RE_HTRIM = /^\s*#+|#+\s*$/;
+export const RE_LINES = /\r?\n/;
 
-const tokenize = require('./tokenize');
-const utils = require('./utils');
+export const S_ANNOTATION = '@';
+export const S_VARIABLE = '%';
+export const S_COMMENT = ';';
+export const S_HEADING = '#';
+export const S_PREFIX = ':';
 
-const RE_HTRIM = /^\s*#+|#+\s*$/;
-const RE_LINES = /\r?\n/;
-
-const S_ANNOTATION = '@';
-const S_VARIABLE = '%';
-const S_COMMENT = ';';
-const S_HEADING = '#';
-const S_PREFIX = ':';
-
-const KEYWORDS = [
+export const KEYWORDS = [
   'notes',
   'pattern',
   'accentMap',
@@ -26,7 +21,7 @@ const KEYWORDS = [
   'noteLength',
 ];
 
-module.exports = function parse(file) {
+export default async function parse(file, source, importer) {
   if (!file || typeof file !== 'string') {
     throw new Error(`Expecting a valid filepath, given '${file}'`);
   }
@@ -38,13 +33,11 @@ module.exports = function parse(file) {
     settings: {},
   };
 
-  const cwd = path.dirname(file);
-  const text = fs.readFileSync(file).toString();
-  const input = text.split(RE_LINES);
+  const input = source.split(RE_LINES);
 
   let currentTrack;
 
-  input.forEach((line, i) => {
+  input.forEach(async (line, i) => {
     if (!line.trim()) {
       ast.lines.push({
         offset: i,
@@ -84,24 +77,26 @@ module.exports = function parse(file) {
       }
 
       if (key === 'import') {
-        const sub = path.resolve(cwd, `${value}.dub`);
+        let sub;
 
-        if (!fs.existsSync(sub)) {
-          throw new Error(`Invalid import at line ${i + 1}. File '${value}' does not exists`);
+        try {
+          sub = await importer(value);
+        } catch (e) {
+          throw new Error(`Invalid import at line ${i + 1}.`);
         }
 
         try {
-          const data = parse(sub);
+          const data = parse(sub, external);
 
           if (currentTrack) {
             if (data.tracks[currentTrack]) {
-              utils.merge(ast.tracks[currentTrack].settings, data.tracks[currentTrack].settings);
-              utils.merge(ast.tracks[currentTrack].context, data.tracks[currentTrack].context);
+              merge(ast.tracks[currentTrack].settings, data.tracks[currentTrack].settings);
+              merge(ast.tracks[currentTrack].context, data.tracks[currentTrack].context);
             }
           } else {
-            utils.merge(ast.settings, data.settings);
-            utils.merge(ast.context, data.context);
-            utils.merge(ast.tracks, data.tracks);
+            merge(ast.settings, data.settings);
+            merge(ast.context, data.context);
+            merge(ast.tracks, data.tracks);
           }
         } catch (e) {
           throw new Error(`Failed '${value}' import at line ${i + 1}. ${e.message}`);
@@ -198,4 +193,4 @@ module.exports = function parse(file) {
   });
 
   return ast;
-};
+}

@@ -1,16 +1,14 @@
-'use strict';
+import scribble from 'scribbletune';
 
-const scribble = require('scribbletune');
+export const RE_SEPARATOR = /\|/;
+export const RE_PATTERN = /^[[\]x_-]+$/;
+export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
+export const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
+export const RE_NOTE = /^[a-gA-G][#b]?\d*(?![Mm])$/;
+export const RE_MODE = /^(?![iv])[a-z]{2,}/;
+export const RE_TRIM = /\.+$/;
 
-const RE_SEPARATOR = /\|/;
-const RE_PATTERN = /^[[\]x_-]+$/;
-const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
-const RE_NOTE = /^[a-gA-G][#b]?\d*(?![Mm])$/;
-const RE_MODE = /^(?![iv])[a-z]{2,}/;
-const RE_TRIM = /\.+$/;
-
-function getType(value) {
+export function getType(value) {
   if (RE_PATTERN.test(value)) {
     return 'pattern';
   }
@@ -34,7 +32,7 @@ function getType(value) {
   return 'value';
 }
 
-module.exports = expression => {
+export default expression => {
   if (!expression || typeof expression !== 'string') {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }

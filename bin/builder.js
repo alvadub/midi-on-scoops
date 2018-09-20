@@ -1,12 +1,9 @@
-'use strict';
-
 const jsmidgen = require('jsmidgen');
 
 const fs = require('fs-extra');
 const path = require('path');
 
-const utils = require('./utils');
-const converter = require('./convert');
+const { utils, convert } = require('../dist/dubber.cjs');
 
 function write(tracks, options, fileName) {
   options = options || {};
@@ -127,7 +124,7 @@ function write(tracks, options, fileName) {
 }
 
 module.exports = ast => {
-  const map = converter(ast);
+  const map = convert(ast);
 
   return {
     save(songName) {

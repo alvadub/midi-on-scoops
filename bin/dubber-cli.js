@@ -1,11 +1,12 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const watch = require('node-watch');
 const spawn = require('child_process').spawn;
 
-const builder = require('../lib/builder');
-const parser = require('../lib/parsing');
+const { parsing: parser } = require('../dist/dubber.cjs');
+const builder = require('./builder');
 
 const children = [];
 
@@ -27,17 +28,31 @@ function exit() {
   process.exit(1);
 }
 
-function play(name) {
+function read(name) {
+  const file = name.indexOf('.dub') === -1
+    ? `${name}.dub`
+    : name;
+
+  if (!fs.existsSync(file)) {
+    throw new Error(`File '${file}' does not exists`);
+  }
+
+  return fs.readFileSync(file).toString();
+}
+
+async function play(name) {
   log(`\b        Loading ${name} ...${CLR}\r`);
 
   let ast;
   let code;
 
+  const importer = x => read(path.resolve(name, '..', x));
+
   try {
-    ast = parser(name);
+    ast = await parser(name, read(name), importer);
     code = builder(ast);
   } catch (e) {
-    log(`\n${e.message}\n`);
+    log(`\n${e.stack}\n`);
     return;
   }
 

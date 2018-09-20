@@ -1,8 +1,8 @@
-'use strict';
+import {
+  add, resolve, repeat, range, flatten,
+} from './utils';
 
-const utils = require('./utils');
-
-module.exports = function reduce(input, context) {
+export default function reduce(input, context) {
   if (!Array.isArray(input)) {
     return input;
   }
@@ -19,7 +19,7 @@ module.exports = function reduce(input, context) {
     }
 
     if (Array.isArray(cur)) {
-      utils.add(prev, cur.map(x => utils.resolve(x, context)));
+      add(prev, cur.map(x => resolve(x, context)));
       return prev;
     }
 
@@ -27,16 +27,16 @@ module.exports = function reduce(input, context) {
       case 'pattern':
       case 'number':
       case 'note':
-        if (cur.repeat) utils.add(prev, utils.repeat(cur.value, cur.repeat));
-        else if (Array.isArray(cur.value)) utils.add(prev, cur.value);
+        if (cur.repeat) add(prev, repeat(cur.value, cur.repeat));
+        else if (Array.isArray(cur.value)) add(prev, cur.value);
         else prev.push(cur.value);
         break;
 
       case 'chord':
       case 'scale':
       case 'progression':
-        if (cur.repeat) utils.add(prev, utils.repeat(cur.value, cur.repeat));
-        else if (cur.unfold) utils.add(prev, cur.value);
+        if (cur.repeat) add(prev, repeat(cur.value, cur.repeat));
+        else if (cur.unfold) add(prev, cur.value);
         else prev.push(cur.value);
 
         if (cur.type !== 'chord') {
@@ -46,18 +46,18 @@ module.exports = function reduce(input, context) {
 
       case 'range':
         if (next.type === 'divide') {
-          utils.add(prev, utils.range(cur.value[0], cur.value[1], next.value));
+          add(prev, range(cur.value[0], cur.value[1], next.value));
           skip = true;
         } else {
-          const value = utils.range(cur.value[0], cur.value[1]);
+          const value = range(cur.value[0], cur.value[1]);
 
           if (next.type === 'multiply') {
-            utils.add(prev, utils.flatten(utils.repeat(value, next.value)));
+            add(prev, flatten(repeat(value, next.value)));
             skip = true;
           } else if (cur.repeat) {
-            utils.add(prev, utils.repeat(value, cur.repeat));
+            add(prev, repeat(value, cur.repeat));
           } else {
-            utils.add(prev, value);
+            add(prev, value);
           }
         }
         break;
@@ -66,7 +66,7 @@ module.exports = function reduce(input, context) {
         return prev.map(x => x / cur.value);
 
       case 'multiply':
-        utils.add(prev, utils.repeat(last, cur.value - 1));
+        add(prev, repeat(last, cur.value - 1));
         break;
 
       case 'slice':
@@ -75,7 +75,7 @@ module.exports = function reduce(input, context) {
       case 'param':
       default: {
         let value = cur.value.indexOf('%') > -1
-          ? utils.resolve(context[cur.value], context)
+          ? resolve(context[cur.value], context)
           : cur.value;
 
         if (value === null) {
@@ -86,26 +86,26 @@ module.exports = function reduce(input, context) {
           value = reduce(value, context);
 
           if (cur.repeat) {
-            utils.add(prev, utils.repeat(value, cur.repeat).reduce((_prev, _cur) => {
-              utils.add(_prev, _cur);
+            add(prev, repeat(value, cur.repeat).reduce((_prev, _cur) => {
+              add(_prev, _cur);
               return _prev;
             }, []));
           } else {
-            utils.add(prev, value);
+            add(prev, value);
           }
 
           return prev;
         }
 
         value = Array.isArray(value)
-          ? value.map(x => utils.resolve(x, context))
+          ? value.map(x => resolve(x, context))
           : [value];
 
-        if (cur.repeat) utils.add(prev, utils.repeat(value, cur.repeat));
-        else utils.add(prev, value);
+        if (cur.repeat) add(prev, repeat(value, cur.repeat));
+        else add(prev, value);
       }
     }
 
     return prev;
   }, []);
-};
+}

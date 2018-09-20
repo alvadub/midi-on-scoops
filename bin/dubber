@@ -5,4 +5,4 @@
 
 'use strict';
 
-require('./midi-cli');
+require('./dubber-cli');

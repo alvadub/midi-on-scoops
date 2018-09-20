@@ -1,12 +1,10 @@
-'use strict';
+export const RE_NORMALIZE = /\W/g;
 
-const RE_NORMALIZE = /\W/g;
-
-function add(obj, args) {
+export function add(obj, args) {
   Array.prototype.push.apply(obj, args);
 }
 
-function range(min, max, step) {
+export function range(min, max, step) {
   const acc = [];
   if (!step) {
     for (let i = min; i <= max; i += 1) {
@@ -23,7 +21,7 @@ function range(min, max, step) {
   return acc;
 }
 
-function repeat(value, times) {
+export function repeat(value, times) {
   const out = [];
 
   while (times) {
@@ -35,7 +33,7 @@ function repeat(value, times) {
   return out;
 }
 
-function resolve(value, context) {
+export function resolve(value, context) {
   if (!value) {
     return null;
   }
@@ -47,7 +45,7 @@ function resolve(value, context) {
   return value;
 }
 
-function merge(target, source) {
+export function merge(target, source) {
   Object.keys(source).forEach(key => {
     if (typeof target[key] === 'undefined') {
       target[key] = source[key];
@@ -57,17 +55,17 @@ function merge(target, source) {
   return target;
 }
 
-function flatten(value) {
+export function flatten(value) {
   return value.reduce((prev, cur) => prev.concat(Array.isArray(cur)
     ? flatten(cur)
     : cur), []);
 }
 
-function normalize(value) {
+export function normalize(value) {
   return value.replace(RE_NORMALIZE, '_');
 }
 
-module.exports = {
+export default {
   add,
   range,
   repeat,

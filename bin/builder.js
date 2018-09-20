@@ -3,7 +3,7 @@ const jsmidgen = require('jsmidgen');
 const fs = require('fs-extra');
 const path = require('path');
 
-const { utils, convert } = require('../dist/dubber.cjs');
+const { utils, convert } = require('../dist/dubr.cjs');
 
 function save(file, data) {
   const output = `${file}.mid`;

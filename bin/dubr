@@ -5,4 +5,4 @@
 
 'use strict';
 
-require('./dubber-cli');
+require('./dubr-cli');

@@ -1,11 +1,11 @@
 {
-  "name": "dubber",
+  "name": "dubr",
   "version": "0.1.0",
-  "main": "dist/dubber.cjs.js",
-  "module": "dist/dubber.es.js",
-  "browser": "dist/dubber.min.js",
+  "main": "dist/dubr.cjs.js",
+  "module": "dist/dubr.es.js",
+  "browser": "dist/dubr.min.js",
   "bin": {
-    "dub": "bin/dubber"
+    "dubr": "bin/dubr"
   },
   "license": "MIT",
   "bili": {

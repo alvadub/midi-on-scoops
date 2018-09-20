@@ -5,7 +5,7 @@ const path = require('path');
 const watch = require('node-watch');
 const spawn = require('child_process').spawn;
 
-const { parse } = require('../dist/dubber.cjs');
+const { parse } = require('../dist/dubr.cjs');
 const builder = require('./builder');
 
 const children = [];

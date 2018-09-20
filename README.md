@@ -27,9 +27,9 @@ Since technology is a good solution because it's already cheap, I would like to 
 
 ## General syntax proposal
 
-Each expression would generate a value or an array of values, sub-expressions are resolved and would produce on or more values, etc.
+Each expression would generate a value or an array of values, sub-expressions are resolved and would produce one or more values, etc.
 
-Once done, all expressions are concatenated into a single array where possible.
+Once declared, all expressions are concatenated into a single array where possible.
 
     # track 1
 

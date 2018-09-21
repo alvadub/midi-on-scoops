@@ -7,7 +7,7 @@
   "module": "dist/midi-on-scoops.es.js",
   "browser": "dist/midi-on-scoops.min.js",
   "bin": {
-    "dubber": "bin/dubber"
+    "dub": "bin/dub"
   },
   "license": "MIT",
   "bili": {

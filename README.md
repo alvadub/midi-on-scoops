@@ -10,7 +10,7 @@ Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping
 
 ## Libraries
 
-- [Scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily.
+- [scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily
 - [jsmidgen](https://github.com/dingram/jsmidgen) for creating the MIDI data on NodeJS, support for browsers is [already done by scribbletune](https://scribbletune.com/documentation/browser/browser-clip)
 
 ## Syntax
@@ -42,43 +42,37 @@ The code above would produce the next scribbletune's settings:
 
 ## Using the CLI
 
-When calling `dubber` it will use `timidity` as default for MIDI playback.
+When calling `dub` it will use `timidity` as default for MIDI playback.
 
-- If you specify a file, it will be loaded an played. E.g. `dubber sample.dub`
-- Opening a directory will watch and play on any changes. E.g. `dubber music/src`
+- If you specify a file, it will be loaded an played. e.g. `dub sample` (`.dub` will be appended if missing)
+- Opening a directory will watch and play on any changes. e.g. `dub music/src/`
 
 Use a different player by appending the arguments:
 
-```bash
-$ dubber music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
-# under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
-```
+    $ dub music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
+    # under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
 
 Try the included examples:
 
-```bash
-$ dubber examples/billy_jean.dub
-$ dubber examples/locks.dub
-$ dubber examples/x.dub
-```
+    $ dub examples/billy_jean.dub
+    $ dub examples/locks.dub
+    $ dub examples/x.dub
 
 ### MIDI Drums
 
 To enable the Drumkit you must use the channel 9, e.g.
 
-```
-@tempo: 90
+    @tempo: 90
 
-# hat
-@channel: 9
+    # hat
+    @channel: 9
 
-notes: f#2
-pattern: xxxx *16
+    notes: f#2
+    pattern: xxxx *16
 
-# snare
-notes: e2
-pattern: [---x][-x] *32
-```
+    # snare
+    notes: e2
+    pattern: [---x][-x] *32
 
 <details>
 <summary>Note/Sound Mappings</summary>
@@ -141,6 +135,17 @@ pattern: [---x][-x] *32
 </details>
 
 ### MIDI Instruments
+
+Those are enabled through the `@instrument` annotation, e.g.
+
+    @tempo: 127
+
+    # skank
+
+    @instrument: 1
+
+    notes: c4|d#4|g4 % % c4|f4|g#4
+    pattern: -x-x *16
 
 <details>
 <summary>Number/Sound</summary>

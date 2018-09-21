@@ -85,7 +85,7 @@ pattern: [---x][-x] *32
 ```
 
 <details>
-<summary>MIDI Sound/Note Mappings</summary>
+<summary>Note/Sound Mappings</summary>
 
 - `d1` &mdash; Heart Bit
 - `d#1` &mdash; Zap
@@ -143,3 +143,27 @@ pattern: [---x][-x] *32
 - `c6` &mdash; Curtain
 
 </details>
+
+### MIDI Instruments
+
+<details>
+<summary>Number/Sound</summary>
+
+- `0-7` &mdash; Piano
+- `8-15` &mdash; Chromatic Percussion
+- `16-23` &mdash; Organ
+- `24-31` &mdash; Guitar
+- `32-39` &mdash; Bass
+- `40-47` &mdash; Strings
+- `48-55` &mdash; Ensemble
+- `56-63` &mdash; Brass
+- `64-71` &mdash; Reed
+- `72-79` &mdash; Pipe
+- `80-87` &mdash; Synth Lead
+- `88-95` &mdash; Synth Pad
+- `96-103` &mdash; Synth Effects
+- `104-111` &mdash; Ethnic
+- `112-119` &mdash; Percussive
+- `120-127` &mdash; Sound Effects
+
+</summary>

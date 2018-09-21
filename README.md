@@ -2,29 +2,18 @@
 
 Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping" approach.
 
-## Problem
-
-I spent lots of time using DAWs just for settings up pet projects, sandboxes, laboratories, etc.
-
-Just having fun and brainstorming is difficult because I don't have enough instruments for playing music.
-
-Since technology is a good solution because it's already cheap, I would like to have a "tool" for writing DUB in text format.
-
-> MVP: I found several forms of composing MIDI on a modern web browser, so I would like to play DUB while on the BUS right on my phone.
+> I spent lots of time using DAWs just for settings up pet projects, sandboxes, laboratories, etc.
+>
+> Just having fun and brainstorming is difficult because I don't have enough instruments for playing music.
+>
+> Since technology is a good solution because it's already cheap, I would like to have a "tool" for writing DUB in text format.
 
 ## Libraries
 
-- [MIDI.js](https://galactic.ink/midi-js/) for all the hardcore-stuff on the web-browser.
-- [MIDI.js Soundfonts](https://github.com/gleitz/midi-js-soundfonts) standard sound-fonts free to use (cc).
 - [Scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily.
+- [jsmidgen](https://github.com/dingram/jsmidgen) for creating the MIDI data on NodeJS, support for browsers is [already done by scribbletune](https://scribbletune.com/documentation/browser/browser-clip)
 
-- [soundfont-player](https://github.com/danigb/soundfont-player) as light-weight alternative to MIDI.js (preferred)
-- [WebAudioFont](https://github.com/surikov/webaudiofont) prerendered sound-fonts for usage with MIDI.js*
-- [Awesome Audio Viz](https://github.com/willianjusten/awesome-audio-visualization) a curated stuff for playing around...
-
-> Web support is not ready yet! PR welcome :)
-
-## General syntax proposal
+## Syntax
 
 Each expression would generate a value or an array of values, sub-expressions are resolved and would produce one or more values, etc.
 
@@ -63,6 +52,14 @@ Use a different player by appending the arguments:
 ```bash
 $ dubber music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
 # under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
+```
+
+Try the included examples:
+
+```bash
+$ dubber examples/billy_jean.dub
+$ dubber examples/locks.dub
+$ dubber examples/x.dub
 ```
 
 ### MIDI Drums
@@ -165,4 +162,4 @@ pattern: [---x][-x] *32
 - `112-119` &mdash; Percussive
 - `120-127` &mdash; Sound Effects
 
-</summary>
+</details>

@@ -1,6 +1,8 @@
 {
   "name": "dubr",
-  "version": "0.1.0",
+  "version": "0.0.0",
+  "description": "MIDI/DAW for the DUB enthusiast!",
+  "author": "Alvaro Cabrera <pateketrueke@gmail.com> (https://soypache.co)",
   "main": "dist/dubr.cjs.js",
   "module": "dist/dubr.es.js",
   "browser": "dist/dubr.min.js",

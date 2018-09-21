@@ -1,5 +1,4 @@
-
-# MIDI on SCOOPS
+# dubr
 
 Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping" approach.
 

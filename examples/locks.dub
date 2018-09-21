@@ -1,0 +1,48 @@
+; Locks - Iration Steppas
+@tempo: 140
+@level: 127
+@bundle
+
+# Drumkit - HATS
+
+@channel: 9
+
+notes: f#2
+pattern: xxxxxxxxxxx[xx]xxxx [xx]xxxxxxxxxxxxxxx *3
+
+# Drumkit - SNARE
+
+@level: 127
+
+notes: c#2
+pattern: --x---x---x-x-x[xx] --x---x---x--[-x]x- *3
+
+# Drumkit - CRASH
+
+notes: a3
+pattern: ----------------x___------------ *2
+
+# Drumkit - KICK
+
+notes: d#1
+pattern: --[xx]---[xx]---[xx]---[xx]- *4
+
+# Skanking
+
+@instrument: 1
+@channel: 0
+@level: 100
+
+%Cm: c4|eb4|g4 %
+%Fm: c4|f4|g#4 %
+
+notes: %Cm %Fm
+pattern: -x-x-x-x-x-x-x-x *4
+
+# Brass
+
+@instrument: 61
+@channel: 1
+
+notes: d#5 d5 c5 a#4 % a4 a#4 a4 g4 c5 d5 d#5
+pattern: --[xx]x[x-][xx][xx]x--x_[xx]--- *4

@@ -1,0 +1,49 @@
+; X (EQUIS) - Nicky Jam x J Balvin
+@tempo: 90
+@level: 90
+@bundle
+
+# skank
+
+@instrument: 0
+@level: 80
+
+%Am: a4|c5|e5
+%Dm: a4|d5|f4
+%Em:  b4|e4|g4
+
+notes: %Am % % % %Dm % % % %Am % % % %Em % % %
+pattern: [--x-][--x-][--x-][--x-][--x-][--x-][--x-][--x-] *16
+
+#synth
+@level: 127
+@channel: 0
+@instrument: 2
+
+%a: b4 c5    a4 b4    c5 d5    a4 b4    b4 c5    a4 b4 a4
+%b: b4 c5    a4 b4    c5 d5    a4 b4    b4 c5    a4 b4 a4 a4 b4
+
+%c: b5 c6    a5 b5    c6 d6    a5 b5    b5 c6    a5 b5 a5
+%d: b5 c6    a5 b5    c6 d6    a5 b5    b5 c6    a5 b5 a5 a5 b5
+
+%x: [[xx__]-[x_][x__]][[xx__]-[x_][x_]][[xx__]-[x_][x__]][[x__]---]
+%y: [[xx__]-[x_][x__]][[xx__]-[x_][x_]][[xx__]-[x_][x__]][[x__]-[x_][x_]]
+
+notes: %a %b %a %a %c %d %c %c
+pattern: ---------------- %x %y %x %x %x %y %x %x
+
+#hat
+@channel: 9
+@level: 127
+
+notes: g#2
+pattern: ---------------- [x--x][-x] *32
+
+#stick
+@level: 115
+notes: a1
+pattern: [x--x][-x] *32
+
+#zap
+notes: d#1
+pattern: [x---][--] *32

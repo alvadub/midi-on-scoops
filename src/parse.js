@@ -33,7 +33,7 @@ export default async function parse(source, importer) {
 
   let currentTrack;
 
-  input.forEach(async (line, i) => {
+  await Promise.all(input.map(async (line, i) => {
     if (!line.trim()) {
       ast.lines.push({
         offset: i,
@@ -186,7 +186,7 @@ export default async function parse(source, importer) {
     }
 
     ast.lines.push(subject);
-  });
+  }));
 
   return ast;
 }

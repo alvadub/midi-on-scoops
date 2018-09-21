@@ -19,6 +19,10 @@ const CLR = '\x1b[K';
 const bin = process.argv.slice(2)[1] || 'timidity';
 const argv = process.argv.slice(4);
 
+function onFail(e) {
+  log(`\n${e.message}\n`);
+}
+
 function exit() {
   children.forEach((child, k) => {
     children.splice(k, 1);
@@ -52,7 +56,7 @@ async function play(name) {
     ast = await parse(read(name), importer);
     code = builder(ast);
   } catch (e) {
-    log(`\n${e.stack}\n`);
+    log(`\n${e.message}\n`);
     return;
   }
 
@@ -128,9 +132,6 @@ async function play(name) {
       return Promise.all(deferred).then(() => {
         log(`\b        ⏏ Stopped playing: ${name}${CLR}\r`);
       });
-    })
-    .catch(e => {
-      log(`\n${e.message}\n`);
     });
 }
 
@@ -146,14 +147,15 @@ setInterval(() => {
 if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
   Promise.resolve()
     .then(() => play(process.argv.slice(2)[0]))
-    .then(() => setTimeout(exit, 100));
+    .then(() => setTimeout(exit, 100))
+    .catch(onFail);
 } else {
   log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
 
   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
     try {
       if (evt === 'update') {
-        process.nextTick(() => play(name));
+        process.nextTick(() => play(name).catch(onFail));
       }
     } catch (e) {
       log(`\n${e.message}\n`);

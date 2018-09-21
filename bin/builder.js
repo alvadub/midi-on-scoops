@@ -88,9 +88,9 @@ function write(tracks, options, fileName) {
       notes.forEach((noteObj, k) => {
         const level = Math.min(Math.min(noteObj.level || 127, settings.level || 127), options.level || 127);
 
-        track.setInstrument(channel, _instrument || 0, _delay);
-
         if (noteObj.note) {
+          track.setInstrument(channel, _instrument || 0, _delay);
+
           if (typeof noteObj.note === 'string') {
             track.noteOn(channel, noteObj.note, noteObj.length, level);
             track.noteOff(channel, noteObj.note, noteObj.length, level);
@@ -100,6 +100,7 @@ function write(tracks, options, fileName) {
         } else if (k === 0) {
           // FIXME: https://github.com/dingram/jsmidgen/issues/22
           // this hack apply volume=1 to avoid added noise...
+          track.setInstrument(channel, 0, _delay);
           track.addNote(channel, '', noteObj.length, 0, 1);
         } else {
           track.noteOff(channel, '', noteObj.length);

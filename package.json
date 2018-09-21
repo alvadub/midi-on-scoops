@@ -1,13 +1,13 @@
 {
-  "name": "dubr",
+  "name": "midi-on-scoops",
   "version": "0.0.0",
   "description": "MIDI/DAW for the DUB enthusiast!",
   "author": "Alvaro Cabrera <pateketrueke@gmail.com> (https://soypache.co)",
-  "main": "dist/dubr.cjs.js",
-  "module": "dist/dubr.es.js",
-  "browser": "dist/dubr.min.js",
+  "main": "dist/midi-on-scoops.cjs.js",
+  "module": "dist/midi-on-scoops.es.js",
+  "browser": "dist/midi-on-scoops.min.js",
   "bin": {
-    "dubr": "bin/dubr"
+    "dubber": "bin/dubber"
   },
   "license": "MIT",
   "bili": {

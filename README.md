@@ -1,4 +1,4 @@
-# dubr
+# MIDI on SCOOPS
 
 Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping" approach.
 
@@ -53,15 +53,15 @@ The code above would produce the next scribbletune's settings:
 
 ## Using the CLI
 
-When calling `midi` it will use `timidity` as default for MIDI playback.
+When calling `dubber` it will use `timidity` as default for MIDI playback.
 
-- If you specify a file, it will be loaded an played. E.g. `midi sample.txt`
-- Opening a directory will watch and play on any changes. E.g. `midi music/src`
+- If you specify a file, it will be loaded an played. E.g. `dubber sample.dub`
+- Opening a directory will watch and play on any changes. E.g. `dubber music/src`
 
 Use a different player by appending the arguments:
 
 ```bash
-$ midi music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
+$ dubber music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
 # under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
 ```
 

@@ -184,7 +184,7 @@ setInterval(() => {
 }, 200);
 
 const command = ['play', 'watch', 'export'].includes(argv._[0])
-  ? argv._[0].shift()
+  ? argv._.shift()
   : 'play';
 
 let sources;
@@ -217,25 +217,31 @@ switch (command) {
     console.log('EXPORT', sources);
     break;
 
-  case 'watch':
-    console.log(sources);
-    //   log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
+  case 'watch': {
+    log(`\b        Watching ${sources.length} source${sources.length === 1 ? '' : 's'} ...${CLR}\r`);
 
-    //   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
-    //     try {
-    //       if (evt === 'update') {
-    //         process.nextTick(() => play(name).catch(onFail));
-    //       }
-    //     } catch (e) {
-    //       log(`\n${e.message}\n`);
-    //     }
+    let timeout;
 
-    //     log(`\b        ${name} changed${CLR}\r`);
-    //   });
+    sources.forEach(src => {
+      watch(src.filepath, { recursive: false, filter: src.isDir ? /\.dub$/ : undefined }, (evt, file) => {
+        try {
+          if (evt === 'update') {
+            clearTimeout(timeout);
+
+            timeout = setTimeout(() => play(file).catch(onFail));
+          }
+        } catch (e) {
+          log(`\n${e.message}\n`);
+        }
+
+        log(`\b        ${path.basename(file)} changed${CLR}\r`);
+      });
+    });
+  }
     break;
 
   case 'play':
-  default: {
+  default:
     tracks = sources.reduce((prev, cur) => {
       if (cur.isDir) {
         fs.readdirSync(cur.filepath)
@@ -250,7 +256,7 @@ switch (command) {
     }, []);
 
     playAll(tracks);
-  }
+    break;
 }
 
 process.on('SIGINT', () => {

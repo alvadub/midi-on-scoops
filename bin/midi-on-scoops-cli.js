@@ -167,6 +167,13 @@ async function play(file) {
     });
 }
 
+function playAll(tracks) {
+  tracks
+    .reduce((prev, cur) => prev.then(() => play(cur)), Promise.resolve())
+    .then(() => setTimeout(exit, 100))
+    .catch(onFail);
+}
+
 let i = 0;
 
 const chars = '\\|/-';
@@ -181,67 +188,70 @@ const command = ['play', 'watch', 'export'].includes(argv._[0])
   : 'play';
 
 let sources;
-let isDir;
+let tracks;
 
 try {
   sources = argv._.map(x => {
-    if (x && x.indexOf('.dub') === -1) {
+    const exists = fs.existsSync(x);
+    const isDir = exists && fs.statSync(x).isDirectory();
+
+    if (isDir) {
+      return {
+        isDir: true,
+        filepath: path.resolve(x),
+      };
+    }
+
+    if (!exists && x.indexOf('.dub') === -1) {
       x = `${x}.dub`;
     }
 
-    return fs.statSync(x).isFile() ? path.resolve(x) : null;
+    return fs.existsSync(x) ? { filepath: path.resolve(x) } : null;
   }).filter(Boolean);
 } catch (e) {
   onFail(e);
 }
 
-if (!sources.length) {
-  sources = argv._.filter(Boolean);
-  isDir = true;
-}
-
-if (isDir && !fs.statSync(sources[0]).isDirectory()) {
-  throw new Error(`Expecting a directory, given '${sources[0]}'`);
-}
-
 switch (command) {
   case 'export':
-    console.log('EXPORT', isDir, sources);
+    console.log('EXPORT', sources);
     break;
 
   case 'watch':
-    console.log('WATCH', isDir, sources);
+    console.log(sources);
+    //   log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
+
+    //   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
+    //     try {
+    //       if (evt === 'update') {
+    //         process.nextTick(() => play(name).catch(onFail));
+    //       }
+    //     } catch (e) {
+    //       log(`\n${e.message}\n`);
+    //     }
+
+    //     log(`\b        ${name} changed${CLR}\r`);
+    //   });
     break;
 
   case 'play':
-  default:
-    Promise.resolve()
-      .then(() => play(sources[0]))
-      .then(() => setTimeout(exit, 100))
-      .catch(onFail);
-    break;
+  default: {
+    tracks = sources.reduce((prev, cur) => {
+      if (cur.isDir) {
+        fs.readdirSync(cur.filepath)
+          .filter(x => x.indexOf('.dub') !== -1)
+          .forEach(x => {
+            prev.push(path.join(cur.filepath, x));
+          });
+      } else {
+        prev.push(cur.filepath);
+      }
+      return prev;
+    }, []);
+
+    playAll(tracks);
+  }
 }
-
-// if (process.argv.slice(2)[0] && process.argv.slice(2)[0].indexOf('.dub') > -1) {
-//   Promise.resolve()
-//     .then(() => play(process.argv.slice(2)[0]))
-//     .then(() => setTimeout(exit, 100))
-//     .catch(onFail);
-// } else {
-//   log(`\b        Watching from: ${musicDir} ...${CLR}\r`);
-
-//   watch(musicDir, { recursive: true, filter: /\.dub$/ }, (evt, name) => {
-//     try {
-//       if (evt === 'update') {
-//         process.nextTick(() => play(name).catch(onFail));
-//       }
-//     } catch (e) {
-//       log(`\n${e.message}\n`);
-//     }
-
-//     log(`\b        ${name} changed${CLR}\r`);
-//   });
-// }
 
 process.on('SIGINT', () => {
   log('\r\r');

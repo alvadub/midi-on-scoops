@@ -6,7 +6,7 @@ const path = require('path');
 const { utils, convert } = require('../dist/midi-on-scoops.cjs');
 
 function save(file, data) {
-  const output = `${file}.mid`;
+  const output = file.replace('.dub', '.mid');
   const baseDir = path.dirname(output);
   const fileName = path.basename(output);
   const filepath = path.join(baseDir, 'output', fileName);
@@ -135,9 +135,9 @@ module.exports = ast => {
   const map = convert(ast);
 
   return {
-    save(songName) {
+    save(fileName) {
       return Promise.resolve()
-        .then(() => write(map, ast.settings, songName));
+        .then(() => write(map, ast.settings, fileName));
     },
   };
 };

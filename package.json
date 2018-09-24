@@ -18,14 +18,7 @@
   "scripts": {
     "build:browser": "bili --target browser --format umd,umd-min --js buble",
     "build:node": "bili --target node --js buble --format es,cjs",
-    "build": "npm run build:browser && npm run build:node",
-    "_dev": "bili --format iife-min --js buble tests/e2e/*.test.js --name sandbox -o docs",
-    "_dev": "jasmine-node spec --coffee --verbose --autoTest --watchFolders lib",
-    "_lint": "eslint bin lib && coffeelint spec",
-    "_spec": "jasmine-node spec --coffee --noStackTrace --captureExceptions",
-    "_cover": "istanbul cover --root lib --x '**/spec/**' -- jasmine-node --coffee spec",
-    "_cover:up": "codecov --file=coverage/lcov.info --disable=gcov -e TRAVIS_NODE_VERSION",
-    "_test": "npm run lint && npm run spec"
+    "build": "npm run build:browser && npm run build:node"
   },
   "devDependencies": {
     "bili": "^3.1.2",
@@ -39,6 +32,7 @@
     "fs-extra": "^7.0.0",
     "jsmidgen": "^0.1.5",
     "node-watch": "^0.5.5",
-    "scribbletune": "^1.5.0"
+    "scribbletune": "^1.5.0",
+    "wargs": "^0.8.1"
   }
 }

@@ -35,7 +35,7 @@ pattern: [xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx] *2
 
 #drums - kick intro
 @level: 127
-notes: d3
+notes: b1
 pattern: x-x-x-x-x-x-x-x- *4
 
 #drums - hat song

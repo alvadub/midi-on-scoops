@@ -5,18 +5,15 @@ const path = require('path');
 
 const { utils, convert } = require('../dist/midi-on-scoops.cjs');
 
-function save(file, data, tmp) {
-  const output = file.replace('.dub', '.mid');
-  const baseDir = path.dirname(output);
-  const fileName = path.basename(output);
-  const filepath = path.join(baseDir, tmp, 'output', fileName);
+function save(file, data) {
+  const out = `${file}.mid`;
 
-  fs.outputFileSync(filepath, data, 'binary');
+  fs.outputFileSync(out, data.toBytes(), 'binary');
 
-  return filepath;
+  return out;
 }
 
-function write(tracks, options, fileName, outputDir) {
+function write(tracks, options, fileName, outputDir, outputBundle) {
   options = options || {};
 
   const unique = Object.keys(tracks).reduce((prev, cur) => {
@@ -26,7 +23,7 @@ function write(tracks, options, fileName, outputDir) {
     return prev;
   }, []);
 
-  const bundle = options.bundle
+  const bundle = outputBundle || options.bundle
     ? new jsmidgen.File()
     : null;
 
@@ -43,11 +40,12 @@ function write(tracks, options, fileName, outputDir) {
     const _tracks = [];
 
     function saveTrack(suffix) {
-      const output = path.join(fileName,
+      const output = path.join(path.dirname(fileName), outputDir,
+        path.basename(fileName).replace('.dub', ''),
         `${utils.normalize(name)}${suffix ? `_${suffix}` : ''}`);
 
       files.push({
-        filepath: save(output, file.toBytes(), outputDir),
+        filepath: save(output, file),
         settings: _tracks.reduce((prev, cur) => utils.merge(prev, cur), {}),
       });
     }
@@ -122,8 +120,11 @@ function write(tracks, options, fileName, outputDir) {
   });
 
   if (bundle) {
+    const file = path.join(path.dirname(fileName), outputDir,
+      path.basename(fileName).replace('.dub', ''));
+
     files.unshift({
-      filepath: save(fileName, bundle.toBytes(), outputDir),
+      filepath: save(file, bundle),
       settings: options,
     });
   }
@@ -135,9 +136,9 @@ module.exports = ast => {
   const map = convert(ast);
 
   return {
-    save(fileName, outputDir) {
+    save(fileName, outputDir, outputBundle) {
       return Promise.resolve()
-        .then(() => write(map, ast.settings, fileName, outputDir));
+        .then(() => write(map, ast.settings, fileName, outputDir, outputBundle));
     },
   };
 };

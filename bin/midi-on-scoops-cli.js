@@ -119,10 +119,10 @@ async function play(file) {
     _bin = playback[0];
   }
 
-  return code.save(file, argv.flags.output || 'generated')
+  return code.save(file, argv.flags.output || 'generated', argv.flags.bundle || ast.settings.bundle)
     .then(destFiles => {
       const deferred = [];
-      if (ast.settings.bundle) {
+      if (argv.flags.bundle || ast.settings.bundle) {
         destFiles.splice(1, destFiles.length);
       }
 

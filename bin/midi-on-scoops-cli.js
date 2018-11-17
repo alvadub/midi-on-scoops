@@ -45,6 +45,7 @@ if (!argv._.length || argv.flags.help) {
 
 const log = msg => process.stdout.write(msg);
 
+const keychars = [];
 const prefix = '♫';
 const CLR = '\x1b[K';
 
@@ -55,6 +56,7 @@ const playback = !argv.raw.length
 let isPaused;
 let sources;
 let tracks;
+let msg;
 
 function onFail(e) {
   log(`\n${e.message}\n`);
@@ -82,10 +84,15 @@ function read(name) {
   return fs.readFileSync(file).toString();
 }
 
+function search(message) {
+  msg = message;
+  return message;
+}
+
 async function play(file, isExport) {
   const name = path.basename(file);
 
-  log(`\b        ${isExport ? 'Exporting' : 'Loading'} ${name} ...${CLR}\r`);
+  log(search(`\b        ${isExport ? 'Exporting' : 'Loading'} ${name} ...${CLR}\r`));
 
   let ast;
   let code;
@@ -105,7 +112,7 @@ async function play(file, isExport) {
 
     if (ast.settings.pause) {
       setTimeout(() => {
-        log(`\b        ❚❚ Pause: ${name}${CLR}\r`);
+        log(search(`\b        ❚❚ Pause: ${name}${CLR}\r`));
       }, 100);
       return;
     }
@@ -172,23 +179,47 @@ async function play(file, isExport) {
       });
 
       process.nextTick(() => {
-        log(`\b        ► Playing: ${name} (${destFiles.length} track${
+        log(search(`\b        ► Playing: ${name} (${destFiles.length} track${
           destFiles.length === 1 ? '' : 's'
         }${_length !== destFiles.length ? `, ${_length} clip${
           _length === 1 ? '' : 's'
-        }` : ''})${CLR}\r`);
+        }` : ''}) ...${CLR}\r`));
       });
 
       return Promise.all(deferred).then(() => {
-        log(`\b        ${isPaused ? '❚❚ Paused' : '⏏ Stopped'} playing: ${name}${CLR}\r`);
+        log(search(`\b        ${isPaused ? '❚❚ Paused' : '⏏ Stopped'} playing: ${name} ...${CLR}\r`));
       });
     });
 }
 
 function playAll(isExport) {
-  return tracks
+  return (tracks || [])
     .reduce((prev, cur) => prev.then(() => play(cur, isExport)), Promise.resolve())
     .catch(onFail);
+}
+
+function lookup(value) {
+  tracks = sources.reduce((prev, cur) => {
+    if (cur.isDir) {
+      const found = fs.readdirSync(cur.filepath)
+        .filter(x => x.includes('.dub') && x.includes(value))[0];
+
+      if (found) {
+        prev.push(path.join(cur.filepath, found));
+      }
+    } else if (path.basename(cur.filepath).includes(value)) {
+      prev.push(cur.filepath);
+    }
+
+    return prev;
+  }, []);
+
+  killAll();
+
+  setTimeout(() => {
+    keychars.splice(0, keychars.length);
+    playAll();
+  }, 100);
 }
 
 let i = 0;
@@ -196,9 +227,15 @@ let i = 0;
 const chars = '\\|/-';
 
 setInterval(() => {
+  if (msg) {
+    log(msg.replace('...', keychars.length
+      ? `... (search: ${keychars.join('')})`
+      : '...'));
+  }
+
   log(`\b${chars[i % chars.length]} ( ${prefix} )\r`);
   i += 1;
-}, 200);
+}, 100);
 
 const command = ['play', 'watch', 'export'].includes(argv._[0])
   ? argv._.shift()
@@ -208,7 +245,7 @@ if (['watch', 'play'].includes(command) || !argv._.length) {
   keypress(process.stdin);
 
   process.stdin.on('keypress', (ch, key) => {
-    if (key && key.name === 'space') {
+    if (key && (key.name === 'space' || key.name === 'tab')) {
       if (!isPaused) {
         isPaused = true;
         killAll();
@@ -216,11 +253,17 @@ if (['watch', 'play'].includes(command) || !argv._.length) {
         isPaused = false;
         playAll();
       }
-    }
-
-    if (key && key.ctrl && key.name === 'c') {
+    } else if (key && key.ctrl && key.name === 'c') {
       process.stdin.pause();
       exit();
+    } else if (key && key.name === 'return') {
+      lookup(keychars.join(''));
+    } else if (key && key.name === 'escape') {
+      keychars.splice(0, keychars.length);
+    } else if (key && key.name === 'backspace') {
+      keychars.pop();
+    } else if (key) {
+      keychars.push(key.sequence);
     }
   });
 
@@ -258,7 +301,7 @@ try {
 
 switch (command) {
   case 'watch': {
-    log(`\b        Watching ${sources.length} source${sources.length === 1 ? '' : 's'} ...${CLR}\r`);
+    log(search(`\b        Watching ${sources.length} source${sources.length === 1 ? '' : 's'} ...${CLR}\r`));
 
     let timeout;
 
@@ -280,7 +323,7 @@ switch (command) {
           log(`\n${e.message}\n`);
         }
 
-        log(`\b        ${path.basename(file)} changed${CLR}\r`);
+        log(search(`\b        ${path.basename(file)} changed ...${CLR}\r`));
       });
     });
   }

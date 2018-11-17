@@ -49,10 +49,15 @@ const keychars = [];
 const prefix = '♫';
 const CLR = '\x1b[K';
 
+const command = ['play', 'watch', 'export'].includes(argv._[0])
+  ? argv._.shift()
+  : 'play';
+
 const playback = !argv.raw.length
   ? ['timidity']
   : argv.raw;
 
+let isStopped;
 let isPaused;
 let sources;
 let tracks;
@@ -69,7 +74,9 @@ function killAll() {
 
 function exit() {
   killAll();
-  process.exit(1);
+  setTimeout(() => {
+    process.exit(1);
+  }, 200);
 }
 
 function read(name) {
@@ -193,9 +200,19 @@ async function play(file, isExport) {
 }
 
 function playAll(isExport) {
+  isStopped = false;
+
   return (tracks || [])
     .reduce((prev, cur) => prev.then(() => play(cur, isExport)), Promise.resolve())
     .catch(onFail);
+}
+
+function onClose() {
+  if (!isPaused && command !== 'watch') {
+    process.nextTick(exit);
+  }
+
+  isStopped = true;
 }
 
 function lookup(value) {
@@ -218,7 +235,7 @@ function lookup(value) {
 
   setTimeout(() => {
     keychars.splice(0, keychars.length);
-    playAll();
+    playAll().then(onClose);
   }, 100);
 }
 
@@ -237,21 +254,17 @@ setInterval(() => {
   i += 1;
 }, 100);
 
-const command = ['play', 'watch', 'export'].includes(argv._[0])
-  ? argv._.shift()
-  : 'play';
-
 if (['watch', 'play'].includes(command) || !argv._.length) {
   keypress(process.stdin);
 
   process.stdin.on('keypress', (ch, key) => {
     if (key && (key.name === 'space' || key.name === 'tab')) {
-      if (!isPaused) {
+      if (!isPaused && !isStopped) {
         isPaused = true;
         killAll();
       } else {
         isPaused = false;
-        playAll();
+        playAll().then(onClose);
       }
     } else if (key && key.ctrl && key.name === 'c') {
       process.stdin.pause();
@@ -269,12 +282,6 @@ if (['watch', 'play'].includes(command) || !argv._.length) {
 
   process.stdin.setRawMode(true);
   process.stdin.resume();
-}
-
-function onClose() {
-  if (!isPaused) {
-    process.nextTick(exit);
-  }
 }
 
 try {

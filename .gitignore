@@ -2,6 +2,7 @@
 *.log
 *.mid
 *.midi
+/dist
 /build
 /external
 /coverage

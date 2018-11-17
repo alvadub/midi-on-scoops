@@ -5,7 +5,6 @@
   "author": "Alvaro Cabrera <pateketrueke@gmail.com> (https://soypache.co)",
   "main": "dist/midi-on-scoops.cjs.js",
   "module": "dist/midi-on-scoops.es.js",
-  "browser": "dist/midi-on-scoops.min.js",
   "bin": {
     "dub": "bin/dub"
   },
@@ -16,14 +15,12 @@
     ]
   },
   "scripts": {
-    "build:browser": "bili --target browser --format umd,umd-min --js buble",
     "build:node": "bili --target node --js buble --format es,cjs",
-    "build": "npm run build:browser && npm run build:node"
+    "build": "npm run build:node"
   },
   "devDependencies": {
     "bili": "^3.1.2",
     "codecov": "^3.1.0",
-    "coffeelint": "^2.1.0",
     "eslint": "^5.6.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0"

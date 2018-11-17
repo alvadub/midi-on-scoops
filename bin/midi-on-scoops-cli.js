@@ -19,14 +19,13 @@ const argv = wargs(process.argv.slice(2), {
 
 const USAGE_INFO = `
 Usage:
-  dub                # Interactive REPL
   dub play [...]     # Play one or more .dub sources
   dub watch [...]    # Watch on *.dub files or directories
   dub export [...]   # Save sources as one or more .midi files
 
 Options:
-      --bundle       # Export tracks as a single .midi file
-      --output       # Directory for exported .midi files  (default: generated)
+  -b, --bundle       # Export tracks as a single .midi file
+  -o, --output       # Directory for exported .midi files  (default: generated)
 
 Additional args after -- will set the default playback arguments, e.g.
   dub play track -- fluidsynth -i --gain 2 Unison.sf2

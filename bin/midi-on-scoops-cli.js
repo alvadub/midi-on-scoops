@@ -78,10 +78,10 @@ function read(name) {
   return fs.readFileSync(file).toString();
 }
 
-async function play(file) {
+async function play(file, isExport) {
   const name = path.basename(file);
 
-  log(`\b        Loading ${name} ...${CLR}\r`);
+  log(`\b        ${isExport ? 'Exporting' : 'Loading'} ${name} ...${CLR}\r`);
 
   let ast;
   let code;
@@ -96,16 +96,18 @@ async function play(file) {
     return;
   }
 
-  children.splice(0, children.length)
-    .forEach(child => {
-      child.kill('SIGINT');
-    });
+  if (!isExport) {
+    children.splice(0, children.length)
+      .forEach(child => {
+        child.kill('SIGINT');
+      });
 
-  if (ast.settings.pause) {
-    setTimeout(() => {
-      log(`\b        ❚❚ Pause: ${name}${CLR}\r`);
-    }, 100);
-    return;
+    if (ast.settings.pause) {
+      setTimeout(() => {
+        log(`\b        ❚❚ Pause: ${name}${CLR}\r`);
+      }, 100);
+      return;
+    }
   }
 
   let _bin;
@@ -121,10 +123,25 @@ async function play(file) {
 
   return code.save(file, argv.flags.output || 'generated', argv.flags.bundle || ast.settings.bundle)
     .then(destFiles => {
-      const deferred = [];
+      const _length = Object.keys(ast.tracks).length;
+
+      if (isExport) {
+        process.nextTick(() => {
+          log(`\b        ☉ Exported: ${name} (${destFiles.length} track${
+            destFiles.length === 1 ? '' : 's'
+          }${_length !== destFiles.length ? `, ${_length} clip${
+            _length === 1 ? '' : 's'
+          }` : ''})${CLR}\r\n`);
+          process.exit(0);
+        });
+        return;
+      }
+
       if (argv.flags.bundle || ast.settings.bundle) {
         destFiles.splice(1, destFiles.length);
       }
+
+      const deferred = [];
 
       destFiles.forEach(midi => {
         let cmd = [_bin].concat(_argv);
@@ -153,8 +170,6 @@ async function play(file) {
         }));
       });
 
-      const _length = Object.keys(ast.tracks).length;
-
       process.nextTick(() => {
         log(`\b        ► Playing: ${name} (${destFiles.length} track${
           destFiles.length === 1 ? '' : 's'
@@ -169,9 +184,9 @@ async function play(file) {
     });
 }
 
-function playAll(tracks) {
+function playAll(tracks, isExport) {
   tracks
-    .reduce((prev, cur) => prev.then(() => play(cur)), Promise.resolve())
+    .reduce((prev, cur) => prev.then(() => play(cur, isExport)), Promise.resolve())
     .then(() => setTimeout(exit, 100))
     .catch(onFail);
 }
@@ -215,10 +230,6 @@ try {
 }
 
 switch (command) {
-  case 'export':
-    console.log('EXPORT', sources);
-    break;
-
   case 'watch': {
     log(`\b        Watching ${sources.length} source${sources.length === 1 ? '' : 's'} ...${CLR}\r`);
 
@@ -242,6 +253,8 @@ switch (command) {
   }
     break;
 
+
+  case 'export':
   case 'play':
   default:
     tracks = sources.reduce((prev, cur) => {
@@ -257,7 +270,7 @@ switch (command) {
       return prev;
     }, []);
 
-    playAll(tracks);
+    playAll(tracks, command === 'export');
     break;
 }
 

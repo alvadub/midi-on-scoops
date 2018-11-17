@@ -13,6 +13,7 @@ const children = [];
 const argv = wargs(process.argv.slice(2), {
   boolean: 'b',
   alias: {
+    o: 'output',
     b: 'bundle',
   },
 });
@@ -26,6 +27,7 @@ Usage:
 
 Options:
       --bundle       # Export tracks as a single .midi file
+      --output       # Directory for exported .midi files  (default: generated)
 
 Additional args after -- will set the default playback arguments, e.g.
   dub play track -- fluidsynth -i --gain 2 Unison.sf2
@@ -33,7 +35,7 @@ Additional args after -- will set the default playback arguments, e.g.
 Examples:
   dub play examples/billy_jean
   dub watch path/to/music
-  dub export -b src/*.dub
+  dub export -b src/*.dub -o sample
 
 `;
 
@@ -117,7 +119,7 @@ async function play(file) {
     _bin = playback[0];
   }
 
-  return code.save(file)
+  return code.save(file, argv.flags.output || 'generated')
     .then(destFiles => {
       const deferred = [];
       if (ast.settings.bundle) {

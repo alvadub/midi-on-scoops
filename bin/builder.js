@@ -5,18 +5,18 @@ const path = require('path');
 
 const { utils, convert } = require('../dist/midi-on-scoops.cjs');
 
-function save(file, data) {
+function save(file, data, tmp) {
   const output = file.replace('.dub', '.mid');
   const baseDir = path.dirname(output);
   const fileName = path.basename(output);
-  const filepath = path.join(baseDir, 'output', fileName);
+  const filepath = path.join(baseDir, tmp, 'output', fileName);
 
   fs.outputFileSync(filepath, data, 'binary');
 
   return filepath;
 }
 
-function write(tracks, options, fileName) {
+function write(tracks, options, fileName, outputDir) {
   options = options || {};
 
   const unique = Object.keys(tracks).reduce((prev, cur) => {
@@ -47,7 +47,7 @@ function write(tracks, options, fileName) {
         `${utils.normalize(name)}${suffix ? `_${suffix}` : ''}`);
 
       files.push({
-        filepath: save(output, file.toBytes()),
+        filepath: save(output, file.toBytes(), outputDir),
         settings: _tracks.reduce((prev, cur) => utils.merge(prev, cur), {}),
       });
     }
@@ -99,7 +99,7 @@ function write(tracks, options, fileName) {
           }
         } else if (k === 0) {
           // FIXME: https://github.com/dingram/jsmidgen/issues/22
-          // this hack apply volume=1 to avoid added noise...
+          // this hack apply volume=1 to "avoid" added noise...
           track.setInstrument(channel, 0, _delay);
           track.addNote(channel, '', noteObj.length, 0, 1);
         } else {
@@ -123,7 +123,7 @@ function write(tracks, options, fileName) {
 
   if (bundle) {
     files.unshift({
-      filepath: save(fileName, bundle.toBytes()),
+      filepath: save(fileName, bundle.toBytes(), outputDir),
       settings: options,
     });
   }
@@ -135,9 +135,9 @@ module.exports = ast => {
   const map = convert(ast);
 
   return {
-    save(fileName) {
+    save(fileName, outputDir) {
       return Promise.resolve()
-        .then(() => write(map, ast.settings, fileName));
+        .then(() => write(map, ast.settings, fileName, outputDir));
     },
   };
 };

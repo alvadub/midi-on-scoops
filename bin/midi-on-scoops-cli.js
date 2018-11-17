@@ -1,9 +1,8 @@
-'use strict';
-
 const fs = require('fs');
 const path = require('path');
 const wargs = require('wargs');
 const watch = require('node-watch');
+const keypress = require('keypress');
 const spawn = require('child_process').spawn;
 
 const { parse } = require('../dist/midi-on-scoops.cjs');
@@ -53,21 +52,26 @@ const playback = !argv.raw.length
   ? ['timidity']
   : argv.raw;
 
+let isPaused;
+let sources;
+let tracks;
+
 function onFail(e) {
   log(`\n${e.message}\n`);
 }
 
-function exit() {
-  children.forEach((child, k) => {
-    children.splice(k, 1);
-    child.kill('SIGINT');
-  });
+function killAll() {
+  children.splice(0, children.length)
+    .map(child => child.kill('SIGINT'));
+}
 
+function exit() {
+  killAll();
   process.exit(1);
 }
 
 function read(name) {
-  const file = name.indexOf('.dub') === -1
+  const file = !name.includes('.dub')
     ? `${name}.dub`
     : name;
 
@@ -97,10 +101,7 @@ async function play(file, isExport) {
   }
 
   if (!isExport) {
-    children.splice(0, children.length)
-      .forEach(child => {
-        child.kill('SIGINT');
-      });
+    killAll();
 
     if (ast.settings.pause) {
       setTimeout(() => {
@@ -179,15 +180,14 @@ async function play(file, isExport) {
       });
 
       return Promise.all(deferred).then(() => {
-        log(`\b        ⏏ Stopped playing: ${name}${CLR}\r`);
+        log(`\b        ${isPaused ? '❚❚ Paused' : '⏏ Stopped'} playing: ${name}${CLR}\r`);
       });
     });
 }
 
-function playAll(tracks, isExport) {
-  tracks
+function playAll(isExport) {
+  return tracks
     .reduce((prev, cur) => prev.then(() => play(cur, isExport)), Promise.resolve())
-    .then(() => setTimeout(exit, 100))
     .catch(onFail);
 }
 
@@ -204,8 +204,35 @@ const command = ['play', 'watch', 'export'].includes(argv._[0])
   ? argv._.shift()
   : 'play';
 
-let sources;
-let tracks;
+if (['watch', 'play'].includes(command) || !argv._.length) {
+  keypress(process.stdin);
+
+  process.stdin.on('keypress', (ch, key) => {
+    if (key && key.name === 'space') {
+      if (!isPaused) {
+        isPaused = true;
+        killAll();
+      } else {
+        isPaused = false;
+        playAll();
+      }
+    }
+
+    if (key && key.ctrl && key.name === 'c') {
+      process.stdin.pause();
+      exit();
+    }
+  });
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+}
+
+function onClose() {
+  if (!isPaused) {
+    process.nextTick(exit);
+  }
+}
 
 try {
   sources = argv._.map(x => {
@@ -219,7 +246,7 @@ try {
       };
     }
 
-    if (!exists && x.indexOf('.dub') === -1) {
+    if (!exists && !x.includes('.dub')) {
       x = `${x}.dub`;
     }
 
@@ -241,6 +268,12 @@ switch (command) {
           if (evt === 'update') {
             clearTimeout(timeout);
 
+            tracks = tracks || [];
+
+            if (!tracks.includes(file)) {
+              tracks.push(file);
+            }
+
             timeout = setTimeout(() => play(file).catch(onFail));
           }
         } catch (e) {
@@ -260,7 +293,7 @@ switch (command) {
     tracks = sources.reduce((prev, cur) => {
       if (cur.isDir) {
         fs.readdirSync(cur.filepath)
-          .filter(x => x.indexOf('.dub') !== -1)
+          .filter(x => x.includes('.dub'))
           .forEach(x => {
             prev.push(path.join(cur.filepath, x));
           });
@@ -270,7 +303,7 @@ switch (command) {
       return prev;
     }, []);
 
-    playAll(tracks, command === 'export');
+    playAll(command === 'export').then(onClose);
     break;
 }
 

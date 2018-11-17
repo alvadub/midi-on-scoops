@@ -28,6 +28,7 @@
   "dependencies": {
     "fs-extra": "^7.0.0",
     "jsmidgen": "^0.1.5",
+    "keypress": "^0.2.1",
     "node-watch": "^0.5.5",
     "scribbletune": "^1.5.0",
     "wargs": "^0.8.1"

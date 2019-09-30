@@ -13,7 +13,7 @@
 %Em:  b4|e4|g4
 
 notes: %Am % % % %Dm % % % %Am % % % %Em % % %
-pattern: [--x-][--x-][--x-][--x-][--x-][--x-][--x-][--x-] *16
+pattern: [--x-][--x-][--x-][--x-][--x-][--x-][--x-][--x-] *10
 
 #synth
 @level: 127

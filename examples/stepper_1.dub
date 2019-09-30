@@ -1,0 +1,46 @@
+@tempo: 140
+@level: 90
+@bundle
+
+#hat
+@channel: 9
+@level: 127
+
+notes: g#2
+pattern: xxxxxxx[xx] *16
+
+#cabasa
+notes: a#5 % a4
+pattern: [xx]x_----- *16
+
+#snare
+@level: 60
+notes: d#1
+pattern: [xx]---[xx]--- *16
+
+;#stick
+;@level: 115
+;notes: d5|a5
+;pattern: --x- *32
+
+#crash
+notes: c#3
+pattern: ----------------x--------------- *4
+
+#skank
+@instrument: 1
+@channel: 0
+@level: 90
+
+%Em: e4|g4|b4
+%Am: e4|a4|c5
+
+notes: %Em % %Am %
+pattern: [----][x---][----][x---] *16
+
+;#brass
+;@instrument: 61
+;@channel: 1
+;
+;notes: e4 % % %
+;pattern: [[x_][x_]][[x_]-]------ *32

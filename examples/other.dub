@@ -1,0 +1,11 @@
+# track 1
+
+@tempo: 400
+@instrument: 1
+
+%sequence: x--- *16
+%range: 10..120 /11
+
+notes: c3 d3
+pattern: %sequence
+accentMap: 5 %range 127x3

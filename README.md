@@ -8,6 +8,8 @@ Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping
 >
 > Since technology is a good solution because it's already cheap, I would like to have a "tool" for writing DUB in text format.
 
+> TODO: About `FIXME` in [builder.js](bin/builder.js).
+
 ## Libraries
 
 - [scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily

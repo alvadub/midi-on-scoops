@@ -1,0 +1,23 @@
+# scales
+
+%a: C4 phrygian.. ++ I I III IV
+
+notes: %a %a
+pattern: -x-x *8
+
+# drumkit - zap
+
+@channel: 9
+
+notes: d#1
+pattern: [xx]-[xx]- *8
+
+# drumkit - clap
+
+notes: d2
+pattern: -x-x *8
+
+# drumkit - hat
+
+notes: f#2
+pattern: [xx][xx][xx][xx] *8

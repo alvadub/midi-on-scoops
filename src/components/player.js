@@ -73,10 +73,10 @@ export default class Player {
             // FIXME: adjust volumes
             if (Array.isArray(chunk)) {
               chunk.forEach(tone => {
-                notes.push([track[0], tone, .05]);
+                notes.push([track[0], tone, 1/16]);
               });
             } else if (typeof chunk === 'number') {
-              notes.push([track[0], chunk, .05]);
+              notes.push([track[0], chunk, 1/16]);
             }
           }
         }
@@ -149,9 +149,9 @@ export default class Player {
     if (window[info.variable]) {
       const pitch = window[info.variable].zones[0].keyRangeLow;
       const volume = this.volumeDrumAdjust(drum);
-      const duration = 0.01; // FIXME: adjust this one
 
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, duration, volume);
+      // FIXME: adjust this one
+      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1/16, volume);
     } else {
       this.cacheDrum(drum);
     }

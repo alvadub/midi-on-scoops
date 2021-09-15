@@ -11,6 +11,7 @@ pattern: x-x_-xx_ *4
 `.trim();
 
   let ast = null;
+  console.log(42)
   onMount(async () => {
     try {
       console.log(text);

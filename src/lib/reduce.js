@@ -8,7 +8,6 @@ export default function reduce(input, context) {
   }
 
   let skip;
-
   return input.reduce((prev, cur, i) => {
     const last = prev[prev.length - 1];
     const next = input[i + 1] || {};
@@ -75,7 +74,7 @@ export default function reduce(input, context) {
       case 'param':
       default: {
         let value = cur.value.indexOf('%') > -1
-          ? resolve(context[cur.value], context)
+          ? context[cur.value]
           : cur.value;
 
         if (value === null) {

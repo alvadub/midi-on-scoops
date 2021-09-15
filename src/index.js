@@ -1,13 +1,5 @@
-import convert from './convert';
-import parse from './parse';
-import reduce from './reduce';
-import tokenize from './tokenize';
-import utils from './utils';
+import App from './components/Editor.svelte';
 
-export default {
-  convert,
-  parse,
-  reduce,
-  tokenize,
-  utils,
-};
+const app = new App({ target: document.body });
+
+export default app;

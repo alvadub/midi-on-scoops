@@ -1,9 +1,7 @@
-const scribble = require('scribbletune');
+import utils from './utils';
+import reduce from './reduce';
 
-const utils = require('./utils');
-const reduce = require('./reduce');
-
-module.exports = (ast, samples) => {
+module.exports = function convert(ast, samples) {
   const map = {};
 
   Object.keys(ast.tracks).forEach(key => {
@@ -23,7 +21,7 @@ module.exports = (ast, samples) => {
     let output;
 
     try {
-      output = scribble.clip({
+      output = this.scribble.clip({
         samples: samples && samples[options.samples],
         synth: options.synth,
         ...clip,

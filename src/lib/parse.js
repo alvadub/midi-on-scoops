@@ -122,7 +122,7 @@ export default async function parse(source, importer) {
       let value;
 
       try {
-        value = tokenize(left.substr(name.length + 1).trim());
+        value = tokenize.call(this, left.substr(name.length + 1).trim());
       } catch (e) {
         throw new Error(`Invalid expression at line ${i + 1}. ${e.message}`);
       }
@@ -173,7 +173,7 @@ export default async function parse(source, importer) {
       }
 
       try {
-        subject.input = tokenize(left.substr(prefix + 1).trim());
+        subject.input = tokenize.call(this, left.substr(prefix + 1).trim());
       } catch (e) {
         throw new Error(`Invalid expression at line ${i + 1}. ${e.message}`);
       }

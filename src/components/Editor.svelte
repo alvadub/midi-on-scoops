@@ -116,7 +116,7 @@
           const steps = token.pattern.map(x => (x === 'x' ? 127 : 0));
           const notes = encode(token.notes || []);
 
-          midi.push([kind.substr(1), ...steps, ...notes]);
+          midi.push([parseInt(kind.substr(1), 10), ...steps, ...notes]);
         }
       });
     });

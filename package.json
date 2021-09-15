@@ -3,34 +3,50 @@
   "version": "0.0.0",
   "description": "MIDI/DAW for the DUB enthusiast!",
   "author": "Alvaro Cabrera <pateketrueke@gmail.com> (https://soypache.co)",
-  "main": "dist/midi-on-scoops.cjs.js",
-  "module": "dist/midi-on-scoops.es.js",
+  "_main": "dist/midi-on-scoops.cjs.js",
+  "_module": "dist/midi-on-scoops.es.js",
   "bin": {
     "dub": "bin/dub"
   },
   "license": "MIT",
-  "bili": {
-    "external": [
-      "scribbletune"
-    ]
-  },
   "scripts": {
-    "build:node": "bili --target node --js buble --format es,cjs",
-    "build": "npm run build:node"
+    "dev": "npm run build -- -w",
+    "dist": "npm run build -- -q",
+    "check": "eslint 'src/**/*.{js,pug,svelte}'",
+    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -Nscribbletune -p8081"
+  },
+  "mortero": {
+    "bundle": [
+      "**/index.js"
+    ],
+    "rename": [
+      "src/**:{filepath/1}"
+    ],
+    "options": {
+      "less": {
+        "plugins": [
+          "less-plugin-autoprefix"
+        ]
+      }
+    }
   },
   "devDependencies": {
-    "bili": "^3.1.2",
     "codecov": "^3.7.1",
-    "eslint": "^5.6.0",
-    "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-import": "^2.14.0"
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.14.0",
+    "less": "^4.1.1",
+    "less-plugin-autoprefix": "^2.0.0",
+    "mortero": "0.0.45",
+    "pug": "^3.0.2",
+    "svelte": "^3.42.5"
   },
   "dependencies": {
-    "fs-extra": "^7.0.0",
+    "fs-extra": "^10.0.0",
     "jsmidgen": "^0.1.5",
     "keypress": "^0.2.1",
-    "node-watch": "^0.5.5",
-    "scribbletune": "^1.5.0",
-    "wargs": "^0.8.1"
+    "node-watch": "^0.7.1",
+    "scribbletune": "^4.1.1",
+    "wargs": "^0.9.5"
   }
 }

@@ -2,6 +2,8 @@
 *.log
 *.mid
 *.midi
+cache.json
+.DS_Store
 /dist
 /build
 /external

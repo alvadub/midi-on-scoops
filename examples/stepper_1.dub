@@ -18,10 +18,10 @@ pattern: [xx]x_----- *16
 notes: d#1
 pattern: [xx]---[xx]--- *16
 
-;#stick
-;@level: 115
-;notes: d5|a5
-;pattern: --x- *32
+#stick
+@level: 115
+notes: d5|a5
+pattern: --x- *32
 
 #crash
 notes: c#3
@@ -38,9 +38,9 @@ pattern: ----------------x--------------- *4
 notes: %Em % %Am %
 pattern: [----][x---][----][x---] *16
 
-;#brass
-;@instrument: 61
-;@channel: 1
-;
-;notes: e4 % % %
-;pattern: [[x_][x_]][[x_]-]------ *32
+#brass
+@instrument: 61
+@channel: 1
+
+notes: e4 % % %
+pattern: [[x_][x_]][[x______]-]x_ *32

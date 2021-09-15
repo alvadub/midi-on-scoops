@@ -31,8 +31,8 @@ export default class Player {
   preloadSounds() {
     this.tracks.forEach(idx => {
       try {
-        if (idx[0].charAt() === '!') this.cacheDrum(idx[0].substr(1));
-        else this.cacheInstrument(idx[0]);
+        if (idx.length > (this.bars + 1)) this.cacheInstrument(idx[0]);
+        else this.cacheDrum(idx[0]);
       } catch (e) {
         console.log('SKIP', e);
       }
@@ -66,8 +66,7 @@ export default class Player {
 
       this.tracks.forEach((track, k) => {
         if (track[i]) {
-          if (track[0].charAt() === '!') drums.push(track[0].substr(1));
-          else {
+          if (track.length > (this.bars + 1)) {
             const chunk = clips[k].shift();
 
             // FIXME: adjust volumes
@@ -78,7 +77,7 @@ export default class Player {
             } else if (typeof chunk === 'number') {
               notes.push([track[0], chunk, 1/16]);
             }
-          }
+          } else drums.push(track[0]);
         }
       });
 

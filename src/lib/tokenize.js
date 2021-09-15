@@ -27,12 +27,16 @@ const TONES = {
 
 const CACHE = {};
 
+export function uc(value) {
+  return value[0].toUpperCase() + value.substr(1);
+}
+
 export function note(value) {
   if (typeof value !== 'string') return false;
   if (CACHE[value]) return CACHE[value];
 
   const parts = value.split(/(?=-?\d+)/);
-  const offset = TONES[parts[0].substr(0, 2).toUpperCase()];
+  const offset = TONES[uc(parts[0].substr(0, 2))];
 
   return CACHE[value] = parseInt(parts[1] || 3, 10) * 12 + offset;
 }

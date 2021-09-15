@@ -5,16 +5,16 @@
   let value = `# skanking demo
 
 ; our variables
-%X  c4|d#4|g4
+%X  a4|c5|e5
 
 ; drumkit
-3   x--- x--- ---- ---- x--- ---- ---- x---
-17  ---- ---- ---- ---- x--- ---- ---- ----
-37  x--- ---- ---- x--- x--- ---- x--- ----
-35  ---- x--- x--- x--- x--- x--- x--- x--- ; after comment
+!3   x--- x--- ---- ---- x--- ---- ---- x---
+!17  ---- ---- ---- ---- x--- ---- ---- ----
+!37  x--- ---- ---- x--- x--- ---- x--- ----
+!35  x-x- x--- x--- x--- x--- x--- x--- x--- ; after comment
 
 ; chords
-144 ---- ---- x--- ---- ---- ---- x--- ---- %X %
+17  ---- ---- x--- ---- ---- ---- x--- ---- %X %
 
 `;
 
@@ -116,7 +116,7 @@
           const steps = token.pattern.map(x => (x === 'x' ? 127 : 0));
           const notes = encode(token.notes || []);
 
-          midi.push([parseInt(kind.substr(1), 10), ...steps, ...notes]);
+          midi.push([kind.substr(1), ...steps, ...notes]);
         }
       });
     });

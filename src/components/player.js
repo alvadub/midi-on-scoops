@@ -30,8 +30,12 @@ export default class Player {
 
   preloadSounds() {
     this.tracks.forEach(idx => {
-      if (idx[0] > 127) this.cacheInstrument(idx[0] - 127);
-      else this.cacheDrum(idx[0]);
+      try {
+        if (idx[0].charAt() === '!') this.cacheDrum(idx[0].substr(1));
+        else this.cacheInstrument(idx[0]);
+      } catch (e) {
+        console.log('SKIP', e);
+      }
     });
   }
 
@@ -46,10 +50,9 @@ export default class Player {
 
   setLoopMachine(data) {
     this.tracks = data || this.tracks;
-    this.preloadSounds();
-
     this.bars = this.tracks[0].length - 1;
     this.fraq = 1 / this.bars;
+    this.preloadSounds();
 
     const clips = this.tracks.reduce((memo, track) => {
       const chunk = track.slice(this.bars + 1);
@@ -63,18 +66,19 @@ export default class Player {
 
       this.tracks.forEach((track, k) => {
         if (track[i]) {
-          if (track[0] > 127) {
+          if (track[0].charAt() === '!') drums.push(track[0].substr(1));
+          else {
             const chunk = clips[k].shift();
 
             // FIXME: adjust volumes
             if (Array.isArray(chunk)) {
               chunk.forEach(tone => {
-                notes.push([track[0] - 127, tone, .05]);
+                notes.push([track[0], tone, .05]);
               });
             } else if (typeof chunk === 'number') {
-              notes.push([track[0] - 127, chunk, .05]);
+              notes.push([track[0], chunk, .05]);
             }
-          } else drums.push(track[0]);
+          }
         }
       });
 

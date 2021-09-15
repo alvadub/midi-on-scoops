@@ -49,7 +49,13 @@ export default class Player {
     this.preloadSounds();
 
     this.bars = this.tracks[0].length - 1;
-    this.fraq = 1/this.bars;
+    this.fraq = 1 / this.bars;
+
+    const clips = this.tracks.reduce((memo, track) => {
+      const chunk = track.slice(this.bars + 1);
+      memo.push(chunk);
+      return memo;
+    }, []);
 
     for (let i = 1; i <= this.bars; i += 1){
       const drums = [];
@@ -57,8 +63,15 @@ export default class Player {
 
       this.tracks.forEach((track, k) => {
         if (track[i]) {
-          if (track[0] > 127) notes.push([track[0] - 127, 6*12+0, .1], [track[0] - 127, 6*12+3, .1], [track[0] - 127, 6*12+7, .1]);
-          else drums.push(track[0]);
+          if (track[0] > 127) {
+            const chunk = clips[k].shift();
+
+            if (Array.isArray(chunk)) {
+              chunk.forEach(tone => {
+                notes.push([track[0] - 127, tone, .05]); // FIXME: adjust
+              });
+            }
+          } else drums.push(track[0]);
         }
       });
 
@@ -129,8 +142,9 @@ export default class Player {
     if (window[info.variable]) {
       const pitch = window[info.variable].zones[0].keyRangeLow;
       const volume = this.volumeDrumAdjust(drum);
+      const duration = 0.01; // FIXME: adjust this one
 
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 3, volume);
+      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, duration, volume);
     } else {
       this.cacheDrum(drum);
     }
@@ -138,7 +152,7 @@ export default class Player {
 
   playDrumsAt(when, drums) {
     for (let i = 0; i < drums.length; i += 1) {
-      this.playDrum(when, drums[i]);
+      this.playDrum(when, drums[i],);
     }
   }
 

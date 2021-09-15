@@ -2,7 +2,7 @@ export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[[\]x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
 export const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
-export const RE_NOTE = /^[a-gA-G][#b]?\d*(?![Mm])$/;
+export const RE_NOTE = /^([a-gA-G][#b]?)((?![Mm]))(\d*)?$/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;
 
@@ -30,7 +30,7 @@ export function getType(value) {
   return 'value';
 }
 
-export default expression => {
+export default (scribble, expression) => {
   if (!expression || typeof expression !== 'string') {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }

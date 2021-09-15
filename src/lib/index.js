@@ -1,6 +1,6 @@
-// export { default as tokenize } from './tokenize';
-// export { default as reduce } from './reduce';
-export { default as parse } from './parse';
+export { default as tokenize } from './tokenize';
+export { default as reduce } from './reduce';
+// export { default as parse } from './parse';
 // import convert from './convert';
 // import parse from './parse';
 // import reduce from './reduce';

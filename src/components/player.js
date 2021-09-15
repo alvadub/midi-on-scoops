@@ -30,7 +30,8 @@ export default class Player {
 
   preloadSounds() {
     this.tracks.forEach(idx => {
-      this.cacheDrum(idx[0]);
+      if (idx[0] > 127) this.cacheInstrument(idx[0] - 127);
+      else this.cacheDrum(idx[0]);
     });
   }
 
@@ -52,12 +53,16 @@ export default class Player {
 
     for (let i = 1; i <= this.bars; i += 1){
       const drums = [];
+      const notes = [];
 
       this.tracks.forEach((track, k) => {
-        if (track[i]) drums.push(track[0]);
+        if (track[i]) {
+          if (track[0] > 127) notes.push([track[0] - 127, 6*12+0, .1], [track[0] - 127, 6*12+3, .1], [track[0] - 127, 6*12+7, .1]);
+          else drums.push(track[0]);
+        }
       });
 
-      this.beats[i - 1] = [drums, []];
+      this.beats[i - 1] = [drums, notes];
     }
   }
 
@@ -162,16 +167,12 @@ export default class Player {
 
       if (kind === 1) {
         this.playStrumDownAt(when, instrument, pitches, duration * N);
+      } else if (kind === 2) {
+        this.playStrumUpAt(when, instrument, pitches, duration * N);
+      } else if (kind === 3) {
+        this.playSnapAt(when, instrument, pitches, duration * N);
       } else {
-        if (kind === 2) {
-          this.playStrumUpAt(when, instrument, pitches, duration * N);
-        } else {
-          if (kind === 3) {
-            this.playSnapAt(when, instrument, pitches, duration * N);
-          } else {
-            this.playChordAt(when, instrument, pitches, duration * N);
-          }
-        }
+        this.playChordAt(when, instrument, pitches, duration * N);
       }
     }
   }
@@ -181,7 +182,8 @@ export default class Player {
     const info = this.player.loader.instrumentInfo(instrument);
 
     if (window[info.variable]) {
-      this.player.queueChord(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
+      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
+      // this.player.queueChord(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
     } else {
       this.cacheInstrument(instrument);
     }

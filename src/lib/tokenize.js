@@ -2,9 +2,44 @@ export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[[\]x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
 export const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
-export const RE_NOTE = /^([a-gA-G][#b]?)((?![Mm]))(\d*)?$/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;
+
+const TONES = {
+  C: 0,
+  'C#': 1,
+  'Db': 1,
+  D: 2,
+  'D#': 3,
+  'Eb': 3,
+  E: 4,
+  F: 5,
+  'F#': 6,
+  'Gb': 6,
+  G: 7,
+  'G#': 8,
+  'Ab': 8,
+  A: 9,
+  'A#': 10,
+  'Bb': 10,
+  B: 11,
+};
+
+const CACHE = {};
+
+export function note(value) {
+  if (typeof value !== 'string') return false;
+  if (CACHE[value]) return CACHE[value];
+
+  const parts = value.split(/(?=-?\d+)/);
+  const offset = TONES[parts[0].substr(0, 2).toUpperCase()];
+
+  return CACHE[value] = parseInt(parts[1] || 3, 10) * 12 + offset;
+}
+
+export function isNote(value) {
+  return !isNaN(note(value));
+}
 
 export function getType(value) {
   if (RE_PATTERN.test(value)) {
@@ -19,12 +54,12 @@ export function getType(value) {
     return 'chord';
   }
 
-  if (RE_NOTE.test(value)) {
-    return 'note';
-  }
-
   if (RE_MODE.test(value)) {
     return 'mode';
+  }
+
+  if (isNote(value)) {
+    return 'note';
   }
 
   return 'value';
@@ -120,11 +155,11 @@ export default (scribble, expression) => {
       return prev;
     }
 
-    if (RE_NOTE.test(cur) || RE_CHORD.test(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
+    if (isNote(cur) || RE_CHORD.test(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
       carry.push(cur);
 
       if (!next || carry.length === 3
-        || !(RE_NOTE.test(next) || RE_MODE.test(next) || RE_NUMBER.test(next))) {
+        || !(isNote(next) || RE_MODE.test(next) || RE_NUMBER.test(next))) {
         const old = carry.splice(0, carry.length);
         const note = old[0];
 
@@ -137,14 +172,14 @@ export default (scribble, expression) => {
         }
 
         if (note.length < 2
-          && RE_NOTE.test(note)
+          && isNote(note)
           && (RE_MODE.test(mode) || RE_NUMBER.test(octave))) {
           add('mode', old.join(' '));
           return prev;
         }
 
         old.forEach(x => {
-          add(x.length > 1 || !RE_NOTE.test(x)
+          add(x.length > 1 || !isNote(x)
             ? getType(x)
             : 'mode', x);
         });

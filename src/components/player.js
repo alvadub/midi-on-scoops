@@ -66,10 +66,13 @@ export default class Player {
           if (track[0] > 127) {
             const chunk = clips[k].shift();
 
+            // FIXME: adjust volumes
             if (Array.isArray(chunk)) {
               chunk.forEach(tone => {
-                notes.push([track[0] - 127, tone, .05]); // FIXME: adjust
+                notes.push([track[0] - 127, tone, .05]);
               });
+            } else if (typeof chunk === 'number') {
+              notes.push([track[0] - 127, chunk, .05]);
             }
           } else drums.push(track[0]);
         }

@@ -1,13 +1,11 @@
 <script>
   import Player from './player.js';
-  import { tokenize } from '../lib';
-  import { RE_NOTE } from '../lib/tokenize';
+  import { note, isNote, default as tokenize } from '../lib/tokenize';
 
   let value = `# skanking demo
 
 ; our variables
 %X  c4|d#4|g4
-%Y  c4|f4|g#4
 
 ; drumkit
 3   x--- x--- ---- ---- x--- ---- ---- x---
@@ -16,42 +14,25 @@
 35  ---- x--- x--- x--- x--- x--- x--- x--- ; after comment
 
 ; chords
-144 ---- ---- x--- ---- ---- ---- x--- ---- %X
+144 ---- ---- x--- ---- ---- ---- x--- ---- %X %
 
 `;
 
-  const tones = {
-    C: 0,
-    'C#': 1,
-    'Db': 1,
-    D: 2,
-    'D#': 3,
-    'Eb': 3,
-    E: 4,
-    F: 5,
-    'F#': 6,
-    'Gb': 6,
-    G: 7,
-    'G#': 8,
-    'Ab': 8,
-    A: 9,
-    'A#': 10,
-    'Bb': 10,
-    B: 11,
-  };
 
-  function encode(note) {
-    if (Array.isArray(note)) return note.map(x => x && encode(x));
-    if (Array.isArray(note.value)) return encode(note.value);
+  function encode(input) {
+    if (Array.isArray(input)) return input.map(x => x && encode(x));
+    if (Array.isArray(input.value)) return encode(input.value);
 
-    if (!RE_NOTE.test(note)) {
-      console.log('INVALID', note);
-      return -1;
+    if (typeof input === 'object') {
+      console.log('OBJECT', input);
+      return (parseInt(input, 10) || 1) * 12 + encode(input.value);
     }
 
-    const [, tone, minmaj, add] = note.match(RE_NOTE);
-
-    return parseInt(add, 10) * 12 + tones[tone.toUpperCase()];
+    if (!isNote(input)) {
+      console.log('INVALID', input);
+      return -1;
+    }
+    return note(input);
   }
 
   function reduce(values, ctx) {
@@ -78,7 +59,7 @@
       if (line.charAt() === '%') {
         const [name, value] = line.split(/\s+/);
 
-        data[name] = tokenize(scribble, value);
+        if (value) data[name] = tokenize(scribble, value);
       } else if (line.charAt() === '#') {
         if (track) {
           tracks[track] = data;
@@ -104,6 +85,7 @@
     if (track) {
       tracks[track] = data;
     }
+    console.log(tracks);
     return tracks;
   }
 

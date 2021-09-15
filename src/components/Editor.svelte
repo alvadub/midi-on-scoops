@@ -1,25 +1,75 @@
 <script>
-  import { onMount } from 'svelte';
-  import { parse } from '../lib';
+  // import { onMount } from 'svelte';
+  import Player from './player.js';
+//   import { parse } from '../lib';
 
-  const text = `
-@tempo: 127
+//   const text = `
+// @tempo: 127
 
-# skank
-notes: C2 phrygian.. ** /2
-pattern: x-x_-xx_ *4
-`.trim();
+// # skank
+// notes: C2 phrygian.. ** /2
+// pattern: x-x_-xx_ *4
+// `.trim();
 
-  let ast = null;
-  console.log(42)
-  onMount(async () => {
-    try {
-      console.log(text);
-      ast = await parse(text);
-    } catch (e) {
-      console.error(e);
+//   let p;
+//   let ast = null;
+//   onMount(async () => {
+//     try {
+//       ast = await parse(text);
+//     } catch (e) {
+//       console.error(e);
+//     }
+
+//     window.p = window.p || null;
+//     setTimeout(() =>  {
+//       p = window.p || new Player();
+//       p.setLoopMachine(getData(value));
+//     }, 200);
+//   });
+
+  let value = `
+3  x--- ---- ---- x--- x--- ---- ---- ----
+13 ---- ---- ---- ---- x--- ---- ---- ----
+37 x--- x--- x--- x--- x--- x--- x--- x---
+35 ---- x--- x--- x--- x--- x--- x--- x---
+24 ---- ---- ---- ---- ---- ---- ---- ----
+ `.trim();
+
+  window.p = window.p || null;
+  setTimeout(() =>  {
+    p = window.p || new Player();
+    p.setLoopMachine(getData(value));
+  }, 200);
+
+  let tempo = (p && p.bpm) || 127;
+
+  function stop() {
+    if (p) p.stopLoopMachine();
+  }
+
+  function play() {
+    stop();
+    if (p) p.playLoopMachine();
+  }
+
+  function getData(text) {
+    return text.trim().split('\n').map(line => {
+      const [n, ...d] = line.split(/\s+/);
+      const l = d.join('').split('');
+
+      return [parseInt(n, 10), ...l.map(x => x === 'x')];
+    });
+  }
+
+  $: if (p) {
+    if (p.bpm !== tempo) {
+      stop();
+      p.playLoopMachine(tempo);
+    } else {
+      console.log('SET');
+      p.setLoopMachine(getData(value));
     }
-  });
+  }
 
 //   function get(data, ctx) {
 //     let v;
@@ -81,4 +131,17 @@ pattern: x-x_-xx_ *4
 <button on:click={onChannel}>GO</button>
  -->
 
-<pre>{JSON.stringify(ast, null, 2)}</pre>
+<!-- <pre>{JSON.stringify(ast, null, 2)}</pre> -->
+
+<style>
+  textarea {
+    font-family: monospace;
+    display: block;
+  }
+</style>
+
+<button on:click={play}>Play</button>
+<button on:click={stop}>Stop</button>
+<input type="number" bind:value={tempo} />
+<textarea bind:value cols="64" rows="4" />
+

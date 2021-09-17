@@ -90,31 +90,27 @@ describe('parser', () => {
     });
   });
 
-  it('...', () => {
+  it('should extract tags', () => {
     expect(test(`
-      @scene 1
-        # test
-        1 120 x--- ---- c5
-        1 110 ---- x--- g5
+      # mix
 
-      @scene 2
-        # test
-        1 .   x--- x--- d5
-        1 .   ---- x--- a5
-    `)).to.eql({
-      notes: {},
-      tracks: {
-        test: {
-          1: [{
-            clips: [p('x---'), p('x---')],
-            notes: [t('d5')],
-            values: [v('.')],
-          }, {
-            clips: [p('----'), p('x---')],
-            notes: [t('a5')],
-            values: [v('.')],
-          }],
-        },
+        @A
+          1 120 x--- ---- c5
+
+        @B
+          1 .   x--- x--- d5
+    `).tracks).to.eql({
+      mix: {
+        '1.A': [{
+          clips: [p('x---'), p('----')],
+          notes: [t('c5')],
+          values: [n(120)],
+        }],
+        '1.B': [{
+          clips: [p('x---'), p('x---')],
+          notes: [t('d5')],
+          values: [v('.')],
+        }],
       },
     });
   });

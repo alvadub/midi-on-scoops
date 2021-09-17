@@ -114,6 +114,7 @@ export function parse(scribble, buffer) {
   const tracks = {};
   const notes = {};
 
+  let suffix = '';
   let track;
   let info = {};
   buffer.split(/\r?\n/g).forEach((line, nth) => {
@@ -128,6 +129,7 @@ export function parse(scribble, buffer) {
       } else if (line.charAt() === '#') {
         if (track) {
           tracks[track] = info;
+          suffix = '';
           info = {};
         }
 
@@ -135,7 +137,7 @@ export function parse(scribble, buffer) {
       } else if (line.charAt() === '>') {
         console.log('SECTION');
       } else if (line.charAt() === '@') {
-        console.log('SCENE');
+        suffix = `.${line.substr(1).split(' ')[0]}`;
       } else {
         const ticks = transform(scribble, line);
         const index = ticks.findIndex(x => x.type === 'pattern');
@@ -143,8 +145,8 @@ export function parse(scribble, buffer) {
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');
 
-        if (!info[input[0].value]) {
-          info[input[0].value] = [];
+        if (!info[input[0].value + suffix]) {
+          info[input[0].value + suffix] = [];
         }
 
         let spec;
@@ -162,7 +164,7 @@ export function parse(scribble, buffer) {
         if (input.length > 1) {
           spec.values = input.slice(1);
         }
-        info[input[0].value].push(spec);
+        info[input[0].value + suffix].push(spec);
       }
     } catch (e) {
       throw new SyntaxError(`${e.message}\n  at line ${nth + 1}\n${line}`);

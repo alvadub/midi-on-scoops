@@ -18,6 +18,10 @@ function n(value) {
   return { type: 'number', value };
 }
 
+function m(value) {
+  return { type: 'mode', value };
+}
+
 function t(value, extra) {
   return { type: 'note', value, ...extra };
 }
@@ -99,18 +103,31 @@ describe('parser', () => {
 
         @B
           1 .   x--- x--- d5
-    `).tracks).to.eql({
-      mix: {
-        '1.A': [{
-          clips: [p('x---'), p('----')],
-          notes: [t('c5')],
-          values: [n(120)],
-        }],
-        '1.B': [{
-          clips: [p('x---'), p('x---')],
-          notes: [t('d5')],
-          values: [v('.')],
-        }],
+
+      foo: A A B A
+      main: foo *4
+
+      > main
+    `)).to.eql({
+      data: {
+        foo: [m('A'), m('A'), m('B'), m('A')],
+        main: [m('foo'), { type: 'multiply', value: 4 }],
+      },
+      main: [[m('main')]],
+      notes: {},
+      tracks: {
+        mix: {
+          '1.A': [{
+            clips: [p('x---'), p('----')],
+            notes: [t('c5')],
+            values: [n(120)],
+          }],
+          '1.B': [{
+            clips: [p('x---'), p('x---')],
+            notes: [t('d5')],
+            values: [v('.')],
+          }],
+        },
       },
     });
   });

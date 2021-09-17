@@ -158,7 +158,11 @@ export function transform(scribble, expression) {
       return prev;
     }
 
-    if (typeof cur === 'string' && (cur.includes('/') || cur.includes('*') || (cur.includes('%') && cur.indexOf('%') > 0))) {
+    if (typeof cur === 'string' && (
+      (cur.includes('/') && cur.indexOf('/') > 0)
+      || (cur.includes('*') && cur.indexOf('*') > 0)
+      || (cur.includes('%') && cur.indexOf('%') > 0)
+    )) {
       add('number', level(cur));
       return prev;
     }

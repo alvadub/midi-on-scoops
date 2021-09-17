@@ -113,6 +113,8 @@ export function reduce(input, context) {
 export function parse(scribble, buffer) {
   const tracks = {};
   const notes = {};
+  const main = [];
+  const data = {};
 
   let suffix = '';
   let track;
@@ -135,18 +137,23 @@ export function parse(scribble, buffer) {
 
         track = line.substr(1).trim();
       } else if (line.charAt() === '>') {
-        console.log('SECTION');
+        main.push(transform(scribble, line.substr(1).trim()));
       } else if (line.charAt() === '@') {
         suffix = `.${line.substr(1).split(' ')[0]}`;
+      } else if (line.indexOf(':') > 0) {
+        const [name, ...value] = line.split(':');
+
+        data[name] = transform(scribble, value.join(':').trim());
       } else {
         const ticks = transform(scribble, line);
         const index = ticks.findIndex(x => x.type === 'pattern');
         const input = ticks.slice(0, index > 0 ? index : 1);
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');
+        const channel = input[0].value + suffix;
 
-        if (!info[input[0].value + suffix]) {
-          info[input[0].value + suffix] = [];
+        if (!info[channel]) {
+          info[channel] = [];
         }
 
         let spec;
@@ -164,7 +171,7 @@ export function parse(scribble, buffer) {
         if (input.length > 1) {
           spec.values = input.slice(1);
         }
-        info[input[0].value + suffix].push(spec);
+        info[channel].push(spec);
       }
     } catch (e) {
       throw new SyntaxError(`${e.message}\n  at line ${nth + 1}\n${line}`);
@@ -175,5 +182,5 @@ export function parse(scribble, buffer) {
     tracks[track] = info;
   }
 
-  return { notes, tracks };
+  return { main, data, notes, tracks };
 }

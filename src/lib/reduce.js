@@ -2,7 +2,7 @@ import {
   add, resolve, repeat, range, flatten,
 } from './utils';
 
-export default function reduce(input, context) {
+export function reduce(input, context) {
   if (!Array.isArray(input)) {
     return input;
   }

@@ -4,7 +4,7 @@ export default class Player {
     this.beats = [];
     this.bars = 8;
     this.bpm = 127;
-    this.fraq = 1/this.bars;
+    this.fraq = 1 / this.bars;
     this.initAudio();
   }
 
@@ -50,7 +50,7 @@ export default class Player {
 
   setLoopMachine(data) {
     this.tracks = data || this.tracks;
-    this.bars = this.tracks[0].length - 1;
+    this.bars = Array.isArray(this.tracks[0]) ? this.tracks[0].length - 1 : 2;
     this.fraq = 1 / this.bars;
     this.preloadSounds();
 

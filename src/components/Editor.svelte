@@ -39,10 +39,15 @@
 > 1 1 2 1
 `;
 
+  function getData(input) {
+    console.log(parse(scribble, input));
+    return [];
+  }
+
   window.p = window.p || null;
   setTimeout(() => {
     p = window.p || new Player();
-    p.setLoopMachine(parse(value));
+    p.setLoopMachine(getData(value));
   }, 200);
 
   let tempo = (p && p.bpm) || 127;
@@ -60,7 +65,7 @@
     if (p.bpm !== tempo) {
       p.playLoopMachine(tempo);
     } else {
-      p.setLoopMachine(parse(value));
+      p.setLoopMachine(getData(value));
     }
   }
 </script>

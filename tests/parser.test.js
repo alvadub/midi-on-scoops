@@ -1,57 +1,63 @@
 import { expect } from 'chai';
+import scribble from 'scribbletune';
 import { parse } from '../src/lib/parser';
 
+function test(sample) {
+  return parse(scribble, sample);
+}
+
+function p(value) {
+  return { type: 'pattern', value };
+}
+
 describe('parser', () => {
-  it('should extract bars/notes from channels', () => {
+  it('should extract tracks', () => {
+    const sample = `
+      # sample
+    `;
+
+    expect(test(sample).tracks).to.eql({ sample: {} });
+  });
+
+  it('should extract variables', () => {
+    const sample = `
+      %x c4
+    `;
+
+    expect(test(sample).notes).to.eql({
+      '%x': [{ type: 'note', value: 'c4' }],
+    });
+  });
+
+  it('should extract channels', () => {
     const sample = `
       # drums
       35  x--- x--- x--- x---
       14  ---- ---- x--- ----
-
-      # skanking
-      1   ---- x--- ---- x--- Cm Cm
     `;
 
-    expect(parse(sample)).to.eql({
+    expect(test(sample).tracks).to.eql({
       drums: {
-        35: { pattern: 'x---x---x---x---'.split('') },
-        14: { pattern: '--------x-------'.split('') },
+        35: { clips: [p('x---'), p('x---'), p('x---'), p('x---')] },
+        14: { clips: [p('----'), p('----'), p('x---'), p('----')] },
       },
+    });
+  });
+
+  it('should extract notes after bars', () => {
+    const sample = `
+      # skanking
+      1 120 ---- x--- ---- x--- c4 %
+    `;
+
+    expect(test(sample).tracks).to.eql({
       skanking: {
-        1: { notes: ['Cm', 'Cm'], pattern: '----x-------x---'.split('') },
+        1: {
+          clips: [p('----'), p('x---'), p('----'), p('x---')],
+          notes: [{ type: 'note', value: 'c4', repeat: 2 }],
+          values: [{ type: 'number', value: 120 }],
+        },
       },
     });
   });
 });
-
-//   let value = `# skanking demo
-
-// ; our variables
-// %X  a4|c5|e5
-// %Y  g4|d4|a#4
-
-// @scene 1
-
-//   ; drumkit
-//   ; CH VOL PAN?
-//   3       ---- ---- ---- ---- x--- ---- ---- ----
-//   14      ---- ---- ---- ---- x--- ---- ---- ----
-//   37      x--- x--- ---- x--- x--- ---- x--- ----
-//   35      x--- x--- x--- x--- x--- x--- x--- x--- ; after comment
-
-//   ; chords
-//   15      ---- ---- x--- ---- ---- ---- x--- ---- %X %
-//   165     ---- x--- ---- x--- ---- x--- ---- x--- %X % % %
-
-// @scene 2
-
-//   ; chords
-//   ;15  ---- ---- x--- ---- ---- ---- x--- ---- %Y %
-//   ;183 ---- x--- ---- x--- ---- x--- ---- x--- %Y % % %
-
-//   ; how to handle duration, e.g. x__-
-//   ; how to repeat from previous stacks?
-//   ; they should merge from previous ones? then extends?
-
-// > 1 1 2 1
-// `;

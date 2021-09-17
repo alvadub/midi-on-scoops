@@ -31,7 +31,23 @@ export function uc(value) {
   return value[0].toUpperCase() + value.substr(1);
 }
 
-export function note(value) {
+export function level(value) {
+  if (value.includes('/')) {
+    const [a, b] = value.split('/');
+
+    return a / b;
+  }
+
+  if (value.includes('*')) {
+    const [a, b] = value.split('*');
+
+    return a * b;
+  }
+
+  return parseFloat(value);
+}
+
+export function pitch(value) {
   if (typeof value !== 'string') return false;
   if (CACHE[value]) return CACHE[value];
 
@@ -42,8 +58,16 @@ export function note(value) {
   return CACHE[value];
 }
 
+export function isPattern(value) {
+  return RE_PATTERN.test(value);
+}
+
+export function isNumber(value) {
+  return RE_NUMBER.test(value);
+}
+
 export function isNote(value) {
-  return !isNaN(note(value));
+  return !isNaN(pitch(value));
 }
 
 export function getType(value) {
@@ -55,7 +79,7 @@ export function getType(value) {
   return 'value';
 }
 
-export default (scribble, expression) => {
+export function transform(scribble, expression) {
   if (!expression || typeof expression !== 'string') {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }
@@ -132,12 +156,12 @@ export default (scribble, expression) => {
 
     if (cur.indexOf('%') > -1) {
       if (cur === '%') {
-        if (!ast[ast.length - 1]) {
+        if (!last.type) {
           throw new Error(`Missing expression to repeat, given '${tokens.slice(0, i).join(' ')}'`);
         }
 
-        ast[ast.length - 1].repeat = ast[ast.length - 1].repeat || 1;
-        ast[ast.length - 1].repeat += 1;
+        last.repeat = last.repeat || 1;
+        last.repeat += 1;
       } else {
         add('param', cur);
       }
@@ -177,7 +201,6 @@ export default (scribble, expression) => {
           add(x.length > 1 || !isNote(x) ? getType(x) : 'mode', x);
         });
       }
-
       return prev;
     }
 
@@ -237,4 +260,4 @@ export default (scribble, expression) => {
 
     return item;
   });
-};
+}

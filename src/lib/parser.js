@@ -143,20 +143,26 @@ export function parse(scribble, buffer) {
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');
 
+        if (!info[input[0].value]) {
+          info[input[0].value] = [];
+        }
+
+        let spec;
         if (offset > 0) {
-          info[input[0].value] = {
+          spec = {
             notes: values.slice(offset),
             clips: values.slice(0, offset),
           };
         } else if (offset === 0) {
-          info[input[0].value] = { values: values.slice(1) };
+          spec = { values: values.slice(1) };
         } else {
-          info[input[0].value] = { clips: values };
+          spec = { clips: values };
         }
 
         if (input.length > 1) {
-          info[input[0].value].values = input.slice(1);
+          spec.values = input.slice(1);
         }
+        info[input[0].value].push(spec);
       }
     } catch (e) {
       throw new SyntaxError(`${e.message}\n  at line ${nth + 1}\n${line}`);

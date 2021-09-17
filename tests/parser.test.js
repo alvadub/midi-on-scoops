@@ -10,6 +10,14 @@ function p(value) {
   return { type: 'pattern', value };
 }
 
+function n(value) {
+  return { type: 'number', value };
+}
+
+function t(value, extra) {
+  return { type: 'note', value, ...extra };
+}
+
 describe('parser', () => {
   it('should extract tracks', () => {
     const sample = `
@@ -19,27 +27,31 @@ describe('parser', () => {
     expect(test(sample).tracks).to.eql({ sample: {} });
   });
 
-  it('should extract variables', () => {
+  it('should extract locals', () => {
     const sample = `
       %x c4
     `;
 
     expect(test(sample).notes).to.eql({
-      '%x': [{ type: 'note', value: 'c4' }],
+      '%x': [t('c4')],
     });
   });
 
   it('should extract channels', () => {
     const sample = `
       # drums
-      35  x--- x--- x--- x---
+      35  x--- ---- x--- ----
+      35  ---- x--- ---- x---
       14  ---- ---- x--- ----
     `;
 
     expect(test(sample).tracks).to.eql({
       drums: {
-        35: { clips: [p('x---'), p('x---'), p('x---'), p('x---')] },
-        14: { clips: [p('----'), p('----'), p('x---'), p('----')] },
+        35: [
+          { clips: [p('x---'), p('----'), p('x---'), p('----')] },
+          { clips: [p('----'), p('x---'), p('----'), p('x---')] },
+        ],
+        14: [{ clips: [p('----'), p('----'), p('x---'), p('----')] }],
       },
     });
   });
@@ -52,14 +64,12 @@ describe('parser', () => {
 
     expect(test(sample).tracks).to.eql({
       multiple: {
-        1: {
-          values: [{ type: 'number', value: 2 }, { type: 'number', value: 3 }],
-        },
+        1: [{ values: [n(2), n(3)] }],
       },
     });
   });
 
-  it('should extract notes after bars', () => {
+  it('should extract notes', () => {
     const sample = `
       # skanking
       1 120 ---- x--- ---- x--- c4 %
@@ -67,11 +77,11 @@ describe('parser', () => {
 
     expect(test(sample).tracks).to.eql({
       skanking: {
-        1: {
+        1: [{
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          notes: [{ type: 'note', value: 'c4', repeat: 2 }],
-          values: [{ type: 'number', value: 120 }],
-        },
+          notes: [t('c4', { repeat: 2 })],
+          values: [n(120)],
+        }],
       },
     });
   });

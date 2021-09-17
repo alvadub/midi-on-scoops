@@ -138,7 +138,7 @@ export function parse(scribble, buffer) {
         console.log('SCENE');
       } else {
         const ticks = transform(scribble, line);
-        const index = ticks.findIndex(x => x.type !== 'number');
+        const index = ticks.findIndex(x => x.type === 'pattern');
         const input = ticks.slice(0, index > 0 ? index : 1);
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');

@@ -32,6 +32,10 @@ export function uc(value) {
 }
 
 export function level(value) {
+  if (value.includes('%')) {
+    return 127 * parseFloat(`.${value}`);
+  }
+
   if (value.includes('/')) {
     const [a, b] = value.split('/');
 
@@ -151,6 +155,11 @@ export function transform(scribble, expression) {
       }
 
       add(cur === '**' ? 'scale' : 'progression', [values.map(x => x.value).join(' ')]);
+      return prev;
+    }
+
+    if (typeof cur === 'string' && (cur.includes('/') || cur.includes('*') || (cur.includes('%') && cur.indexOf('%') > 0))) {
+      add('number', level(cur));
       return prev;
     }
 

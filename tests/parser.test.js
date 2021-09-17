@@ -10,6 +10,10 @@ function p(value) {
   return { type: 'pattern', value };
 }
 
+function v(value) {
+  return { type: 'value', value };
+}
+
 function n(value) {
   return { type: 'number', value };
 }
@@ -59,12 +63,12 @@ describe('parser', () => {
   it('should extract values', () => {
     const sample = `
       # multiple
-      1 2 3
+      1 2/3 . 4*5 67%
     `;
 
     expect(test(sample).tracks).to.eql({
       multiple: {
-        1: [{ values: [n(2), n(3)] }],
+        1: [{ values: [n(2 / 3), v('.'), n(4 * 5), n(85.09)] }],
       },
     });
   });
@@ -84,5 +88,12 @@ describe('parser', () => {
         }],
       },
     });
+  });
+
+  it('...', () => {
+    expect(test(`
+      # test
+      1 1/16 x--- x--- c4 g4
+    `)).to.eql({});
   });
 });

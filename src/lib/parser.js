@@ -6,6 +6,13 @@ import {
   add, repeat, range, flatten,
 } from './utils';
 
+export function fetch(input, context) {
+  let result = null;
+  if (input.charAt() === '%') result = context.notes[input];
+  if (context.data[input]) result = context.data[input];
+  return result;
+}
+
 export function reduce(input, context) {
   if (!Array.isArray(input)) {
     return input;
@@ -76,11 +83,9 @@ export function reduce(input, context) {
         return prev.slice(cur.value[0], cur.value[1]);
 
       case 'param':
+      case 'mode':
       default: {
-        let value = cur.value.indexOf('%') > -1
-          ? context[cur.value]
-          : cur.value;
-
+        let value = fetch(cur.value, context);
         if (value === null) {
           throw new Error(`Missing expression for '${cur.value}'`);
         }

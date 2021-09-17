@@ -33,11 +33,11 @@ describe('parser', () => {
 
   it('should extract locals', () => {
     const sample = `
-      %x c4
+      %x c4 %
     `;
 
     expect(test(sample).notes).to.eql({
-      '%x': [t('c4')],
+      '%x': [t('c4', { repeat: 2 })],
     });
   });
 
@@ -92,8 +92,30 @@ describe('parser', () => {
 
   it('...', () => {
     expect(test(`
-      # test
-      1 1/16 x--- x--- c4 g4
-    `)).to.eql({});
+      @scene 1
+        # test
+        1 120 x--- ---- c5
+        1 110 ---- x--- g5
+
+      @scene 2
+        # test
+        1 .   x--- x--- d5
+        1 .   ---- x--- a5
+    `)).to.eql({
+      notes: {},
+      tracks: {
+        test: {
+          1: [{
+            clips: [p('x---'), p('x---')],
+            notes: [t('d5')],
+            values: [v('.')],
+          }, {
+            clips: [p('----'), p('x---')],
+            notes: [t('a5')],
+            values: [v('.')],
+          }],
+        },
+      },
+    });
   });
 });

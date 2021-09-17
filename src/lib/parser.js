@@ -122,9 +122,9 @@ export function parse(scribble, buffer) {
 
     try {
       if (line.charAt() === '%') {
-        const [name, value] = line.split(/\s+/);
+        const [name, ...value] = line.split(/\s+/);
 
-        if (value) notes[name] = transform(scribble, value);
+        if (value.length > 0) notes[name] = transform(scribble, value.join(' '));
       } else if (line.charAt() === '#') {
         if (track) {
           tracks[track] = info;

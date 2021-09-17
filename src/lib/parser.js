@@ -148,6 +148,8 @@ export function parse(scribble, buffer) {
             notes: values.slice(offset),
             clips: values.slice(0, offset),
           };
+        } else if (offset === 0) {
+          info[input[0].value] = { values: values.slice(1) };
         } else {
           info[input[0].value] = { clips: values };
         }

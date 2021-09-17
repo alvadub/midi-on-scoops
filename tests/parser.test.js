@@ -44,6 +44,21 @@ describe('parser', () => {
     });
   });
 
+  it('should extract values', () => {
+    const sample = `
+      # multiple
+      1 2 3
+    `;
+
+    expect(test(sample).tracks).to.eql({
+      multiple: {
+        1: {
+          values: [{ type: 'number', value: 2 }, { type: 'number', value: 3 }],
+        },
+      },
+    });
+  });
+
   it('should extract notes after bars', () => {
     const sample = `
       # skanking

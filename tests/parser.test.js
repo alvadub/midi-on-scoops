@@ -1,14 +1,26 @@
+import { expect } from 'chai';
 import { parse } from '../src/lib/parser';
 
 describe('parser', () => {
-  it('should extract channels', () => {
+  it('should extract bars/notes from channels', () => {
     const sample = `
-      # channel name
+      # drums
       35  x--- x--- x--- x---
       14  ---- ---- x--- ----
+
+      # skanking
+      1   ---- x--- ---- x--- Cm Cm
     `;
 
-    console.log(parse(sample));
+    expect(parse(sample)).to.eql({
+      drums: {
+        35: { pattern: 'x---x---x---x---'.split('') },
+        14: { pattern: '--------x-------'.split('') },
+      },
+      skanking: {
+        1: { notes: ['Cm', 'Cm'], pattern: '----x-------x---'.split('') },
+      },
+    });
   });
 });
 

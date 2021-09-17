@@ -1,5 +1,5 @@
 export const RE_SEPARATOR = /\|/;
-export const RE_PATTERN = /^[[\]x_-]+$/;
+export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
 export const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
@@ -8,20 +8,20 @@ export const RE_TRIM = /\.+$/;
 const TONES = {
   C: 0,
   'C#': 1,
-  'Db': 1,
+  Db: 1,
   D: 2,
   'D#': 3,
-  'Eb': 3,
+  Eb: 3,
   E: 4,
   F: 5,
   'F#': 6,
-  'Gb': 6,
+  Gb: 6,
   G: 7,
   'G#': 8,
-  'Ab': 8,
+  Ab: 8,
   A: 9,
   'A#': 10,
-  'Bb': 10,
+  Bb: 10,
   B: 11,
 };
 
@@ -38,7 +38,8 @@ export function note(value) {
   const parts = value.split(/(?=-?\d+)/);
   const offset = TONES[uc(parts[0].substr(0, 2))];
 
-  return CACHE[value] = parseInt(parts[1] || 3, 10) * 12 + offset;
+  CACHE[value] = parseInt(parts[1] || 3, 10) * 12 + offset;
+  return CACHE[value];
 }
 
 export function isNote(value) {
@@ -46,26 +47,11 @@ export function isNote(value) {
 }
 
 export function getType(value) {
-  if (RE_PATTERN.test(value)) {
-    return 'pattern';
-  }
-
-  if (RE_NUMBER.test(value)) {
-    return 'number';
-  }
-
-  if (RE_CHORD.test(value)) {
-    return 'chord';
-  }
-
-  if (RE_MODE.test(value)) {
-    return 'mode';
-  }
-
-  if (isNote(value)) {
-    return 'note';
-  }
-
+  if (RE_PATTERN.test(value)) return 'pattern';
+  if (RE_NUMBER.test(value)) return 'number';
+  if (RE_CHORD.test(value)) return 'chord';
+  if (RE_MODE.test(value)) return 'mode';
+  if (isNote(value)) return 'note';
   return 'value';
 }
 
@@ -162,10 +148,13 @@ export default (scribble, expression) => {
     if (isNote(cur) || RE_CHORD.test(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
       carry.push(cur);
 
-      if (!next || carry.length === 3
-        || !(isNote(next) || RE_MODE.test(next) || RE_NUMBER.test(next))) {
+      if (
+        !next
+        || carry.length === 3
+        || !(isNote(next) || RE_MODE.test(next) || RE_NUMBER.test(next))
+      ) {
         const old = carry.splice(0, carry.length);
-        const note = old[0];
+        const test = old[0];
 
         let mode = old[1];
         let octave = old[2];
@@ -175,17 +164,17 @@ export default (scribble, expression) => {
           mode = undefined;
         }
 
-        if (note.length < 2
-          && isNote(note)
-          && (RE_MODE.test(mode) || RE_NUMBER.test(octave))) {
+        if (
+          test.length < 2
+          && isNote(test)
+          && (RE_MODE.test(mode) || RE_NUMBER.test(octave))
+        ) {
           add('mode', old.join(' '));
           return prev;
         }
 
         old.forEach(x => {
-          add(x.length > 1 || !isNote(x)
-            ? getType(x)
-            : 'mode', x);
+          add(x.length > 1 || !isNote(x) ? getType(x) : 'mode', x);
         });
       }
 
@@ -197,17 +186,15 @@ export default (scribble, expression) => {
         || last.type === 'scale'
         || last.type === 'progression'
         || (last.type === 'chord' && last.unfold)
-        || (Array.isArray(prev) && last.type !== 'range')
-        ? 'slice'
-        : 'range';
+        || (Array.isArray(prev) && last.type !== 'range') ? 'slice' : 'range';
 
-      const x = cur.split('..');
+      const parts = cur.split('..');
 
-      if (!(RE_NUMBER.test(x[0]) && RE_NUMBER.test(x[1]))) {
+      if (!(RE_NUMBER.test(parts[0]) && RE_NUMBER.test(parts[1]))) {
         throw new Error(`Expecting valid numbers for ${type}, given '${prev} ${cur}'`);
       }
 
-      cur = x.map(n => parseInt(n, 10));
+      cur = parts.map(n => parseInt(n, 10));
     }
 
     if (typeof cur === 'string' && (cur.charAt() === '/' || cur.charAt() === '*')) {
@@ -219,7 +206,6 @@ export default (scribble, expression) => {
       }
 
       add(operator, parseInt(number, 10));
-
       return prev;
     }
 
@@ -230,10 +216,7 @@ export default (scribble, expression) => {
       return cur;
     }
 
-    add(type || getType(cur), typeof cur === 'string' && RE_NUMBER.test(cur)
-      ? parseInt(cur, 10)
-      : cur);
-
+    add(type || getType(cur), typeof cur === 'string' && RE_NUMBER.test(cur) ? parseInt(cur, 10) : cur);
     return cur;
   }, null);
 

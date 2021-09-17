@@ -1,4 +1,4 @@
-import { note, isNote, default as tokenize } from './tokenize';
+import tokenize, { note, isNote } from './tokenize';
 
 export function encode(input) {
   if (Array.isArray(input)) return input.map(x => x && encode(x));
@@ -57,12 +57,12 @@ export function parse(buffer) {
       const offset = ticks.findIndex(x => !'x-_'.includes(x.charAt()));
 
       if (offset > 0) {
-        data[`#${ins}`] = {
+        data[ins] = {
           notes: reduce(ticks.slice(offset), data),
           pattern: ticks.slice(0, offset).join('').split(''),
         };
       } else {
-        data[`#${ins}`] = { pattern: ticks.join('').split('') };
+        data[ins] = { pattern: ticks.join('').split('') };
       }
     }
   });
@@ -71,18 +71,18 @@ export function parse(buffer) {
     tracks[track] = data;
   }
 
-  const midi = [];
+  // const midi = [];
 
-  Object.keys(tracks).forEach(name => {
-    Object.entries(tracks[name]).forEach(([kind, token]) => {
-      if (kind.charAt() === '#') {
-        const steps = token.pattern.map(x => (x === 'x' ? 127 : 0));
-        const notes = encode(token.notes || []);
+  // Object.keys(tracks).forEach(name => {
+  //   Object.entries(tracks[name]).forEach(([kind, token]) => {
+  //     if (kind.charAt() === '#') {
+  //       const steps = token.pattern.map(x => (x === 'x' ? 127 : 0));
+  //       const notes = encode(token.notes || []);
 
-        midi.push([parseInt(kind.substr(1), 10), ...steps, ...notes]);
-      }
-    });
-  });
+  //       midi.push([parseInt(kind.substr(1), 10), ...steps, ...notes]);
+  //     }
+  //   });
+  // });
 
-  return midi;
+  return tracks;
 }

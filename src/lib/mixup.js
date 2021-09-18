@@ -8,16 +8,23 @@ export function mix(ctx) {
       Object.keys(ctx.tracks[key]).forEach(sub => {
         const name = `@${sub.split('.').pop()}`;
 
-        index[name] = { type: 'channel', value: [key, ctx.tracks[key][sub]] };
+        index[name] = { type: 'channel', name: key, value: [] };
+      });
+
+      Object.keys(ctx.tracks[key]).forEach(track => {
+        const name = track.split('.').pop();
+        const prop = `@${name}`;
+
+        index[prop] = index[prop] || { value: [] };
+        index[prop].value.push(ctx.tracks[key][track]);
       });
     });
   }
 
   if (!ctx.main.length) {
     Object.keys(index).forEach(key => {
-      ctx.main.push({ type: 'param', value: key });
+      console.log(ctx);
     });
-    return reduce(ctx.main, { data: index });
   }
 
   // FIXME: how to compose?
@@ -25,7 +32,12 @@ export function mix(ctx) {
   // we have `>` as markers for entry-points, values resolved here are
   // bundled into a giant array of values... that array, is then translated on the
   // fly or compiled down to MIDI files...
+  // console.log({groups});
+  // Object.keys(index).forEach(key => {
+  //   index[key].tracks = index[key].value;
+  //   console.log(index[key].tracks);
+  // });
 
-  console.log(JSON.stringify(ctx, null, 2));
+  console.log(require('util').inspect(index, { colors: true, depth: 10 }));
   return [{ type: 'channel' }];
 }

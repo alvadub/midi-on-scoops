@@ -1,9 +1,14 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
-import { mix } from '../src/lib/mixup';
-import { parse, reduce } from '../src/lib/parser';
-import { pitch, isNote, isChord } from '../src/lib/tokenize';
+const { expect } = require('chai');
+
+const {
+  mix,
+  parse, reduce,
+  pitch, isNote, isChord,
+} = require('../build/main.cjs');
+
+// delete require.cache[require.resolve('../build/main.cjs')];
 
 function p(value) {
   return { type: 'pattern', value };

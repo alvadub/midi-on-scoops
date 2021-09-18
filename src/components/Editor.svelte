@@ -40,7 +40,7 @@
 `;
 
   function getData(input) {
-    console.log(parse(scribble, input));
+    console.log(parse(input));
     return [];
   }
 

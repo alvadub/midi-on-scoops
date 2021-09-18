@@ -1,5 +1,3 @@
-export const RE_NORMALIZE = /\W/g;
-
 export function range(min, max, step) {
   const acc = [];
   if (!step) {
@@ -55,8 +53,4 @@ export function flatten(value) {
   return value.reduce((prev, cur) => prev.concat(Array.isArray(cur)
     ? flatten(cur)
     : cur), []);
-}
-
-export function normalize(value) {
-  return value.replace(RE_NORMALIZE, '_');
 }

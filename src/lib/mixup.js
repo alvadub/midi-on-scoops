@@ -3,29 +3,29 @@ import { reduce } from './parser';
 export function mix(ctx) {
   const index = { ...ctx.data };
 
-  if (ctx.tracks) {
-    Object.keys(ctx.tracks).forEach(key => {
-      Object.keys(ctx.tracks[key]).forEach(sub => {
-        const name = `@${sub.split('.').pop()}`;
+  // if (ctx.tracks) {
+  //   Object.keys(ctx.tracks).forEach(key => {
+  //     Object.keys(ctx.tracks[key]).forEach(sub => {
+  //       const name = `@${sub.split('.').pop()}`;
 
-        index[name] = { type: 'channel', name: key, value: [] };
-      });
+  //       index[name] = { type: 'channel', name: key, value: [] };
+  //     });
 
-      Object.keys(ctx.tracks[key]).forEach(track => {
-        const name = track.split('.').pop();
-        const prop = `@${name}`;
+  //     Object.keys(ctx.tracks[key]).forEach(track => {
+  //       const name = track.split('.').pop();
+  //       const prop = `@${name}`;
 
-        index[prop] = index[prop] || { value: [] };
-        index[prop].value.push(ctx.tracks[key][track]);
-      });
-    });
-  }
+  //       index[prop] = index[prop] || { value: [] };
+  //       index[prop].value.push(ctx.tracks[key][track]);
+  //     });
+  //   });
+  // }
 
-  if (!ctx.main.length) {
-    Object.keys(index).forEach(key => {
-      console.log(ctx);
-    });
-  }
+  // if (!ctx.main.length) {
+  //   Object.keys(index).forEach(key => {
+  //     console.log(ctx);
+  //   });
+  // }
 
   // FIXME: how to compose?
   //

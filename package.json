@@ -13,9 +13,10 @@
     "dev": "npm run build -- -w",
     "dist": "npm run build -- -q",
     "check": "eslint 'src/**/*.{js,pug,svelte}'",
-    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -Nscribbletune -p8081",
-    "mocha": "NODE_ENV=test _mocha -c -r esm --exit --verbose --recursive",
+    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081",
+    "mocha": "NODE_ENV=test _mocha -c  --exit --verbose --recursive",
     "test": "npm run test:unit --",
+    "pretest": "npm run dist",
     "test:unit": "npm run mocha -- -bR spec 'tests/*.test.js'",
     "test:coverage": "nyc --silent -x '**/*.test.js'",
     "test:coverage:unit": "npm run test:coverage -- npm run test:unit --",
@@ -23,7 +24,7 @@
   },
   "mortero": {
     "bundle": [
-      "**/index.js"
+      "**/{main*,index}.js"
     ],
     "rename": [
       "src/**:{filepath/1}"
@@ -43,7 +44,6 @@
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-svelte3": "^3.2.0",
-    "esm": "^3.2.25",
     "harmonics": "^1.0.8",
     "less": "^4.1.1",
     "less-plugin-autoprefix": "^2.0.0",

@@ -1,17 +1,8 @@
-import { getChordsByProgression } from 'scribbletune';
-import * as harmonics from 'harmonics';
+import { getChordsByProgression } from 'scribbletune/src/progression';
+import { scale } from 'harmonics';
 
-import {
-  isProgression, isPattern, isNumber, transform, level,
-} from './tokenize';
-
-import {
-  repeat, range, flatten,
-} from './utils';
-
-export function fetch(input, context) {
-  return context.data[input] || null;
-}
+import { isProgression, transform } from './tokenize';
+import { repeat, range, flatten } from './utils';
 
 export function reduce(input, context) {
   if (!Array.isArray(input)) {
@@ -87,7 +78,8 @@ export function reduce(input, context) {
 
       case 'param':
       case 'value': {
-        let value = fetch(cur.value, context);
+        let value = null;
+        if (typeof context[cur.value] !== 'undefined') value = context[cur.value];
         if (value === null) {
           throw new Error(`Missing expression for '${cur.value}'`);
         }
@@ -112,7 +104,7 @@ export function reduce(input, context) {
         else prev.push(...value);
       } break;
       default: {
-        console.log(prev, cur);
+        console.log({prev, cur});
         throw new Error('FIXME');
       }
     }
@@ -128,7 +120,7 @@ export function reduce(input, context) {
 
         memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(harmonics.inlineChord));
       } else {
-        memo.push(harmonics.scale(item));
+        memo.push(scale(item));
       }
     } else {
       memo.push(item);

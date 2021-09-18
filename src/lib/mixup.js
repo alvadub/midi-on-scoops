@@ -20,5 +20,12 @@ export function mix(ctx) {
     return reduce(ctx.main, { data: index });
   }
 
-  return ctx.main.reduce((prev, x) => prev.concat(reduce(x, { data: index })), []);
+  // FIXME: how to compose?
+  //
+  // we have `>` as markers for entry-points, values resolved here are
+  // bundled into a giant array of values... that array, is then translated on the
+  // fly or compiled down to MIDI files...
+
+  console.log(JSON.stringify(ctx, null, 2));
+  return [{ type: 'channel' }];
 }

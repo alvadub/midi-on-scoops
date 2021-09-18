@@ -202,28 +202,27 @@ describe('mixup', () => {
   it('should compose tracks', () => {
     expect(mix(parse(`
       # track
-      1 x--- x---
+      1 ---x x---
     `))).to.eql([{
       type: 'channel',
       value: ['track', [
-        { clips: [p('x---'), p('x---')] },
+        { clips: [p('---x'), p('x---')] },
       ]],
     }]);
 
     expect(mix(parse(`
       # track
-      @A
-      1 x--- x---
-
-      @B
-      1 -x-- x---
-
+        @A
+          1 x--- --x-
+        @B
+          1 -x-- x---
+          2 ---- ---x
       > @B
     `))).to.eql([{
       type: 'channel',
-      value: ['track', [
-        { clips: [p('-x--'), p('x---')] },
-      ]],
+      // value: ['track', [
+      //   { clips: [p('-x--'), p('x---')] },
+      // ]],
     }]);
   });
 });

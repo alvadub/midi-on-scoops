@@ -203,14 +203,27 @@ describe('mixup', () => {
     expect(mix(parse(`
       # track
       1 x--- x---
-    `))).to.eql([]);
+    `))).to.eql([{
+      type: 'channel',
+      value: ['track', [
+        { clips: [p('x---'), p('x---')] },
+      ]],
+    }]);
 
-    // expect(mix(parse(`
-    //   # track
-    //   @A
-    //   1 x--- x---
+    expect(mix(parse(`
+      # track
+      @A
+      1 x--- x---
 
-    //   > @A
-    // `))).to.eql([]);
+      @B
+      1 -x-- x---
+
+      > @B
+    `))).to.eql([{
+      type: 'channel',
+      value: ['track', [
+        { clips: [p('-x--'), p('x---')] },
+      ]],
+    }]);
   });
 });

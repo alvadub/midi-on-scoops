@@ -17,8 +17,8 @@ export function mix(ctx) {
     Object.keys(index).forEach(key => {
       ctx.main.push({ type: 'param', value: key });
     });
+    return reduce(ctx.main, { data: index });
   }
-  // console.log(index);
-  // console.log(reduce(ctx.main, index));
-  return [];
+
+  return ctx.main.reduce((prev, x) => prev.concat(reduce(x, { data: index })), []);
 }

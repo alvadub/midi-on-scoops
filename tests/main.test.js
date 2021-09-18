@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-expressions */
 
 import { expect } from 'chai';
+import { mix } from '../src/lib/mixup';
 import { parse, reduce } from '../src/lib/parser';
-import { pitch, isNote, isChord, transform } from '../src/lib/tokenize';
+import { pitch, isNote, isChord } from '../src/lib/tokenize';
 
 function p(value) {
   return { type: 'pattern', value };
@@ -195,5 +196,14 @@ describe('reducer', () => {
         ['Eb4', 'G4', 'Bb4'],
       ],
     ]);
+  });
+});
+
+describe('mixup', () => {
+  it('should compose tracks', () => {
+    expect(mix(parse(`
+      # track
+      1 x--- x---
+    `))).to.eql([]);
   });
 });

@@ -61,7 +61,7 @@ describe('parser', () => {
       %x c4 %
     `;
 
-    expect(parse(sample).notes).to.eql({
+    expect(parse(sample).data).to.eql({
       '%x': [t('c4', { repeat: 2 })],
     });
   });
@@ -107,8 +107,8 @@ describe('parser', () => {
     expect(parse(sample).tracks).to.eql({
       skanking: {
         1: [{
+          data: [t('c4', { repeat: 2 })],
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          notes: [t('c4', { repeat: 2 })],
           values: [n(120)],
         }],
       },
@@ -135,17 +135,16 @@ describe('parser', () => {
         main: [m('foo'), { type: 'multiply', value: 4 }],
       },
       main: [[m('main')]],
-      notes: {},
       tracks: {
         mix: {
           '1.A': [{
+            data: [t('c5')],
             clips: [p('x---'), p('----')],
-            notes: [t('c5')],
             values: [n(120)],
           }],
           '1.B': [{
+            data: [t('d5')],
             clips: [p('x---'), p('x---')],
-            notes: [t('d5')],
             values: [v('.')],
           }],
         },
@@ -205,5 +204,13 @@ describe('mixup', () => {
       # track
       1 x--- x---
     `))).to.eql([]);
+
+    // expect(mix(parse(`
+    //   # track
+    //   @A
+    //   1 x--- x---
+
+    //   > @A
+    // `))).to.eql([]);
   });
 });

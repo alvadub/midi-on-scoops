@@ -11,7 +11,6 @@ import {
 
 export function fetch(input, context) {
   let result = null;
-  if (input.charAt() === '%') result = context.notes[input];
   if (context.data[input]) result = context.data[input];
   return result;
 }
@@ -142,7 +141,6 @@ export function reduce(input, context) {
 
 export function parse(buffer) {
   const tracks = {};
-  const notes = {};
   const main = [];
   const data = {};
 
@@ -157,7 +155,9 @@ export function parse(buffer) {
       if (line.charAt() === '%') {
         const [name, ...value] = line.split(/\s+/);
 
-        if (value.length > 0) notes[name] = transform(value.join(' '));
+        if (value.length > 0) {
+          data[name] = transform(value.join(' '));
+        }
       } else if (line.charAt() === '#') {
         if (track) {
           tracks[track] = info;
@@ -189,7 +189,7 @@ export function parse(buffer) {
         let spec;
         if (offset > 0) {
           spec = {
-            notes: values.slice(offset),
+            data: values.slice(offset),
             clips: values.slice(0, offset),
           };
         } else if (offset === 0) {
@@ -214,5 +214,5 @@ export function parse(buffer) {
     tracks[track] = info;
   }
 
-  return { main, data, notes, tracks };
+  return { main, data, tracks };
 }

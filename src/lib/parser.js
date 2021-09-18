@@ -1,5 +1,5 @@
 import { getChordsByProgression } from 'scribbletune/src/progression';
-import { scale } from 'harmonics';
+import { scale, inlineChord } from 'harmonics';
 
 import { isProgression, transform } from './tokenize';
 import { repeat, range, flatten } from './utils';
@@ -79,7 +79,7 @@ export function reduce(input, context) {
       case 'param':
       case 'value': {
         let value = null;
-        if (typeof context[cur.value] !== 'undefined') value = context[cur.value];
+        if (typeof context.data[cur.value] !== 'undefined') value = context.data[cur.value];
         if (value === null) {
           throw new Error(`Missing expression for '${cur.value}'`);
         }
@@ -118,7 +118,7 @@ export function reduce(input, context) {
         const offset = chunks.findIndex(isProgression);
         const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];
 
-        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(harmonics.inlineChord));
+        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(inlineChord));
       } else {
         memo.push(scale(item));
       }

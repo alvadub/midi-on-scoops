@@ -3,8 +3,8 @@ import * as harmonics from 'harmonics';
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-export const RE_CHORD = /^[a-gA-G][^\s]*\d*$/;
-export const RE_NOTE = /^[a-gA-G][#b]?\d?$/;
+export const RE_CHORD = /^[a-gA-G][^\s]*\d+$/;
+export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;
 
@@ -145,24 +145,6 @@ export function transform(expression) {
       return prev;
     }
 
-    if (cur === '**' || cur === '++') {
-      const values = [];
-
-      for (let c = ast.length - 1; c >= 0; c -= 1) {
-        values.unshift(ast[c]);
-
-        if (ast[c].type === 'note') {
-          ast.pop();
-          break;
-        }
-
-        ast.pop();
-      }
-
-      add(cur === '**' ? 'scale' : 'progression', [values.map(x => x.value).join(' ')]);
-      return prev;
-    }
-
     if (typeof cur === 'string' && (
       (cur.includes('/') && cur.indexOf('/') > 0)
       || (cur.includes('*') && cur.indexOf('*') > 0)
@@ -224,8 +206,6 @@ export function transform(expression) {
 
     if (typeof cur === 'string' && cur.indexOf('..') > -1) {
       type = last.type === 'mode'
-        || last.type === 'scale'
-        || last.type === 'progression'
         || (last.type === 'chord' && last.unfold)
         || (Array.isArray(prev) && last.type !== 'range') ? 'slice' : 'range';
 
@@ -261,22 +241,5 @@ export function transform(expression) {
     return cur;
   }, null);
 
-  return ast.map(item => {
-    if (item.type === 'scale' || item.type === 'progression') {
-      if (item.value[0].indexOf('...') > -1) {
-        item.spread = true;
-      } else if (item.value[0].indexOf('..') > -1) {
-        item.unfold = true;
-      }
-
-      console.log('>>', item.value);
-      item.value = harmonics[item.type](item.value[0].replace(RE_TRIM, ''), item.value[1]);
-
-      if (!Array.isArray(item.value)) {
-        item.value = item.value.split(' ');
-      }
-    }
-
-    return item;
-  });
+  return ast;
 }

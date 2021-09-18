@@ -26,19 +26,17 @@ function t(value, extra) {
 
 describe('tokenize', () => {
   it('should parse tones', () => {
-    expect(isNote('c')).to.be.true;
+    expect(isNote('c')).to.be.false;
+    expect(isNote('c3')).to.be.true;
     expect(isNote('CM_4')).to.be.false;
     expect(isNote('C4 major')).to.be.false;
   });
 
   it('should parse chords', () => {
-    expect(isChord('c')).to.be.true;
+    expect(isChord('c')).to.be.false;
+    expect(isChord('c3')).to.be.true;
     expect(isChord('CM_4')).to.be.true;
     expect(isChord('C4 major')).to.be.false;
-  });
-
-  it('should parse scales', () => {
-    // console.log(transform('c ++'));
   });
 });
 
@@ -168,15 +166,17 @@ describe('reducer', () => {
   it('should resolve notes', () => {
     const ctx = parse(`
       %x Cm7_4
+      %y C4 major
+      %z C5 foo bar
       > %x C4 Bb3 CM7sus4
+      > %y C3
+      > %z
     `);
 
-    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[['C4', 'Eb4', 'G4', 'Bb4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']]]);
-
-    const ctx2 = parse(`
-      %x C4 major
-      > %x C3_dorian_b2
-    `);
-    console.log(ctx2.main.map(x => reduce(x, ctx2)));
+    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
+      [['C4', 'Eb4', 'G4', 'Bb4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']],
+      ['C4 major', 'C3'],
+      ['C5 foo bar'],
+    ]);
   });
 });

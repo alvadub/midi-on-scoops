@@ -10,9 +10,7 @@ import {
 } from './utils';
 
 export function fetch(input, context) {
-  let result = null;
-  if (context.data[input]) result = context.data[input];
-  return result;
+  return context.data[input] || null;
 }
 
 export function reduce(input, context) {

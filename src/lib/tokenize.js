@@ -6,7 +6,7 @@ export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
 export const RE_CHORD = /^[a-gA-G][^#\s]*\d+$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
-export const RE_PROG = /^[ivIV]{1,3}$/;
+export const RE_PROG = /^[ivIV]{1,3}°?$/;
 export const RE_TRIM = /\.+$/;
 
 const CACHE = {};

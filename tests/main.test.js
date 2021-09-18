@@ -178,7 +178,7 @@ describe('reducer', () => {
       %x Cm7_4
       %y C4 major
       %z C5 minor blues CmMaj9b6
-      %o C4 minor I iv iii III
+      %o C4 minor I iv iii III ii°
       > %x C4 Bb3 CM7sus4
       > %y C3
       > %z %o
@@ -193,6 +193,7 @@ describe('reducer', () => {
         ['C4', 'E4', 'G4'], ['F4', 'Ab4', 'C5'],
         ['Eb4', 'Gb4', 'Bb4'],
         ['Eb4', 'G4', 'Bb4'],
+        ['D4', 'F4', 'Ab4', 'C5'],
       ],
     ]);
   });

@@ -13,23 +13,22 @@ const CACHE = {};
 const TONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 export function level(value) {
-  if (value.includes('%')) {
-    return 127 * parseFloat(`.${value}`);
+  if (!CACHE[value]) {
+    if (value.includes('%')) {
+      CACHE[value] = 127 * parseFloat(`.${value}`);
+    } else if (value.includes('/')) {
+      const [a, b] = value.split('/');
+
+      CACHE[value] = a / b;
+    } else if (value.includes('*')) {
+      const [a, b] = value.split('*');
+
+      CACHE[value] = a * b;
+    } else {
+      CACHE[value] = parseFloat(value);
+    }
   }
-
-  if (value.includes('/')) {
-    const [a, b] = value.split('/');
-
-    return a / b;
-  }
-
-  if (value.includes('*')) {
-    const [a, b] = value.split('*');
-
-    return a * b;
-  }
-
-  return parseFloat(value);
+  return CACHE[value];
 }
 
 export function pitch(value) {
@@ -85,18 +84,24 @@ export function isNote(value) {
 }
 
 export function getType(value) {
-  if (isNote(value)) return 'note';
-  if (isChord(value)) return 'chord';
-  if (RE_MODE.test(value)) return 'mode';
-  if (RE_NUMBER.test(value)) return 'number';
-  if (RE_PATTERN.test(value)) return 'pattern';
-  return 'value';
+  const key = `T${value}`;
+  if (!CACHE[key]) {
+    if (isNote(value)) CACHE[key] = 'note';
+    else if (isChord(value)) CACHE[key] = 'chord';
+    else if (RE_MODE.test(value)) CACHE[key] = 'mode';
+    else if (RE_NUMBER.test(value)) CACHE[key] = 'number';
+    else if (RE_PATTERN.test(value)) CACHE[key] = 'pattern';
+    else CACHE[key] = 'value';
+  }
+  return CACHE[key];
 }
 
 export function transform(expression) {
   if (!expression || typeof expression !== 'string') {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }
+
+  if (CACHE[expression]) return CACHE[expression];
 
   const tokens = expression.split(/\s+/);
 
@@ -251,5 +256,6 @@ export function transform(expression) {
     return cur;
   }, null);
 
+  CACHE[expression] = ast;
   return ast;
 }

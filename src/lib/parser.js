@@ -1,3 +1,5 @@
+import * as harmonics from 'harmonics';
+
 import {
   isPattern, isNumber, transform, level,
 } from './tokenize';
@@ -43,8 +45,6 @@ export function reduce(input, context) {
         break;
 
       case 'chord':
-      case 'scale':
-      case 'progression':
         if (cur.repeat) prev.push(...repeat(cur.value, cur.repeat));
         else if (cur.unfold) prev.push(...cur.value);
         else prev.push(cur.value);
@@ -119,7 +119,12 @@ export function reduce(input, context) {
     }
 
     return prev;
-  }, []);
+  }, []).map(item => {
+    if (typeof item === 'string' && item.includes(' ')) {
+      return harmonics.scale(item);
+    }
+    return item;
+  });
 }
 
 export function parse(buffer) {

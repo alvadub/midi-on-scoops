@@ -3,7 +3,7 @@ import * as harmonics from 'harmonics';
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-export const RE_CHORD = /^[a-gA-G][^\s]*\d+$/;
+export const RE_CHORD = /^[a-gA-G][^#\s]*\d+$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;

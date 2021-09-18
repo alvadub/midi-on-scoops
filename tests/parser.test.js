@@ -1,10 +1,5 @@
 import { expect } from 'chai';
-import scribble from 'scribbletune';
 import { parse, reduce } from '../src/lib/parser';
-
-function test(sample) {
-  return parse(scribble, sample);
-}
 
 function p(value) {
   return { type: 'pattern', value };
@@ -32,7 +27,7 @@ describe('parser', () => {
       # sample
     `;
 
-    expect(test(sample).tracks).to.eql({ sample: {} });
+    expect(parse(sample).tracks).to.eql({ sample: {} });
   });
 
   it('should extract locals', () => {
@@ -40,8 +35,8 @@ describe('parser', () => {
       %x c4 %
     `;
 
-    expect(test(sample).notes).to.eql({
-      '%x': [t('c4', { repeat: 2 })],
+    expect(parse(sample).notes).to.eql({
+      '%x': [t(48, { repeat: 2 })],
     });
   });
 
@@ -53,7 +48,7 @@ describe('parser', () => {
       14  ---- ---- x--- ----
     `;
 
-    expect(test(sample).tracks).to.eql({
+    expect(parse(sample).tracks).to.eql({
       drums: {
         35: [
           { clips: [p('x---'), p('----'), p('x---'), p('----')] },
@@ -70,7 +65,7 @@ describe('parser', () => {
       1 2/3 . 4*5 67%
     `;
 
-    expect(test(sample).tracks).to.eql({
+    expect(parse(sample).tracks).to.eql({
       multiple: {
         1: [{ values: [n(2 / 3), v('.'), n(4 * 5), n(85.09)] }],
       },
@@ -83,11 +78,11 @@ describe('parser', () => {
       1 120 ---- x--- ---- x--- c4 %
     `;
 
-    expect(test(sample).tracks).to.eql({
+    expect(parse(sample).tracks).to.eql({
       skanking: {
         1: [{
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          notes: [t('c4', { repeat: 2 })],
+          notes: [t(48, { repeat: 2 })],
           values: [n(120)],
         }],
       },
@@ -95,7 +90,7 @@ describe('parser', () => {
   });
 
   it('should extract tags', () => {
-    expect(test(`
+    expect(parse(`
       # mix
 
         @A
@@ -110,7 +105,7 @@ describe('parser', () => {
       > main
     `)).to.eql({
       data: {
-        foo: [m('A'), m('A'), m('B'), m('A')],
+        foo: [v('A'), v('A'), v('B'), v('A')],
         main: [m('foo'), { type: 'multiply', value: 4 }],
       },
       main: [[m('main')]],
@@ -119,12 +114,12 @@ describe('parser', () => {
         mix: {
           '1.A': [{
             clips: [p('x---'), p('----')],
-            notes: [t('c5')],
+            notes: [t(60)],
             values: [n(120)],
           }],
           '1.B': [{
             clips: [p('x---'), p('x---')],
-            notes: [t('d5')],
+            notes: [t(62)],
             values: [v('.')],
           }],
         },
@@ -135,7 +130,7 @@ describe('parser', () => {
 
 describe('reducer', () => {
   it('should resolve numbers', () => {
-    const ctx = test(`
+    const ctx = parse(`
       A: 1
       D: 2x3
 
@@ -147,5 +142,14 @@ describe('reducer', () => {
     `);
 
     expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1]]);
+  });
+
+  it('should resolve notes', () => {
+    const ctx = parse(`
+      %x Cm7_4
+      > %x C4 Bb3 CM7sus4
+    `);
+
+    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[[48, 51, 55, 58], 48, 46, [48, 53, 55, 59]]]);
   });
 });

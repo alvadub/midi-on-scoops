@@ -83,8 +83,7 @@ export function reduce(input, context) {
         return prev.slice(cur.value[0], cur.value[1]);
 
       case 'param':
-      case 'mode':
-      default: {
+      case 'value': {
         let value = fetch(cur.value, context);
         if (value === null) {
           throw new Error(`Missing expression for '${cur.value}'`);
@@ -108,14 +107,15 @@ export function reduce(input, context) {
         value = Array.isArray(value) ? value : [value];
         if (cur.repeat) add(prev, repeat(value, cur.repeat));
         else add(prev, value);
-      }
+      } break;
+      default: throw new Error('FIXME');
     }
 
     return prev;
   }, []);
 }
 
-export function parse(scribble, buffer) {
+export function parse(buffer) {
   const tracks = {};
   const notes = {};
   const main = [];
@@ -132,7 +132,7 @@ export function parse(scribble, buffer) {
       if (line.charAt() === '%') {
         const [name, ...value] = line.split(/\s+/);
 
-        if (value.length > 0) notes[name] = transform(scribble, value.join(' '));
+        if (value.length > 0) notes[name] = transform(value.join(' '));
       } else if (line.charAt() === '#') {
         if (track) {
           tracks[track] = info;
@@ -142,15 +142,15 @@ export function parse(scribble, buffer) {
 
         track = line.substr(1).trim();
       } else if (line.charAt() === '>') {
-        main.push(transform(scribble, line.substr(1).trim()));
+        main.push(transform(line.substr(1).trim()));
       } else if (line.charAt() === '@') {
         suffix = `.${line.substr(1).split(' ')[0]}`;
       } else if (line.indexOf(':') > 0) {
         const [name, ...value] = line.split(':');
 
-        data[name] = transform(scribble, value.join(':').trim());
+        data[name] = transform(value.join(':').trim());
       } else {
-        const ticks = transform(scribble, line);
+        const ticks = transform(line);
         const index = ticks.findIndex(x => x.type === 'pattern');
         const input = ticks.slice(0, index > 0 ? index : 1);
         const values = index > 0 ? ticks.slice(index) : ticks;
@@ -179,7 +179,9 @@ export function parse(scribble, buffer) {
         info[channel].push(spec);
       }
     } catch (e) {
-      throw new SyntaxError(`${e.message}\n  at line ${nth + 1}\n${line}`);
+      const msg = typeof e === 'string' ? e : e.message;
+
+      throw new SyntaxError(`${msg}\n  at line ${nth + 1}\n${line}`);
     }
   });
 

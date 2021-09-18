@@ -1,35 +1,15 @@
+import * as harmonics from 'harmonics';
+
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-export const RE_CHORD = /^[A-G][Mm][#\d\w-]*/;
+export const RE_CHORD = /^[a-gA-G].*\d+$/;
+export const RE_NOTE = /^[a-gA-G][#b]?\d/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;
 
-const TONES = {
-  C: 0,
-  'C#': 1,
-  Db: 1,
-  D: 2,
-  'D#': 3,
-  Eb: 3,
-  E: 4,
-  F: 5,
-  'F#': 6,
-  Gb: 6,
-  G: 7,
-  'G#': 8,
-  Ab: 8,
-  A: 9,
-  'A#': 10,
-  Bb: 10,
-  B: 11,
-};
-
 const CACHE = {};
-
-export function uc(value) {
-  return value[0].toUpperCase() + value.substr(1);
-}
+const TONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 export function level(value) {
   if (value.includes('%')) {
@@ -52,13 +32,29 @@ export function level(value) {
 }
 
 export function pitch(value) {
+  if (Array.isArray(value)) return value.map(pitch);
   if (typeof value !== 'string') return false;
   if (CACHE[value]) return CACHE[value];
 
   const parts = value.split(/(?=-?\d+)/);
-  const offset = TONES[uc(parts[0].substr(0, 2))];
+  const base = parts[0][0].toUpperCase();
+  const sub = parts[0][1];
 
-  CACHE[value] = parseInt(parts[1] || 3, 10) * 12 + offset;
+  let offset = TONES[base];
+  if (sub === '#') offset += 1;
+  if (sub === 'b') offset -= 1;
+
+  let note = parseInt(parts[1] || 3, 10);
+  if (offset > 11) {
+    offset = 0;
+    note += 1;
+  }
+  if (offset < 0) {
+    offset = 11;
+    note -= 1;
+  }
+
+  CACHE[value] = note * 12 + offset;
   return CACHE[value];
 }
 
@@ -70,20 +66,24 @@ export function isNumber(value) {
   return RE_NUMBER.test(value);
 }
 
+export function isChord(value) {
+  return RE_CHORD.test(value);
+}
+
 export function isNote(value) {
-  return !isNaN(pitch(value));
+  return RE_NOTE.test(value);
 }
 
 export function getType(value) {
-  if (RE_PATTERN.test(value)) return 'pattern';
-  if (RE_NUMBER.test(value)) return 'number';
-  if (RE_CHORD.test(value)) return 'chord';
-  if (RE_MODE.test(value)) return 'mode';
   if (isNote(value)) return 'note';
+  if (isChord(value)) return 'chord';
+  if (RE_MODE.test(value)) return 'mode';
+  if (RE_NUMBER.test(value)) return 'number';
+  if (RE_PATTERN.test(value)) return 'pattern';
   return 'value';
 }
 
-export function transform(scribble, expression) {
+export function transform(expression) {
   if (!expression || typeof expression !== 'string') {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }
@@ -100,12 +100,16 @@ export function transform(scribble, expression) {
   function add(type, value) {
     const item = { type, value };
 
+    if (type === 'note') {
+      item.value = pitch(item.value);
+    }
+
     if (type === 'number' && typeof value === 'string') {
       item.value = parseInt(value, 10);
     }
 
     if (type === 'chord' && typeof value === 'string') {
-      item.value = scribble.chord(value.replace(RE_TRIM, ''));
+      item.value = harmonics.inlineChord(value.replace(RE_TRIM, '')).map(pitch);
 
       if (value.indexOf('...') > -1) {
         item.spread = true;
@@ -182,7 +186,7 @@ export function transform(scribble, expression) {
       return prev;
     }
 
-    if (isNote(cur) || RE_CHORD.test(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
+    if (isNote(cur) || isChord(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
       carry.push(cur);
 
       if (
@@ -264,7 +268,7 @@ export function transform(scribble, expression) {
         item.unfold = true;
       }
 
-      item.value = scribble[item.type](item.value[0].replace(RE_TRIM, ''), item.value[1]);
+      item.value = harmonics[item.type](item.value[0].replace(RE_TRIM, ''), item.value[1]);
 
       if (!Array.isArray(item.value)) {
         item.value = item.value.split(' ');

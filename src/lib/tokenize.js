@@ -50,7 +50,7 @@ export function pitch(value) {
   if (sub === '#') offset += 1;
   if (sub === 'b') offset -= 1;
 
-  let note = parseInt(parts[1] || 3, 10);
+  let note = parseInt(parts.pop(), 10);
   if (offset > 11) {
     offset = 0;
     note += 1;

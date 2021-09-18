@@ -116,7 +116,7 @@ export function transform(expression) {
     const item = { type, value };
 
     if (type === 'number' && typeof value === 'string') {
-      item.value = parseInt(value, 10);
+      item.value = typeof value === 'string' ? level(value) : value;
     }
 
     if (type === 'chord' && typeof value === 'string') {
@@ -241,7 +241,7 @@ export function transform(expression) {
         throw new Error(`Expecting a valid expression to ${operator}, given '${tokens.slice(0, i).join(' ')} ${cur}'`);
       }
 
-      add(operator, parseInt(number, 10));
+      add(operator, parseFloat(number));
       return prev;
     }
 

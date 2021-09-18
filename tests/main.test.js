@@ -164,9 +164,13 @@ describe('reducer', () => {
       a: b c
 
       > a % b *5
+      > 3 /2 4.5 /1.5
     `);
 
-    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1]]);
+    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
+      [1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1],
+      [1, 4.5 / 1.5],
+    ]);
   });
 
   it('should resolve notes', () => {

@@ -74,7 +74,8 @@ export function reduce(input, context) {
         break;
 
       case 'divide':
-        return prev.map(x => x / cur.value);
+        prev[prev.length - 1] /= cur.value;
+        return prev;
 
       case 'multiply':
         prev.push(...repeat(last, cur.value - 1));

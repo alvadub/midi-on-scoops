@@ -170,7 +170,7 @@ describe('reducer', () => {
 
     expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
       [1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1],
-      [1, 4.5 / 1.5],
+      [1.5, 4.5 / 1.5],
     ]);
   });
 

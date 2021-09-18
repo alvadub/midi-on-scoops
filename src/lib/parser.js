@@ -3,7 +3,7 @@ import {
 } from './tokenize';
 
 import {
-  add, repeat, range, flatten,
+  repeat, range, flatten,
 } from './utils';
 
 export function fetch(input, context) {
@@ -29,7 +29,7 @@ export function reduce(input, context) {
     }
 
     if (Array.isArray(cur)) {
-      add(prev, cur);
+      prev.push(...cur);
       return prev;
     }
 
@@ -37,16 +37,16 @@ export function reduce(input, context) {
       case 'pattern':
       case 'number':
       case 'note':
-        if (cur.repeat) add(prev, repeat(cur.value, cur.repeat));
-        else if (Array.isArray(cur.value)) add(prev, cur.value);
+        if (cur.repeat) prev.push(...repeat(cur.value, cur.repeat));
+        else if (Array.isArray(cur.value)) prev.push(...cur.value);
         else prev.push(cur.value);
         break;
 
       case 'chord':
       case 'scale':
       case 'progression':
-        if (cur.repeat) add(prev, repeat(cur.value, cur.repeat));
-        else if (cur.unfold) add(prev, cur.value);
+        if (cur.repeat) prev.push(...repeat(cur.value, cur.repeat));
+        else if (cur.unfold) prev.push(...cur.value);
         else prev.push(cur.value);
 
         if (cur.type !== 'chord') {
@@ -56,18 +56,18 @@ export function reduce(input, context) {
 
       case 'range':
         if (next.type === 'divide') {
-          add(prev, range(cur.value[0], cur.value[1], next.value));
+          prev.push(...range(cur.value[0], cur.value[1], next.value));
           skip = true;
         } else {
           const value = range(cur.value[0], cur.value[1]);
 
           if (next.type === 'multiply') {
-            add(prev, flatten(repeat(value, next.value)));
+            prev.push(...flatten(repeat(value, next.value)));
             skip = true;
           } else if (cur.repeat) {
-            add(prev, repeat(value, cur.repeat));
+            prev.push(...repeat(value, cur.repeat));
           } else {
-            add(prev, value);
+            prev.push(...value);
           }
         }
         break;
@@ -76,11 +76,15 @@ export function reduce(input, context) {
         return prev.map(x => x / cur.value);
 
       case 'multiply':
-        add(prev, repeat(last, cur.value - 1));
+        prev.push(...repeat(last, cur.value - 1));
         break;
 
       case 'slice':
         return prev.slice(cur.value[0], cur.value[1]);
+
+      case 'mode':
+        prev[prev.length - 1] = `${last} ${cur.value}`;
+        break;
 
       case 'param':
       case 'value': {
@@ -93,22 +97,25 @@ export function reduce(input, context) {
           value = reduce(value, context);
 
           if (cur.repeat) {
-            add(prev, repeat(value, cur.repeat).reduce((_prev, _cur) => {
-              add(_prev, _cur);
+            prev.push(...repeat(value, cur.repeat).reduce((_prev, _cur) => {
+              _prev.push(..._cur);
               return _prev;
             }, []));
           } else {
-            add(prev, value);
+            prev.push(...value);
           }
 
           return prev;
         }
 
         value = Array.isArray(value) ? value : [value];
-        if (cur.repeat) add(prev, repeat(value, cur.repeat));
-        else add(prev, value);
+        if (cur.repeat) prev.push(...repeat(value, cur.repeat));
+        else prev.push(...value);
       } break;
-      default: throw new Error('FIXME');
+      default: {
+        console.log(prev, cur);
+        throw new Error('FIXME');
+      }
     }
 
     return prev;

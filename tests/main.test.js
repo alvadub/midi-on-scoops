@@ -1,5 +1,8 @@
+/* eslint-disable no-unused-expressions */
+
 import { expect } from 'chai';
 import { parse, reduce } from '../src/lib/parser';
+import { isNote, isChord, transform } from '../src/lib/tokenize';
 
 function p(value) {
   return { type: 'pattern', value };
@@ -21,6 +24,24 @@ function t(value, extra) {
   return { type: 'note', value, ...extra };
 }
 
+describe('tokenize', () => {
+  it('should parse tones', () => {
+    expect(isNote('c')).to.be.true;
+    expect(isNote('CM_4')).to.be.false;
+    expect(isNote('C4 major')).to.be.false;
+  });
+
+  it('should parse chords', () => {
+    expect(isChord('c')).to.be.true;
+    expect(isChord('CM_4')).to.be.true;
+    expect(isChord('C4 major')).to.be.false;
+  });
+
+  it('should parse scales', () => {
+    // console.log(transform('c ++'));
+  });
+});
+
 describe('parser', () => {
   it('should extract tracks', () => {
     const sample = `
@@ -36,7 +57,7 @@ describe('parser', () => {
     `;
 
     expect(parse(sample).notes).to.eql({
-      '%x': [t(48, { repeat: 2 })],
+      '%x': [t('c4', { repeat: 2 })],
     });
   });
 
@@ -82,7 +103,7 @@ describe('parser', () => {
       skanking: {
         1: [{
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          notes: [t(48, { repeat: 2 })],
+          notes: [t('c4', { repeat: 2 })],
           values: [n(120)],
         }],
       },
@@ -114,12 +135,12 @@ describe('parser', () => {
         mix: {
           '1.A': [{
             clips: [p('x---'), p('----')],
-            notes: [t(60)],
+            notes: [t('c5')],
             values: [n(120)],
           }],
           '1.B': [{
             clips: [p('x---'), p('x---')],
-            notes: [t(62)],
+            notes: [t('d5')],
             values: [v('.')],
           }],
         },
@@ -150,6 +171,12 @@ describe('reducer', () => {
       > %x C4 Bb3 CM7sus4
     `);
 
-    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[[48, 51, 55, 58], 48, 46, [48, 53, 55, 59]]]);
+    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([[['C4', 'Eb4', 'G4', 'Bb4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']]]);
+
+    const ctx2 = parse(`
+      %x C4 major
+      > %x C3_dorian_b2
+    `);
+    console.log(ctx2.main.map(x => reduce(x, ctx2)));
   });
 });

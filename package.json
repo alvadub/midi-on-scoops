@@ -50,6 +50,7 @@
     "mocha": "^9.1.1",
     "mortero": "0.0.45",
     "pug": "^3.0.2",
+    "scribbletune": "^4.1.1",
     "svelte": "^3.42.5"
   },
   "dependencies": {

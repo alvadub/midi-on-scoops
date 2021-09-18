@@ -1,9 +1,5 @@
 export const RE_NORMALIZE = /\W/g;
 
-export function add(obj, args) {
-  Array.prototype.push.apply(obj, args);
-}
-
 export function range(min, max, step) {
   const acc = [];
   if (!step) {
@@ -64,13 +60,3 @@ export function flatten(value) {
 export function normalize(value) {
   return value.replace(RE_NORMALIZE, '_');
 }
-
-export default {
-  add,
-  range,
-  repeat,
-  resolve,
-  merge,
-  flatten,
-  normalize,
-};

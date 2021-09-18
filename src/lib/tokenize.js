@@ -3,8 +3,8 @@ import * as harmonics from 'harmonics';
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-export const RE_CHORD = /^[a-gA-G].*\d+$/;
-export const RE_NOTE = /^[a-gA-G][#b]?\d/;
+export const RE_CHORD = /^[a-gA-G][^\s]*\d*$/;
+export const RE_NOTE = /^[a-gA-G][#b]?\d?$/;
 export const RE_MODE = /^(?![iv])[a-z]{2,}/;
 export const RE_TRIM = /\.+$/;
 
@@ -37,6 +37,11 @@ export function pitch(value) {
   if (CACHE[value]) return CACHE[value];
 
   const parts = value.split(/(?=-?\d+)/);
+
+  if (parts.length > 2) {
+    throw new TypeError(`Unknown '${value}' value`);
+  }
+
   const base = parts[0][0].toUpperCase();
   const sub = parts[0][1];
 
@@ -100,16 +105,12 @@ export function transform(expression) {
   function add(type, value) {
     const item = { type, value };
 
-    if (type === 'note') {
-      item.value = pitch(item.value);
-    }
-
     if (type === 'number' && typeof value === 'string') {
       item.value = parseInt(value, 10);
     }
 
     if (type === 'chord' && typeof value === 'string') {
-      item.value = harmonics.inlineChord(value.replace(RE_TRIM, '')).map(pitch);
+      item.value = harmonics.inlineChord(value.replace(RE_TRIM, ''));
 
       if (value.indexOf('...') > -1) {
         item.spread = true;
@@ -268,6 +269,7 @@ export function transform(expression) {
         item.unfold = true;
       }
 
+      console.log('>>', item.value);
       item.value = harmonics[item.type](item.value[0].replace(RE_TRIM, ''), item.value[1]);
 
       if (!Array.isArray(item.value)) {

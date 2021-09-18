@@ -1,7 +1,8 @@
+import { getChordsByProgression } from 'scribbletune';
 import * as harmonics from 'harmonics';
 
 import {
-  isPattern, isNumber, transform, level,
+  isProgression, isPattern, isNumber, transform, level,
 } from './tokenize';
 
 import {
@@ -119,12 +120,23 @@ export function reduce(input, context) {
     }
 
     return prev;
-  }, []).map(item => {
+  }, []).reduce((memo, item) => {
     if (typeof item === 'string' && item.includes(' ')) {
-      return harmonics.scale(item);
+      const chunks = item.split(' ');
+
+      if (chunks.some(isProgression)) {
+        const offset = chunks.findIndex(isProgression);
+        const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];
+
+        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(harmonics.inlineChord));
+      } else {
+        memo.push(harmonics.scale(item));
+      }
+    } else {
+      memo.push(item);
     }
-    return item;
-  });
+    return memo;
+  }, []);
 }
 
 export function parse(buffer) {

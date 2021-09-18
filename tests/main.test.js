@@ -2,7 +2,7 @@
 
 import { expect } from 'chai';
 import { parse, reduce } from '../src/lib/parser';
-import { isNote, isChord, transform } from '../src/lib/tokenize';
+import { pitch, isNote, isChord, transform } from '../src/lib/tokenize';
 
 function p(value) {
   return { type: 'pattern', value };
@@ -37,6 +37,12 @@ describe('tokenize', () => {
     expect(isChord('c3')).to.be.true;
     expect(isChord('CM_4')).to.be.true;
     expect(isChord('C4 major')).to.be.false;
+  });
+
+  describe('pitch', () => {
+    it('convert from notes to midi', () => {
+      expect(['C5', 'Eb5', 'F5', 'Gb5', 'G5', 'Bb5'].map(pitch)).to.eql([60, 63, 65, 66, 67, 70]);
+    });
   });
 });
 
@@ -168,15 +174,22 @@ describe('reducer', () => {
       %x Cm7_4
       %y C4 major
       %z C5 minor blues CmMaj9b6
+      %o C4 minor I iv iii III
       > %x C4 Bb3 CM7sus4
       > %y C3
-      > %z
+      > %z %o
     `);
 
     expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
       [['C4', 'Eb4', 'G4', 'Bb4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']],
       [['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'], 'C3'],
-      [['C5', 'Eb5', 'F5', 'Gb5', 'G5', 'Bb5'], ['C4', 'D4', 'Eb4', 'G4', 'Ab4', 'B4']],
+      [
+        ['C5', 'Eb5', 'F5', 'Gb5', 'G5', 'Bb5'],
+        ['C4', 'D4', 'Eb4', 'G4', 'Ab4', 'B4'],
+        ['C4', 'E4', 'G4'], ['F4', 'Ab4', 'C5'],
+        ['Eb4', 'Gb4', 'Bb4'],
+        ['Eb4', 'G4', 'Bb4'],
+      ],
     ]);
   });
 });

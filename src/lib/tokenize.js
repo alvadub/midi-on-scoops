@@ -5,7 +5,8 @@ export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
 export const RE_CHORD = /^[a-gA-G][^#\s]*\d+$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
-export const RE_MODE = /^(?![iv])[a-z]{2,}/;
+export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
+export const RE_PROG = /^[ivIV]{1,3}$/;
 export const RE_TRIM = /\.+$/;
 
 const CACHE = {};
@@ -61,6 +62,10 @@ export function pitch(value) {
 
   CACHE[value] = note * 12 + offset;
   return CACHE[value];
+}
+
+export function isProgression(value) {
+  return RE_PROG.test(value);
 }
 
 export function isPattern(value) {
@@ -166,6 +171,11 @@ export function transform(expression) {
         add('param', cur);
       }
 
+      return prev;
+    }
+
+    if (isProgression(cur)) {
+      last.value += ` ${cur}`;
       return prev;
     }
 

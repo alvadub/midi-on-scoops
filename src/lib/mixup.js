@@ -4,10 +4,8 @@ import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
 
-export function build(test) {
+export function build(test, bpm = 120) {
   const file = new File();
-
-  const bpm = 90;
   const q = (1.5 / bpm) * 1000;
   const o = {};
 

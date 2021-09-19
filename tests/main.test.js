@@ -311,7 +311,7 @@ describe('midi', () => {
     const fs = require('fs-extra');
     const out = '/tmp/test.midi';
 
-    fs.outputFileSync(out, build(midi), 'binary');
+    fs.outputFileSync(out, build(midi, 90), 'binary');
 
     await new Promise(ok => {
       exec(`timidity ${out}`, (error, stdout, stderr) => {

@@ -140,6 +140,7 @@ export function parse(buffer) {
   const main = [];
   const data = {};
 
+  let channel = null;
   let volumes = [];
   let prefix = '';
   let track;
@@ -184,7 +185,7 @@ export function parse(buffer) {
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');
 
-        const channel = prefix + input[0].value;
+        channel = prefix + input[0].value;
         if (!info[channel]) {
           info[channel] = [];
         }
@@ -222,6 +223,12 @@ export function parse(buffer) {
 
   if (track) {
     tracks[track] = info;
+  }
+  if (volumes.length > 0) {
+    const end = info[channel][info[channel].length - 1];
+
+    if (!end.values) end.values = [];
+    end.values.push(...volumes);
   }
 
   return { main, data, tracks };

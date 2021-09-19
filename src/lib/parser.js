@@ -187,12 +187,12 @@ export function parse(buffer) {
         if (offset > 0) {
           spec = {
             data: values.slice(offset),
-            clips: values.slice(0, offset),
+            input: values.slice(0, offset),
           };
         } else if (offset === 0) {
           spec = { values: values.slice(1) };
         } else {
-          spec = { clips: values };
+          spec = { input: values };
         }
 
         if (input.length > 1) {

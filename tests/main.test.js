@@ -82,10 +82,10 @@ describe('parser', () => {
     expect(parse(sample).tracks).to.eql({
       drums: {
         '#35': [
-          { clips: [p('x---'), p('----'), p('x---'), p('----')] },
-          { clips: [p('----'), p('x---'), p('----'), p('x---')] },
+          { input: [p('x---'), p('----'), p('x---'), p('----')] },
+          { input: [p('----'), p('x---'), p('----'), p('x---')] },
         ],
-        '#14': [{ clips: [p('----'), p('----'), p('x---'), p('----')] }],
+        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')] }],
       },
     });
   });
@@ -115,7 +115,7 @@ describe('parser', () => {
       skanking: {
         '#1': [{
           data: [t('c4', { repeat: 2 })],
-          clips: [p('----'), p('x---'), p('----'), p('x---')],
+          input: [p('----'), p('x---'), p('----'), p('x---')],
           values: [n(120), n(115)],
         }],
       },
@@ -146,12 +146,12 @@ describe('parser', () => {
         mix: {
           'A#1': [{
             data: [t('c5')],
-            clips: [p('x---'), p('----')],
+            input: [p('x---'), p('----')],
             values: [n(120)],
           }],
           'B#1': [{
             data: [t('d5')],
-            clips: [p('x---'), p('x---')],
+            input: [p('x---'), p('x---')],
             values: [v('.')],
           }],
         },
@@ -214,7 +214,7 @@ describe('mixup', () => {
     `))).to.eql([{
       type: 'channel',
       // value: ['track', [
-      //   { clips: [p('---x'), p('x---')] },
+      //   { input: [p('---x'), p('x---')] },
       // ]],
     }]);
 
@@ -230,7 +230,7 @@ describe('mixup', () => {
     `))).to.eql([{
       type: 'channel',
       // value: ['track', [
-      //   { clips: [p('-x--'), p('x---')] },
+      //   { input: [p('-x--'), p('x---')] },
       // ]],
     }]);
   });

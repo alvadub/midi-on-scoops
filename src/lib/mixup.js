@@ -9,42 +9,42 @@ export function build(midi, bpm = 120) {
   const q = (1.5 / bpm) * 1000;
   const o = {};
 
-  console.log(midi);
-
   let ch = 0;
-  // test.forEach(info => {
-  //   Object.keys(info).forEach(key => {
-  //     info[key].forEach(clips => {
-  //       const track = new Track();
+  midi.forEach(channels => {
+    channels.forEach(tracks => {
+      tracks.forEach(e => {
+        const track = new Track();
 
-  //       track.setTempo(bpm);
-  //       file.addTrack(track);
+        track.setTempo(bpm);
+        file.addTrack(track);
 
-  //       let chan = clips[0] === '0' ? 9 : ch;
-  //       if (chan !== 9) {
-  //         chan = o[clips[0]] || (o[clips[0]] = chan); // eslint-disable-line
-  //         track.instrument(chan, clips[0]);
-  //         ch += 1;
-  //       }
+        let chan = e[0] === '0' ? 9 : ch;
+        if (chan !== 9) {
+          chan = o[e[0]] || (o[e[0]] = chan); // eslint-disable-line
+          track.instrument(chan, e[0]);
+          ch += 1;
+        }
 
-  //       clips[1].forEach((tick, i) => {
-  //         if (tick[0] > 0) {
-  //           const note = tick[1] || 90;
+        for (let i = 1; i < e.length; i += 1) {
+          const tick = e[i];
 
-  //           if (Array.isArray(note)) {
-  //             track.noteOff(chan, '', q);
-  //             track.addChord(chan, note, q, tick[0]);
-  //           } else {
-  //             track.noteOn(chan, note, q, tick[0]);
-  //             track.noteOff(chan, note, q);
-  //           }
-  //         } else {
-  //           track.noteOff(chan, '', q * 2);
-  //         }
-  //       });
-  //     });
-  //   });
-  // });
+          if (tick[0] > 0) {
+            const note = tick[1] || 90;
+
+            if (Array.isArray(note)) {
+              track.noteOff(chan, '', q);
+              track.addChord(chan, note, q, tick[0]);
+            } else {
+              track.noteOn(chan, note, q, tick[0]);
+              track.noteOff(chan, note, q);
+            }
+          } else {
+            track.noteOff(chan, '', q * 2);
+          }
+        }
+      });
+    });
+  });
   return file.toBytes();
 }
 

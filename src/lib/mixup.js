@@ -96,5 +96,16 @@ export function mix(ctx) {
     ctx.main = [[{ type: 'value', value: DEFAULT }]];
   }
 
-  return ctx.main.map(track => reduce(track, scenes));
+  return ctx.main.map(track => {
+    return reduce(track, scenes).map(item => {
+      return [].concat(item).reduce((memo, x) => {
+        x.tracks.forEach(t => {
+          t.track.forEach(_ => {
+            memo.push([t.midi, ..._]);
+          });
+        });
+        return memo;
+      }, []);
+    });
+  });
 }

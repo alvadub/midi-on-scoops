@@ -288,7 +288,8 @@ describe('mixup', () => {
 describe('midi', () => {
   it('should encode output', async () => {
     const file = new jsmidgen.File();
-    const test = [{ a: [13, [[100], [0], [80], [0], [90], [0], [0], [0]]] }];
+    const test = [{ a: [1, [[100], [0], [80], [0], [90], [0], [0], [0], [100]]] }];
+    const q = (2 / 16) * 440;
 
     let ch = 0;
     test.forEach(info => {
@@ -297,27 +298,22 @@ describe('midi', () => {
 
         track.setTempo(127);
         file.addTrack(track);
+        track.instrument(ch, info[key][0]);
 
-        const [num, clip] = info[key];
-
-        track.instrument(ch, num);
-
-        // track
-        clip.forEach(tick => {
+        info[key][1].forEach(tick => {
           if (tick[0] > 0) {
             const note = tick[1] || 90;
 
             if (Array.isArray(note)) {
-              track.addChord(ch, note, 100, tick[0]);
+              track.addChord(ch, note, q, tick[0]);
             } else {
-              track.noteOn(ch, note, 100, tick[0]);
-              track.noteOff(ch, note, 100, tick[0]);
+              track.noteOn(ch, note, q, tick[0]);
+              track.noteOff(ch, note, q / 2, tick[0]);
             }
           } else {
-            track.noteOff(ch, '', 100);
+            track.noteOff(ch, '', q);
           }
         });
-
         ch += 1;
       });
     });
@@ -338,5 +334,5 @@ describe('midi', () => {
         ok();
       });
     });
-  }).timeout(5000);
+  }).timeout(10000);
 });

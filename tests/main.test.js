@@ -1,9 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-const harmonics = require('harmonics');
-const { expect } = require('chai');
-const fs = require('fs-extra');
 const { exec } = require('child_process');
+const fs = require('fs-extra');
+const { expect } = require('chai');
 
 const {
   mix, build,
@@ -290,11 +289,11 @@ describe('mixup', () => {
 });
 
 describe('midi', () => {
-  it.skip('should encode output', async () => {
+  it('should encode output', async () => {
     const midi = mix(parse(`
       # piano
         @A
-          #1 112 --x- --x- --x- --x- Cm_4 % % %
+          #1 115 --x- --x- --x- --x- Cm_4 % % %
 
       ## bass
         @A
@@ -307,7 +306,7 @@ describe('midi', () => {
     const l = 112;
 
     expect(midi[0][0]).to.eql([
-      ['1', 'piano', [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]],
+      ['1', 'piano', [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0]],
       ['1', 'bass', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0]],
     ]);
 

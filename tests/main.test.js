@@ -285,46 +285,42 @@ describe('mixup', () => {
   });
 });
 
-describe.skip('midi', () => {
+describe('midi', () => {
   it('should encode output', async () => {
     const file = new jsmidgen.File();
-    const test = [{ a: ['1', [127, 0, 0, 0, 127, 0, 0, 0], []] }];
+    const test = [{ a: [13, [[100], [0], [80], [0], [90], [0], [0], [0]]] }];
 
+    let ch = 0;
     test.forEach(info => {
       Object.keys(info).forEach(key => {
         const track = new jsmidgen.Track();
 
-        track.setTempo(140);
+        track.setTempo(127);
         file.addTrack(track);
 
-        console.log(key, info[key]);
+        const [num, clip] = info[key];
 
-        // const [ch, clip, notes] = info[key];
-        // // track
-        // clip.forEach(tick => {
-        //   if (tick > 0) {
-        //     const note =
-        //     track.noteOn(ch, note, 100, tick);
-        //     track.noteOff(ch, note, 100, tick);
-        //   } else {
-        //     track.noteOff(ch, '', 100);
-        //   }
-        // });
+        track.instrument(ch, num);
+
+        // track
+        clip.forEach(tick => {
+          if (tick[0] > 0) {
+            const note = tick[1] || 90;
+
+            if (Array.isArray(note)) {
+              track.addChord(ch, note, 100, tick[0]);
+            } else {
+              track.noteOn(ch, note, 100, tick[0]);
+              track.noteOff(ch, note, 100, tick[0]);
+            }
+          } else {
+            track.noteOff(ch, '', 100);
+          }
+        });
+
+        ch += 1;
       });
     });
-
-    // NOTE
-      // track.noteOn(channel, noteObj.note, noteObj.length, level);
-      // track.noteOff(channel, noteObj.note, noteObj.length, level);
-
-      // track.addChord(channel, noteObj.note, noteObj.length, level);
-
-    // HACK
-      // track.setInstrument(channel, 0, _delay);
-      // track.addNote(channel, '', noteObj.length, 0, 1);
-
-    // OFF
-      // track.noteOff(channel, '', noteObj.length);
 
     const { exec } = require('child_process');
     const fs = require('fs-extra');
@@ -342,5 +338,5 @@ describe.skip('midi', () => {
         ok();
       });
     });
-  }).timeout(3000);
+  }).timeout(5000);
 });

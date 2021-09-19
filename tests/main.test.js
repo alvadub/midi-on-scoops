@@ -1,11 +1,10 @@
 /* eslint-disable no-unused-expressions */
 
 const harmonics = require('harmonics');
-const jsmidgen = require('jsmidgen');
 const { expect } = require('chai');
 
 const {
-  mix,
+  mix, build,
   parse, reduce,
   pitch, isNote, isChord,
 } = require('../build/main.cjs');
@@ -288,91 +287,31 @@ describe('mixup', () => {
 
 describe('midi', () => {
   it('should encode output', async () => {
-    const file = new jsmidgen.File();
-    // const scale = harmonics.scale('B3 minor');
-    // const a = scale[0];
-    // const b = scale[2];
-    // const c = scale[4];
-    // const x = [a, b, c];
-    // const _1 = scale[0];
-    // const _2 = scale[1];
-    // const _3 = scale[2];
-    // const _4 = scale[3];
-    // const _5 = scale[4];
-    // const _6 = scale[4];
-    // const test = [
-    //   {
-    //     piano: [
-    //       ['1', [
-    //         [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0],
-    //         [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0],
-    //       ]],
-    //     ],
-    //     bass: [
-    //       ['1', [
-    //         [50, _1], [0], [50, _2], [0], [50, _3], [0], [50, _4], [0], [50, _5], [0], [50, _4], [0], [50, _3], [0], [50, _2], [0],
-    //         [50, _1], [0], [50, _2], [0], [50, _3], [0], [50, _4], [0], [50, _5], [0], [50, _4], [0], [50, _3], [0], [50, _2], [0], [50, _1],
-    //       ]],
-    //     ],
-    //   },
-    // ];
-
-    const test = mix(parse(`
+    const midi = mix(parse(`
       # piano
         @A
           #1 --x- --x- --x- --x- Cm_4 % % %
 
       # bass
         @A
-          #1 x-x- x-x- x-x- x-x- c3 d3 d#3 f3 g3 f3 d#3 d3
+          #1 x-x- x-x- x-x- x-x- x C3 D3 Eb3 F3 G3 F3 Eb3 D3 C3
 
       > A
     `));
 
-    // bars length?
-    const q = 16;
-    const o = {};
+    const c = [60, 63, 67];
+    const l = 127;
 
-    let ch = 0;
-    test.forEach(info => {
-      Object.keys(info).forEach(key => {
-        info[key].forEach(clips => {
-          const track = new jsmidgen.Track();
-
-          track.setTempo(90);
-          file.addTrack(track);
-
-          let chan = clips[0] === '0' ? 9 : ch;
-          if (chan !== 9) {
-            chan = o[clips[0]] || (o[clips[0]] = chan); // eslint-disable-line
-            track.instrument(chan, clips[0]);
-            ch += 1;
-          }
-
-          clips[1].forEach((tick, i) => {
-            if (tick[0] > 0) {
-              const note = tick[1] || 90;
-
-              if (Array.isArray(note)) {
-                track.noteOff(chan, '', q);
-                track.addChord(chan, note, q, tick[0]);
-              } else {
-                track.noteOn(chan, note, q, tick[0]);
-                track.noteOff(chan, note, q);
-              }
-            } else {
-              track.noteOff(chan, '', q * 2);
-            }
-          });
-        });
-      });
-    });
+    expect(midi).to.eql([{
+      piano: [['1', [[0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]]]],
+      bass: [['1', [[l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0], [l, 48]]]],
+    }]);
 
     const { exec } = require('child_process');
     const fs = require('fs-extra');
     const out = '/tmp/test.midi';
 
-    fs.outputFileSync(out, file.toBytes(), 'binary');
+    fs.outputFileSync(out, build(midi), 'binary');
 
     await new Promise(ok => {
       exec(`timidity ${out}`, (error, stdout, stderr) => {

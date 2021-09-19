@@ -144,12 +144,12 @@ describe('parser', () => {
       main: [[m('main')]],
       tracks: {
         mix: {
-          '#1.A': [{
+          'A#1': [{
             data: [t('c5')],
             clips: [p('x---'), p('----')],
             values: [n(120)],
           }],
-          '#1.B': [{
+          'B#1': [{
             data: [t('d5')],
             clips: [p('x---'), p('x---')],
             values: [v('.')],

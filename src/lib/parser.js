@@ -135,7 +135,7 @@ export function parse(buffer) {
   const data = {};
 
   let volumes = [];
-  let suffix = '';
+  let prefix = '';
   let track;
   let info = {};
   buffer.split(/\r?\n/g).forEach((line, nth) => {
@@ -152,7 +152,7 @@ export function parse(buffer) {
       } else if (line.indexOf('# ') === 0) {
         if (track) {
           tracks[track] = info;
-          suffix = '';
+          prefix = '';
           info = {};
         }
 
@@ -160,7 +160,7 @@ export function parse(buffer) {
       } else if (line.charAt() === '>') {
         main.push(transform(line.substr(1).trim()));
       } else if (line.charAt() === '@') {
-        suffix = `.${line.substr(1).split(' ')[0]}`;
+        prefix = line.substr(1).split(' ')[0];
       } else if (line.indexOf(':') > 0) {
         const [name, ...value] = line.split(':');
 
@@ -178,7 +178,7 @@ export function parse(buffer) {
         const values = index > 0 ? ticks.slice(index) : ticks;
         const offset = values.findIndex(x => x.type !== 'pattern');
 
-        const channel = input[0].value + suffix;
+        const channel = prefix + input[0].value;
         if (!info[channel]) {
           info[channel] = [];
         }

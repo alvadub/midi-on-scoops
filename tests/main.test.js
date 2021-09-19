@@ -262,14 +262,15 @@ describe('mixup', () => {
         @B
           #3 ---- -x-x
 
-      > A A B A
+      > A % B A
     `));
-
 
     console.log(require('util').inspect(test,{depth:10,colors:1}));
 
-    // expect(test[0].track).to.eql([]);
-    // expect(test[0].other).to.eql([]);
+    // expect(test[0][0]).to.eql([A1, AA1]);
+    // expect(test[0][1]).to.eql([A1, AA1]);
+    // expect(test[0][2]).to.eql([B1, B1_, BB1]);
+    // expect(test[0][3]).to.eql([A1, AA1]);
   });
 });
 

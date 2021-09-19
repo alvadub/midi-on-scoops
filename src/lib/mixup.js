@@ -87,8 +87,8 @@ export function mix(ctx) {
         track.push(reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []));
       });
 
-      if (!scenes[key]) scenes[key] = [];
-      scenes[key].push({ midi, name, track });
+      if (!scenes[key]) scenes[key] = { tracks: [] };
+      scenes[key].tracks.push({ midi, name, track });
     });
   });
 
@@ -96,18 +96,9 @@ export function mix(ctx) {
     ctx.main = [[{ type: 'value', value: DEFAULT }]];
   }
 
-  console.log(require('util').inspect(scenes,{depth:10,colors:1}));
+  // console.log(require('util').inspect(scenes,{depth:10,colors:1}));
 
   return ctx.main.map(track => {
-    return reduce(track, scenes).reduce((memo, cur) => {
-      if (!memo[cur.name]) memo[cur.name] = [];
-
-      const tracks = [];
-      cur.track.forEach(clip => {
-        tracks.push([cur.midi, ...clip]);
-      });
-      memo[cur.name].push({ tracks });
-      return memo;
-    }, {});
+    return reduce(track, scenes);
   });
 }

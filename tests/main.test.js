@@ -319,7 +319,7 @@ describe('midi', () => {
       },
     ];
 
-    const q = 24;
+    const q = (128 / 16) * 3;
     const o = {};
 
     let ch = 0;
@@ -328,7 +328,7 @@ describe('midi', () => {
         info[key].forEach(clips => {
           const track = new jsmidgen.Track();
 
-          track.setTempo(127);
+          track.setTempo(120);
           file.addTrack(track);
 
           let chan = clips[0] === '0' ? 9 : ch;

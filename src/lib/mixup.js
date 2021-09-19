@@ -1,5 +1,15 @@
 import { reduce } from './parser';
 
+/**
+
+how this would work?
+
+we have tracks,
+  then we have channels
+    and channels can be tagged...
+
+*/
+
 export function mix(ctx) {
   const index = { ...ctx.data };
 
@@ -23,7 +33,7 @@ export function mix(ctx) {
 
   // if (!ctx.main.length) {
   //   Object.keys(index).forEach(key => {
-  //     console.log(ctx);
+  //     console.log(key);
   //   });
   // }
 

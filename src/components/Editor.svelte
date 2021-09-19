@@ -3,7 +3,7 @@
   import { parse } from '../lib/parser';
 
   // FIXME: implements, first, a good parser for these inputs...
-  // here we'll have 2 axis, horzontally we stack the bars...
+  // here we'll have 2 axis, horizontally we stack bars...
   // vertically we can create layers of those stacks...
   // then, we can use the Y-axis to play as scenes!
 
@@ -13,30 +13,31 @@
 %X  a4|c5|e5
 %Y  g4|d4|a#4
 
-@scene 1
+@A
 
   ; drumkit
-  ; CH VOL PAN?
   3       ---- ---- ---- ---- x--- ---- ---- ----
   14      ---- ---- ---- ---- x--- ---- ---- ----
   37      x--- x--- ---- x--- x--- ---- x--- ----
+
+          120  %    115  125  %    %    115  120
   35      x--- x--- x--- x--- x--- x--- x--- x--- ; after comment
 
   ; chords
   15      ---- ---- x--- ---- ---- ---- x--- ---- %X %
   165     ---- x--- ---- x--- ---- x--- ---- x--- %X % % %
 
-@scene 2
+@B
 
   ; chords
-  ;15  ---- ---- x--- ---- ---- ---- x--- ---- %Y %
-  ;183 ---- x--- ---- x--- ---- x--- ---- x--- %Y % % %
+  15      ---- ---- x--- ---- ---- ---- x--- ---- %Y %
+  183     ---- x--- ---- x--- ---- x--- ---- x--- %Y % % %
 
   ; how to handle duration, e.g. x__-
   ; how to repeat from previous stacks?
   ; they should merge from previous ones? then extends?
 
-> 1 1 2 1
+> A A B A
 `;
 
   function getData(input) {
@@ -80,5 +81,5 @@
 <button on:click={play}>Play</button>
 <button on:click={stop}>Stop</button>
 <input type="number" bind:value={tempo} />
-<textarea bind:value cols="64" rows="20" />
+<textarea bind:value cols="64" rows="30" />
 

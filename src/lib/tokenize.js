@@ -88,9 +88,9 @@ export function getType(value) {
   if (!CACHE[key]) {
     if (isNote(value)) CACHE[key] = 'note';
     else if (isChord(value)) CACHE[key] = 'chord';
+    else if (isPattern(value)) CACHE[key] = 'pattern';
     else if (RE_MODE.test(value)) CACHE[key] = 'mode';
     else if (RE_NUMBER.test(value)) CACHE[key] = 'number';
-    else if (RE_PATTERN.test(value)) CACHE[key] = 'pattern';
     else CACHE[key] = 'value';
   }
   return CACHE[key];
@@ -101,7 +101,7 @@ export function transform(expression) {
     throw new Error(`Expecting a valid string, given '${expression}'`);
   }
 
-  if (CACHE[expression]) return CACHE[expression];
+  if (CACHE[`$${expression}`]) return CACHE[`$${expression}`];
 
   const tokens = expression.split(/\s+/);
 
@@ -256,6 +256,6 @@ export function transform(expression) {
     return cur;
   }, null);
 
-  CACHE[expression] = ast;
+  CACHE[`$${expression}`] = ast;
   return ast;
 }

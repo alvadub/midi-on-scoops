@@ -18,8 +18,8 @@ function v(value) {
   return { type: 'value', value };
 }
 
-function n(value) {
-  return { type: 'number', value };
+function n(value, extra) {
+  return { type: 'number', value, ...extra };
 }
 
 function m(value) {
@@ -93,12 +93,12 @@ describe('parser', () => {
   it('should extract values', () => {
     const sample = `
       # multiple
-      1 2/3 . 4*5 67%
+      1 2/3 4*5 67% .
     `;
 
     expect(parse(sample).tracks).to.eql({
       multiple: {
-        1: [{ values: [n(2 / 3), v('.'), n(4 * 5), n(85.09)] }],
+        1: [{ values: [n(2 / 3), n(4 * 5), n(85.09), v('.')] }],
       },
     });
   });
@@ -106,6 +106,8 @@ describe('parser', () => {
   it('should extract notes', () => {
     const sample = `
       # skanking
+
+            120  %    115  125
       1 120 ---- x--- ---- x--- c4 %
     `;
 
@@ -114,7 +116,7 @@ describe('parser', () => {
         1: [{
           data: [t('c4', { repeat: 2 })],
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          values: [n(120)],
+          values: [n(120), n(120, { repeat: 2 }), n(115), n(125)],
         }],
       },
     });
@@ -224,7 +226,7 @@ describe('mixup', () => {
           1 -x-- x---
           1 -x-- x---
           2 ---- ---x
-      > @B
+      > A A B A
     `))).to.eql([{
       type: 'channel',
       // value: ['track', [

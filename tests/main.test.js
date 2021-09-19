@@ -11,8 +11,6 @@ const {
   pitch, isNote, isChord,
 } = require('../build/main.cjs');
 
-// delete require.cache[require.resolve('../build/main.cjs')];
-
 function p(value) {
   return { type: 'pattern', value };
 }
@@ -292,7 +290,7 @@ describe('mixup', () => {
 });
 
 describe('midi', () => {
-  it('should encode output', () => {
+  it('should encode output', async () => {
     const midi = mix(parse(`
       # piano
         @A
@@ -313,6 +311,6 @@ describe('midi', () => {
       ['1', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0], [l, 48]],
     ]);
 
-    return play(midi);
+    await play(midi);
   }).timeout(60000);
 });

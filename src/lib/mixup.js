@@ -73,7 +73,7 @@ export function pack(values, notes) {
 export function mix(ctx) {
   const scenes = {};
 
-  Object.entries(ctx.tracks).forEach(([name, tracks]) => {
+  Object.entries(ctx.tracks).forEach(([src, tracks]) => {
     Object.entries(tracks).forEach(([ch, clips]) => {
       const [tag, midi] = ch.split('#');
       const key = tag || DEFAULT;
@@ -88,7 +88,7 @@ export function mix(ctx) {
       });
 
       if (!scenes[key]) scenes[key] = { tracks: [] };
-      scenes[key].tracks.push({ midi, name, track });
+      scenes[key].tracks.push({ src, midi, track });
     });
   });
 

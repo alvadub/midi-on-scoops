@@ -141,7 +141,6 @@ export function parse(buffer) {
   const data = {};
 
   let channel = null;
-  let volumes = [];
   let prefix = '';
   let track;
   let info = {};
@@ -159,7 +158,7 @@ export function parse(buffer) {
       } else if (line.indexOf('# ') === 0) {
         if (track) {
           tracks[track] = info;
-          volumes = [];
+          channel = null;
           prefix = '';
           info = {};
         }
@@ -177,7 +176,12 @@ export function parse(buffer) {
         const ticks = transform(line);
 
         if (ticks[0].type !== 'channel') {
-          volumes = ticks;
+          if (!channel) throw new TypeError(`Missing channel, given '${line}'`);
+
+          const end = info[channel][info[channel].length - 1];
+
+          if (!end.values) end.values = [];
+          end.values.push(...ticks);
           return;
         }
 
@@ -209,10 +213,6 @@ export function parse(buffer) {
         if (input.length > 1) {
           spec.values = input.slice(1);
         }
-        if (volumes.length > 0) {
-          spec.values = (spec.values || []).concat(volumes);
-          volumes = [];
-        }
         info[channel].push(spec);
       }
     } catch (e) {
@@ -225,12 +225,5 @@ export function parse(buffer) {
   if (track) {
     tracks[track] = info;
   }
-  if (volumes.length > 0) {
-    const end = info[channel][info[channel].length - 1];
-
-    if (!end.values) end.values = [];
-    end.values.push(...volumes);
-  }
-
   return { main, data, tracks };
 }

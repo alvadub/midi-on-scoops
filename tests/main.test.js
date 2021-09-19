@@ -214,12 +214,7 @@ describe('mixup', () => {
     expect(mix(parse(`
       # track
       #1 ---x x---
-    `))).to.eql([{
-      type: 'channel',
-      // value: ['track', [
-      //   { input: [p('---x'), p('x---')] },
-      // ]],
-    }]);
+    `))).to.eql([]);
 
     expect(mix(parse(`
       # track
@@ -231,11 +226,6 @@ describe('mixup', () => {
           #2 120 ---- ---x C4
                        115
       > A A B A
-    `))).to.eql([{
-      type: 'channel',
-      // value: ['track', [
-      //   { input: [p('-x--'), p('x---')] },
-      // ]],
-    }]);
+    `))).to.eql([]);
   });
 });

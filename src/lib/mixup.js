@@ -1,4 +1,4 @@
-import { pitch } from './tokenize';
+import { pitch, isPattern } from './tokenize';
 import { reduce } from './parser';
 
 /**
@@ -17,24 +17,25 @@ then, when resolving, iterate params until tracks are reach
 finally, expand all gathered values and concatenate all pieces...
 */
 
-// export function convert(pattern, values) {
-//   const copy = values ? values.slice() : [];
-
-//   return pattern.split('').reduce((memo, cur) => {
-//     let tmp = cur === '-' ? 0 : 127;
-//     if (cur === 'x' && values && copy.length > 0) {
-//       tmp = copy.shift();
-
-//       if (Array.isArray(tmp)) {
-//         tmp = tmp.map(pitch);
-//       } else {
-//         tmp = pitch(tmp);
-//       }
-//     }
-//     if (typeof tmp === 'number') memo.push(tmp);
-//     return memo;
-//   }, []);
-// }
+export function convert(values, cycle) {
+  return value => {
+    if (Array.isArray(value)) return value.map(pitch);
+    if (typeof value === 'string') {
+      if (isPattern(value)) {
+        let offset = 0;
+        return value.split('').map(x => {
+          if (values.length > 0 && x !== '-') {
+            if (cycle && offset >= values.length) offset = 0;
+            return values[offset++] || 0; // eslint-disable-line
+          }
+          return x === '-' ? 0 : 127;
+        });
+      }
+      return pitch(value);
+    }
+    return value;
+  };
+}
 
 export function mix(ctx) {
   const index = { ...ctx.data };
@@ -47,8 +48,12 @@ export function mix(ctx) {
       const values = [];
 
       clips.forEach(clip => {
-        // values.push(convert(reduce(clip.input, index).join(''), clip.data));
-        // console.log(clip);
+        const fn = convert(clip.values ? reduce(clip.values, index) : []);
+
+        values.push({
+          clips: reduce(clip.input, index, fn),
+          notes: clip.data ? reduce(clip.data, index, fn) : [],
+        });
       });
 
       if (!scenes[key]) scenes[key] = [];
@@ -92,5 +97,5 @@ export function mix(ctx) {
   // });
 
   console.log(require('util').inspect(scenes, { colors: true, depth: 10 }));
-  return [{ type: 'channel' }];
+  return [];
 }

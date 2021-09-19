@@ -1,18 +1,19 @@
 import { getChordsByProgression } from 'scribbletune/src/progression';
 import { scale, inlineChord } from 'harmonics';
 
-import { isProgression, transform } from './tokenize';
+import { isProgression, isPattern, transform } from './tokenize';
 import { repeat, range, flatten } from './utils';
 
-export function reduce(input, context) {
-  if (!Array.isArray(input)) {
-    return input;
-  }
+export function reduce(input, context, callback) {
+  if (!Array.isArray(input)) return input;
+
+  const fn = typeof callback === 'function' ? callback : (v => v);
 
   let skip;
   return input.reduce((prev, cur, i) => {
     const last = prev[prev.length - 1];
     const next = input[i + 1] || {};
+    const old = input[i - 1] || {};
 
     if (skip) {
       skip = false;
@@ -21,6 +22,11 @@ export function reduce(input, context) {
 
     if (Array.isArray(cur)) {
       prev.push(...cur);
+      return prev;
+    }
+
+    if (old.type === 'pattern' && cur.type === 'pattern') {
+      prev[prev.length - 1] += cur.value;
       return prev;
     }
 
@@ -118,12 +124,12 @@ export function reduce(input, context) {
         const offset = chunks.findIndex(isProgression);
         const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];
 
-        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(inlineChord));
+        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(x => fn(inlineChord(x))));
       } else {
-        memo.push(scale(item));
+        memo.push(fn(scale(item)));
       }
     } else {
-      memo.push(item);
+      memo.push(fn(item));
     }
     return memo;
   }, []);

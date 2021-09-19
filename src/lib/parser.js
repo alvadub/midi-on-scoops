@@ -49,24 +49,6 @@ export function reduce(input, context, callback) {
         }
         break;
 
-      case 'range':
-        if (next.type === 'divide') {
-          prev.push(...range(cur.value[0], cur.value[1], next.value));
-          skip = true;
-        } else {
-          const value = range(cur.value[0], cur.value[1]);
-
-          if (next.type === 'multiply') {
-            prev.push(...flatten(repeat(value, next.value)));
-            skip = true;
-          } else if (cur.repeat) {
-            prev.push(...repeat(value, cur.repeat));
-          } else {
-            prev.push(...value);
-          }
-        }
-        break;
-
       case 'divide':
         prev[prev.length - 1] /= cur.value;
         return prev;
@@ -76,7 +58,10 @@ export function reduce(input, context, callback) {
         break;
 
       case 'slice':
-        return prev.slice(cur.value[0], cur.value[1]);
+        prev.push(cur.value);
+        break;
+        // console.log({ prev, last, cur });
+        // return prev.slice(cur.value[0], cur.value[1]);
 
       case 'mode':
         prev[prev.length - 1] = `${last} ${cur.value}`;
@@ -110,17 +95,37 @@ export function reduce(input, context, callback) {
         else prev.push(...value);
       } break;
       default: {
-        // console.log({prev, cur});
-        throw new Error('FIXME');
+        throw new Error(`Unhandled '${cur.type}'`);
       }
     }
 
     return prev;
   }, []).reduce((memo, item) => {
+    const prev = memo[memo.length - 1];
+
+    if (Array.isArray(prev) && Array.isArray(item) && item.length === 2) {
+      const [base, length] = item[1].split(/\D/);
+
+      memo.pop();
+      memo.push(...prev.slice(item[0] - 1, base));
+
+      if (length > 0) {
+        if (item[1].includes('>')) {
+          const parts = memo.slice(-length - 1);
+
+          parts.pop();
+          parts.reverse();
+          memo.push(...parts);
+        }
+      } else {
+        memo.push(...prev.slice(item[0] - 1, item[1]));
+      }
+      return memo;
+    }
+
     if (typeof item === 'string' && item.includes(' ')) {
       const chunks = item.split(' ');
 
-      // FIXME: check next-param to slice/pick/mirror
       if (chunks.some(isProgression)) {
         const offset = chunks.findIndex(isProgression);
         const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];

@@ -27,10 +27,9 @@ export function build(midi, bpm = 120) {
   midi.forEach(section => {
     section.forEach(parts => {
       parts.forEach(e => {
-        // reusing the `chan` will stack notes after...
         const { chan, track } = get(e[0], e[1]);
-        track.setTempo(bpm);
 
+        track.setTempo(bpm);
         if (chan !== 9) {
           track.instrument(chan, e[0]);
         }

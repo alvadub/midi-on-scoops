@@ -237,12 +237,10 @@ export function transform(expression) {
         || (Array.isArray(prev) && last.type !== 'range') ? 'slice' : 'range';
 
       const parts = cur.split('..');
+      const min = parts[0] || 1;
+      const max = parts[1] || Infinity;
 
-      if (!(RE_NUMBER.test(parts[0]) && RE_NUMBER.test(parts[1]))) {
-        throw new Error(`Expecting valid numbers for ${type}, given '${prev} ${cur}'`);
-      }
-
-      cur = parts.map(n => parseInt(n, 10));
+      cur = [min, max];
     }
 
     if (typeof cur === 'string' && (cur.charAt() === '/' || cur.charAt() === '*')) {

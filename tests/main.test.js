@@ -289,7 +289,7 @@ describe('mixup', () => {
   });
 });
 
-describe('midi', () => {
+describe.only('midi', () => {
   it('should encode output', async () => {
     const midi = mix(parse(`
       # piano
@@ -298,7 +298,7 @@ describe('midi', () => {
 
       ## bass
         @A
-          #1 112 x-x- x-x- x-x- x-x- C3 D3 Eb3 F3 G3 F3 Eb3 D3
+          #1 112 x-x- x-x- x-x- x-x- C3 minor ..5>3
 
       > A % % %
     `));

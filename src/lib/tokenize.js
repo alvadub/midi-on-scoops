@@ -59,7 +59,7 @@ export function pitch(value) {
     note -= 1;
   }
 
-  CACHE[value] = note * 12 + offset;
+  CACHE[value] = (note * 12 + offset) + 12;
   return CACHE[value];
 }
 

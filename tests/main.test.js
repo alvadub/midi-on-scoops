@@ -35,10 +35,10 @@ function k(values, notes = []) {
   return { send: values, notes };
 }
 
-function play(midi) {
+function play(midi, bpm) {
   const out = '/tmp/test.midi';
 
-  fs.outputFileSync(out, build(midi, 90), 'binary');
+  fs.outputFileSync(out, build(midi, bpm), 'binary');
 
   return new Promise(ok => {
     exec(`timidity ${out}`, (error, stdout, stderr) => {
@@ -234,14 +234,14 @@ describe('mixup', () => {
       # track
       #1 -x
     `))).to.eql([
-      [[['1', [0], [127]]]],
+      [[['1', 'track', [0], [127]]]],
     ]);
 
     expect(mix(parse(`
       # track
       #1 125 ---x
     `))).to.eql([
-      [[['1', [0], [0], [0], [125]]]],
+      [[['1', 'track', [0], [0], [0], [125]]]],
     ]);
 
     expect(mix(parse(`
@@ -249,18 +249,18 @@ describe('mixup', () => {
       #1 ---x x---
          100  120
     `))).to.eql([
-      [[['1', [0], [0], [0], [100], [120], [0], [0], [0]]]],
+      [[['1', 'track', [0], [0], [0], [100], [120], [0], [0], [0]]]],
     ]);
   });
 
   it('should compose mixed tracks', () => {
-    const A1 = ['1', [127], [0], [0], [0], [0], [0], [127], [0]];
-    const B1 = ['1', [0], [127], [0], [0], [127], [0], [0], [0]];
-    const B1_ = ['1', [0], [127], [0], [0], [127], [127], [0], [0]];
-    const B2 = ['2', [0], [0], [0], [0], [0], [0], [0], [115, 60]];
+    const A1 = ['1', 'track', [127], [0], [0], [0], [0], [0], [127], [0]];
+    const B1 = ['1', 'track', [0], [127], [0], [0], [127], [0], [0], [0]];
+    const B1_ = ['1', 'track', [0], [127], [0], [0], [127], [127], [0], [0]];
+    const B2 = ['2', 'track', [0], [0], [0], [0], [0], [0], [0], [115, 60]];
 
-    const AA1 = ['3', [0], [0], [0], [127], [0], [0], [0], [127]];
-    const BB1 = ['3', [0], [0], [0], [0], [0], [127], [0], [127]];
+    const AA1 = ['3', 'other', [0], [0], [0], [127], [0], [0], [0], [127]];
+    const BB1 = ['3', 'other', [0], [0], [0], [0], [0], [127], [0], [127]];
 
     const midi = mix(parse(`
       # track
@@ -298,21 +298,23 @@ describe('midi', () => {
 
       # bass
         @A
-          #1 x-x- x-x- x-x- x-x- x C3 D3 Eb3 F3 G3 F3 Eb3 D3 C3
+          #1 x-x- x-x- x-x- x-x- C3 D3 Eb3 F3 G3 F3 Eb3 D3
 
-      > A A
+      > A % ; A A
     `));
+
+    // console.log(require('util').inspect(midi,{depth:5,colors:1}));
 
     const c = [60, 63, 67];
     const l = 127;
 
     expect(midi[0][0]).to.eql([
-      ['1', [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]],
-      ['1', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0], [l, 48]],
+      ['1', 'piano', [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]],
+      ['1', 'bass', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0]],
     ]);
 
     expect(midi[0][1]).to.eql(midi[0][0]);
 
-    await play(midi);
+    await play(midi, 90);
   }).timeout(60000);
 });

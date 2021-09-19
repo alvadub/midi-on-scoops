@@ -96,9 +96,5 @@ export function mix(ctx) {
     ctx.main = [[{ type: 'value', value: DEFAULT }]];
   }
 
-  // console.log(require('util').inspect(scenes,{depth:10,colors:1}));
-
-  return ctx.main.map(track => {
-    return reduce(track, scenes);
-  });
+  return ctx.main.map(track => reduce(track, scenes));
 }

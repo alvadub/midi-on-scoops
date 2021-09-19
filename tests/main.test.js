@@ -289,8 +289,8 @@ describe('mixup', () => {
   });
 });
 
-describe.only('midi', () => {
-  it('should encode output', async () => {
+describe('midi', () => {
+  it.skip('should encode output', async () => {
     const midi = mix(parse(`
       # piano
         @A
@@ -302,8 +302,6 @@ describe.only('midi', () => {
 
       > A % % %
     `));
-
-    // console.log(require('util').inspect(midi,{depth:5,colors:1}));
 
     const c = [60, 63, 67];
     const l = 112;

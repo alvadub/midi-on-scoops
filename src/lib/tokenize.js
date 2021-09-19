@@ -90,14 +90,18 @@ export function isNote(value) {
   return validate(RE_NOTE, value);
 }
 
+export function isMode(value) {
+  return validate(RE_MODE, value);
+}
+
 export function getType(value) {
   const key = `T${value}`;
   if (!CACHE[key]) {
     if (isNote(value)) CACHE[key] = 'note';
     else if (isChord(value)) CACHE[key] = 'chord';
     else if (isPattern(value)) CACHE[key] = 'pattern';
-    else if (RE_MODE.test(value)) CACHE[key] = 'mode';
-    else if (RE_NUMBER.test(value)) CACHE[key] = 'number';
+    else if (isMode(value)) CACHE[key] = 'mode';
+    else if (isNumber(value)) CACHE[key] = 'number';
     else CACHE[key] = 'value';
   }
   return CACHE[key];
@@ -139,7 +143,7 @@ export function transform(expression) {
     if (type === 'value' && value.indexOf('x') > -1) {
       const x = value.split('x');
 
-      if (!(RE_NUMBER.test(x[0]) && RE_NUMBER.test(x[1]))) {
+      if (!(isNumber(x[0]) && isNumber(x[1]))) {
         throw new Error(`Expecting valid numbers for ${type}, given '${value}'`);
       }
 
@@ -196,13 +200,13 @@ export function transform(expression) {
       return prev;
     }
 
-    if (isNote(cur) || isChord(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
+    if (isNote(cur) || isChord(cur) || isMode(cur) || isNumber(cur)) {
       carry.push(cur);
 
       if (
         !next
         || carry.length === 3
-        || !(isNote(next) || RE_MODE.test(next) || RE_NUMBER.test(next))
+        || !(isNote(next) || isMode(next) || isNumber(next))
       ) {
         const old = carry.splice(0, carry.length);
         const test = old[0];
@@ -210,7 +214,7 @@ export function transform(expression) {
         let mode = old[1];
         let octave = old[2];
 
-        if (!octave && RE_NUMBER.test(mode)) {
+        if (!octave && isNumber(mode)) {
           octave = mode;
           mode = undefined;
         }
@@ -218,7 +222,7 @@ export function transform(expression) {
         if (
           test.length < 2
           && isNote(test)
-          && (RE_MODE.test(mode) || RE_NUMBER.test(octave))
+          && (isMode(mode) || isNumber(octave))
         ) {
           add('mode', old.join(' '));
           return prev;
@@ -232,14 +236,11 @@ export function transform(expression) {
     }
 
     if (typeof cur === 'string' && cur.indexOf('..') > -1) {
-      type = last.type === 'mode'
-        || (last.type === 'chord' && last.unfold)
-        || (Array.isArray(prev) && last.type !== 'range') ? 'slice' : 'range';
-
       const parts = cur.split('..');
       const min = parts[0] || 1;
       const max = parts[1] || Infinity;
 
+      type = 'slice';
       cur = [min, max];
     }
 
@@ -247,7 +248,7 @@ export function transform(expression) {
       const operator = cur.charAt() === '/' ? 'divide' : 'multiply';
       const number = cur.substr(1);
 
-      if (!RE_NUMBER.test(number)) {
+      if (!isNumber(number)) {
         throw new Error(`Expecting a valid expression to ${operator}, given '${tokens.slice(0, i).join(' ')} ${cur}'`);
       }
 
@@ -262,7 +263,7 @@ export function transform(expression) {
       return cur;
     }
 
-    add(type || getType(cur), typeof cur === 'string' && RE_NUMBER.test(cur) ? parseInt(cur, 10) : cur);
+    add(type || getType(cur), typeof cur === 'string' && isNumber(cur) ? parseInt(cur, 10) : cur);
     return cur;
   }, null);
 

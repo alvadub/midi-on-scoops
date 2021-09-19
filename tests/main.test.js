@@ -236,7 +236,7 @@ describe('mixup', () => {
     ]);
   });
 
-  it.skip('should compose mixed tracks', () => {
+  it.only('should compose mixed tracks', () => {
     const A1 = ['1', [127], [0], [0], [0], [0], [0], [127], [0]];
     const B1 = ['1', [0], [127], [0], [0], [127], [0], [0], [0]];
     const B1_ = ['1', [0], [127], [0], [0], [127], [127], [0], [0]];
@@ -245,7 +245,7 @@ describe('mixup', () => {
     const AA1 = ['3', [0], [0], [0], [127], [0], [0], [0], [127]];
     const BB1 = ['3', [0], [0], [0], [0], [0], [127], [0], [127]];
 
-    expect(mix(parse(`
+    const test = mix(parse(`
       # track
         @A
           #1 x--- --x-
@@ -263,16 +263,13 @@ describe('mixup', () => {
           #3 ---- -x-x
 
       > A A B A
-    `))).to.eql([
-      {
-        track: [
-          [A1], [A1], [B1, B1_, B2], [A1],
-        ],
-        other: [
-          [AA1], [AA1], [BB1], [AA1],
-        ],
-      },
-    ]);
+    `));
+
+
+    console.log(require('util').inspect(test,{depth:10,colors:1}));
+
+    // expect(test[0].track).to.eql([]);
+    // expect(test[0].other).to.eql([]);
   });
 });
 

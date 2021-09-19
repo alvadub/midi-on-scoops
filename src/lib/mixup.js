@@ -96,6 +96,8 @@ export function mix(ctx) {
     ctx.main = [[{ type: 'value', value: DEFAULT }]];
   }
 
+  console.log(require('util').inspect(scenes,{depth:10,colors:1}));
+
   return ctx.main.map(track => {
     return reduce(track, scenes).reduce((memo, cur) => {
       if (!memo[cur.name]) memo[cur.name] = [];
@@ -104,7 +106,7 @@ export function mix(ctx) {
       cur.track.forEach(clip => {
         tracks.push([cur.midi, ...clip]);
       });
-      memo[cur.name].push(tracks);
+      memo[cur.name].push({ tracks });
       return memo;
     }, {});
   });

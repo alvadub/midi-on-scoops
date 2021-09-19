@@ -1,6 +1,8 @@
 import { pitch, isPattern } from './tokenize';
 import { reduce } from './parser';
 
+const DEFAULT = Symbol('@main');
+
 export function convert(values, cycle, reset) {
   return value => {
     let result = value;
@@ -29,7 +31,7 @@ export function mix(ctx) {
   Object.entries(ctx.tracks).forEach(([name, tracks]) => {
     Object.entries(tracks).forEach(([ch, clips]) => {
       const [tag, midi] = ch.split('#');
-      const key = tag || 'default';
+      const key = tag || DEFAULT;
       const track = [];
 
       clips.forEach(clip => {
@@ -47,7 +49,7 @@ export function mix(ctx) {
   });
 
   if (!ctx.main.length) {
-    ctx.main = [[{ type: 'value', value: 'default' }]];
+    ctx.main = [[{ type: 'value', value: DEFAULT }]];
   }
 
   return ctx.main.map(track => {

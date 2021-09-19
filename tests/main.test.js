@@ -30,6 +30,10 @@ function t(value, extra) {
   return { type: 'note', value, ...extra };
 }
 
+function k(values, notes = []) {
+  return { send: values, notes };
+}
+
 describe('tokenize', () => {
   it('should parse tones', () => {
     expect(isNote('c')).to.be.false;
@@ -177,7 +181,7 @@ describe('reducer', () => {
       > 3 /2 4.5 /1.5
     `);
 
-    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
+    expect(ctx.main.map(x => reduce(x, ctx.data))).to.eql([
       [1, 2, 2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1],
       [1.5, 4.5 / 1.5],
     ]);
@@ -194,7 +198,7 @@ describe('reducer', () => {
       > %z %o
     `);
 
-    expect(ctx.main.map(x => reduce(x, ctx))).to.eql([
+    expect(ctx.main.map(x => reduce(x, ctx.data))).to.eql([
       [['C4', 'Eb4', 'G4', 'Bb4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']],
       [['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'], 'C3'],
       [
@@ -214,7 +218,9 @@ describe('mixup', () => {
     expect(mix(parse(`
       # track
       #1 ---x x---
-    `))).to.eql([]);
+    `))).to.eql([
+      { track: [['1', [0, 0, 0, 127, 127, 0, 0, 0], []]] },
+    ]);
 
     expect(mix(parse(`
       # track
@@ -222,10 +228,30 @@ describe('mixup', () => {
           #1 x--- --x-
         @B
           #1 -x-- x---
-          #1 -x-- x---
+          #1 -x-- xx--
           #2 ---- ---x C4
                        115
+
+      # other
+        @A
+          #3 ---x ---x
+        @B
+          #3 ---- -x-x
+
       > A A B A
-    `))).to.eql([]);
+    `))).to.eql([
+      { track:
+         [['1', [127, 0, 0, 0, 0, 0, 127, 0], []],
+           ['1', [127, 0, 0, 0, 0, 0, 127, 0], []],
+           ['1', [0, 127, 0, 0, 127, 0, 0, 0], []],
+           ['1', [0, 127, 0, 0, 127, 127, 0, 0], []],
+           ['2', [0, 0, 0, 0, 0, 0, 0, 127], [48]],
+           ['1', [127, 0, 0, 0, 0, 0, 127, 0], []]],
+        other:
+         [['3', [0, 0, 0, 115, 0, 0, 0, 0], []],
+           ['3', [0, 0, 0, 115, 0, 0, 0, 0], []],
+           ['3', [0, 0, 0, 0, 0, 127, 0, 127], []],
+           ['3', [0, 0, 0, 115, 0, 0, 0, 0], []]] },
+    ]);
   });
 });

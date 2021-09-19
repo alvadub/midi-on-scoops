@@ -36,16 +36,28 @@ export function mix(ctx) {
         const fn = convert(clip.values ? reduce(clip.values, ctx.data) : []);
 
         track.push({
-          clips: reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []),
+          send: reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []),
           notes: clip.data ? reduce(clip.data, ctx.data, fn) : [],
         });
       });
 
       if (!scenes[key]) scenes[key] = [];
-      scenes[key].push({ midi, track });
+      scenes[key].push({ midi, name, track });
     });
   });
 
-  console.log(require('util').inspect(scenes, { colors: true, depth: 10 }));
-  return [];
+  if (!ctx.main.length) {
+    ctx.main = [[{ type: 'value', value: 'default' }]];
+  }
+
+  return ctx.main.map(track => {
+    return reduce(track, scenes).reduce((memo, cur) => {
+      if (!memo[cur.name]) memo[cur.name] = [];
+
+      cur.track.forEach(clip => {
+        memo[cur.name].push([cur.midi, clip.send, clip.notes]);
+      });
+      return memo;
+    }, {});
+  });
 }

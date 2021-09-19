@@ -85,7 +85,7 @@ export function reduce(input, context, callback) {
       case 'param':
       case 'value': {
         let value = null;
-        if (typeof context.data[cur.value] !== 'undefined') value = context.data[cur.value];
+        if (typeof context[cur.value] !== 'undefined') value = context[cur.value];
         if (value === null) {
           throw new Error(`Missing expression for '${cur.value}'`);
         }

@@ -2,6 +2,8 @@
 
 const harmonics = require('harmonics');
 const { expect } = require('chai');
+const fs = require('fs-extra');
+const { exec } = require('child_process');
 
 const {
   mix, build,
@@ -33,6 +35,23 @@ function t(value, extra) {
 
 function k(values, notes = []) {
   return { send: values, notes };
+}
+
+function play(midi) {
+  const out = '/tmp/test.midi';
+
+  fs.outputFileSync(out, build(midi, 90), 'binary');
+
+  return new Promise(ok => {
+    exec(`timidity ${out}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+      }
+      console.log(`stdout: ${stdout}`);
+      console.log(`stderr: ${stderr}`);
+      ok();
+    });
+  });
 }
 
 describe('tokenize', () => {
@@ -245,7 +264,7 @@ describe('mixup', () => {
     const AA1 = ['3', [0], [0], [0], [127], [0], [0], [0], [127]];
     const BB1 = ['3', [0], [0], [0], [0], [0], [127], [0], [127]];
 
-    const test = mix(parse(`
+    const midi = mix(parse(`
       # track
         @A
           #1 x--- --x-
@@ -265,15 +284,15 @@ describe('mixup', () => {
       > A % B A
     `));
 
-    expect(test[0][0]).to.eql([A1, AA1]);
-    expect(test[0][1]).to.eql([A1, AA1]);
-    expect(test[0][2]).to.eql([B1, B1_, B2, BB1]);
-    expect(test[0][3]).to.eql([A1, AA1]);
+    expect(midi[0][0]).to.eql([A1, AA1]);
+    expect(midi[0][1]).to.eql([A1, AA1]);
+    expect(midi[0][2]).to.eql([B1, B1_, B2, BB1]);
+    expect(midi[0][3]).to.eql([A1, AA1]);
   });
 });
 
-describe.skip('midi', () => {
-  it('should encode output', async () => {
+describe('midi', () => {
+  it('should encode output', () => {
     const midi = mix(parse(`
       # piano
         @A
@@ -289,26 +308,11 @@ describe.skip('midi', () => {
     const c = [60, 63, 67];
     const l = 127;
 
-    expect(midi).to.eql([{
-      piano: [['1', [[0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]]]],
-      bass: [['1', [[l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0], [l, 48]]]],
-    }]);
+    expect(midi[0][0]).to.eql([
+      ['1', [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]],
+      ['1', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0], [l, 48]],
+    ]);
 
-    const { exec } = require('child_process');
-    const fs = require('fs-extra');
-    const out = '/tmp/test.midi';
-
-    fs.outputFileSync(out, build(midi, 90), 'binary');
-
-    await new Promise(ok => {
-      exec(`timidity ${out}`, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-        }
-        console.log(`stdout: ${stdout}`);
-        console.log(`stderr: ${stderr}`);
-        ok();
-      });
-    });
+    return play(midi);
   }).timeout(60000);
 });

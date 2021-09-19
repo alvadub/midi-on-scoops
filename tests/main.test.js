@@ -289,12 +289,11 @@ describe('mixup', () => {
 describe('midi', () => {
   it('should encode output', async () => {
     const file = new jsmidgen.File();
-    const scale = harmonics.scale('G3 minor');
+    const scale = harmonics.scale('B3 minor');
     const a = scale[0];
     const b = scale[2];
     const c = scale[4];
     const x = [a, b, c];
-    const y = 42;
     const _1 = scale[0];
     const _2 = scale[1];
     const _3 = scale[2];
@@ -310,21 +309,16 @@ describe('midi', () => {
           ]],
         ],
         bass: [
-          ['2', [
+          ['1', [
             [50, _1], [0], [50, _2], [0], [50, _3], [0], [50, _4], [0], [50, _5], [0], [50, _4], [0], [50, _3], [0], [50, _2], [0],
             [50, _1], [0], [50, _2], [0], [50, _3], [0], [50, _4], [0], [50, _5], [0], [50, _4], [0], [50, _3], [0], [50, _2], [0], [50, _1],
-          ]],
-        ],
-        drums: [
-          ['0', [
-            [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0],
-            [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y],
           ]],
         ],
       },
     ];
 
-    const q = (128 / 16) * 3;
+    // bars length?
+    const q = 16;
     const o = {};
 
     let ch = 0;
@@ -333,7 +327,7 @@ describe('midi', () => {
         info[key].forEach(clips => {
           const track = new jsmidgen.Track();
 
-          track.setTempo(127);
+          track.setTempo(90);
           file.addTrack(track);
 
           let chan = clips[0] === '0' ? 9 : ch;

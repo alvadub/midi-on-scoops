@@ -82,10 +82,10 @@ describe('parser', () => {
     expect(parse(sample).tracks).to.eql({
       drums: {
         '#35': [
-          { input: [p('x---'), p('----'), p('x---'), p('----')] },
-          { input: [p('----'), p('x---'), p('----'), p('x---')] },
+          { input: [p('x---'), p('----'), p('x---'), p('----')], length: 16 },
+          { input: [p('----'), p('x---'), p('----'), p('x---')], length: 16 },
         ],
-        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')] }],
+        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')], length: 16 }],
       },
     });
   });
@@ -116,6 +116,7 @@ describe('parser', () => {
         '#1': [{
           data: [t('c4', { repeat: 2 })],
           input: [p('----'), p('x---'), p('----'), p('x---')],
+          length: 16,
           values: [n(120), n(115)],
         }],
       },
@@ -147,11 +148,13 @@ describe('parser', () => {
           'A#1': [{
             data: [t('c5')],
             input: [p('x---'), p('----')],
+            length: 8,
             values: [n(120)],
           }],
           'B#1': [{
             data: [t('d5')],
             input: [p('x---'), p('x---')],
+            length: 8,
             values: [v('.')],
           }],
         },
@@ -225,7 +228,8 @@ describe('mixup', () => {
         @B
           #1 -x-- x---
           #1 -x-- x---
-          #2 ---- ---x
+          #2 120 ---- ---x C4
+                       115
       > A A B A
     `))).to.eql([{
       type: 'channel',

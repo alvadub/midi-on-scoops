@@ -195,6 +195,9 @@ export function parse(buffer) {
           spec = { input: values };
         }
 
+        if (spec.input) {
+          spec.length = spec.input.reduce((memo, cur) => memo + cur.value.length, 0);
+        }
         if (input.length > 1) {
           spec.values = input.slice(1);
         }

@@ -63,24 +63,31 @@ export function pitch(value) {
   return CACHE[value];
 }
 
+export function validate(re, value) {
+  if (!CACHE[re.source + value]) {
+    CACHE[re.source + value] = re.test(value);
+  }
+  return CACHE[re.source + value];
+}
+
 export function isProgression(value) {
-  return RE_PROG.test(value);
+  return validate(RE_PROG, value);
 }
 
 export function isPattern(value) {
-  return RE_PATTERN.test(value);
+  return validate(RE_PATTERN, value);
 }
 
 export function isNumber(value) {
-  return RE_NUMBER.test(value);
+  return validate(RE_NUMBER, value);
 }
 
 export function isChord(value) {
-  return RE_CHORD.test(value);
+  return validate(RE_CHORD, value);
 }
 
 export function isNote(value) {
-  return RE_NOTE.test(value);
+  return validate(RE_NOTE, value);
 }
 
 export function getType(value) {

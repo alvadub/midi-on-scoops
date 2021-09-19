@@ -1,3 +1,4 @@
+import { pitch } from './tokenize';
 import { reduce } from './parser';
 
 /**
@@ -8,10 +9,52 @@ we have tracks,
   then we have channels
     and channels can be tagged...
 
+we could build like a book, where each page
+is the full scene, from all tracks, grouped by tag
+
+then, when resolving, iterate params until tracks are reach
+
+finally, expand all gathered values and concatenate all pieces...
 */
+
+// export function convert(pattern, values) {
+//   const copy = values ? values.slice() : [];
+
+//   return pattern.split('').reduce((memo, cur) => {
+//     let tmp = cur === '-' ? 0 : 127;
+//     if (cur === 'x' && values && copy.length > 0) {
+//       tmp = copy.shift();
+
+//       if (Array.isArray(tmp)) {
+//         tmp = tmp.map(pitch);
+//       } else {
+//         tmp = pitch(tmp);
+//       }
+//     }
+//     if (typeof tmp === 'number') memo.push(tmp);
+//     return memo;
+//   }, []);
+// }
 
 export function mix(ctx) {
   const index = { ...ctx.data };
+  const scenes = {};
+
+  Object.entries(ctx.tracks).forEach(([name, tracks]) => {
+    Object.entries(tracks).forEach(([ch, clips]) => {
+      const [tag, id] = ch.split('#');
+      const key = tag || 'default';
+      const values = [];
+
+      clips.forEach(clip => {
+        // values.push(convert(reduce(clip.input, index).join(''), clip.data));
+        // console.log(clip);
+      });
+
+      if (!scenes[key]) scenes[key] = [];
+      scenes[key].push({ id, name, values });
+    });
+  });
 
   // if (ctx.tracks) {
   //   Object.keys(ctx.tracks).forEach(key => {
@@ -48,6 +91,6 @@ export function mix(ctx) {
   //   console.log(index[key].tracks);
   // });
 
-  console.log(require('util').inspect(ctx, { colors: true, depth: 10 }));
+  console.log(require('util').inspect(scenes, { colors: true, depth: 10 }));
   return [{ type: 'channel' }];
 }

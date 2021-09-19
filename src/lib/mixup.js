@@ -70,6 +70,7 @@ export function pack(values, notes) {
           if (x !== '-') {
             token[0] = typeof values[offset] !== 'undefined' ? values[offset] : token[0] || 0;
             if (typeof notes[offset] !== 'undefined') token[1] = notes[offset];
+            if (values.length === 1) token[0] = values[0];
             offset += 1;
           }
           return token;

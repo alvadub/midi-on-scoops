@@ -294,19 +294,17 @@ describe('midi', () => {
     const midi = mix(parse(`
       # piano
         @A
-          #1 --x- --x- --x- --x- Cm_4 % % %
+          #1 112 --x- --x- --x- --x- Cm_4 % % %
 
-      # bass
+      ## bass
         @A
-          #1 x-x- x-x- x-x- x-x- C3 D3 Eb3 F3 G3 F3 Eb3 D3
+          #1 112 x-x- x-x- x-x- x-x- C3 D3 Eb3 F3 G3 F3 Eb3 D3
 
-      > A % ; A A
+      > A % % %
     `));
 
-    // console.log(require('util').inspect(midi,{depth:5,colors:1}));
-
     const c = [60, 63, 67];
-    const l = 127;
+    const l = 112;
 
     expect(midi[0][0]).to.eql([
       ['1', 'piano', [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0], [0], [0], [l, c], [0]],

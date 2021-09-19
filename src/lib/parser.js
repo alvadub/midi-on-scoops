@@ -156,7 +156,7 @@ export function parse(buffer) {
         if (value.length > 0) {
           data[name] = transform(value.join(' '));
         }
-      } else if (line.indexOf('# ') === 0) {
+      } else if (line.indexOf('# ') >= 0) {
         if (track) {
           tracks[track] = info;
           channel = null;
@@ -164,7 +164,7 @@ export function parse(buffer) {
           info = {};
         }
 
-        track = line.substr(1).trim();
+        track = line.split(/\s+/).slice(1).join(' ');
       } else if (line.charAt() === '>') {
         main.push(transform(line.substr(1).trim()));
       } else if (line.charAt() === '@') {

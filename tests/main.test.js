@@ -208,9 +208,9 @@ describe('reducer', () => {
   it('should resolve notes', () => {
     const ctx = parse(`
       %x Cm7_4 1..3
-      %y C4 major
+      %y C4 major ..5
       %z C5 minor blues CmMaj9b6
-      %o C4 minor I iv iii III ii°
+      %o C4 minor I iv iii III ii° ..
       > %x C4 Bb3 CM7sus4
       > %y C3
       > %z %o
@@ -218,11 +218,11 @@ describe('reducer', () => {
 
     expect(ctx.main.map(x => reduce(x, ctx.data))).to.eql([
       [['C4', 'Eb4', 'G4'], 'C4', 'Bb3', ['C4', 'F4', 'G4', 'B4']],
-      [['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'], 'C3'],
+      ['C4', 'D4', 'E4', 'F4', 'G4', 'C3'],
       [
         ['C5', 'Eb5', 'F5', 'Gb5', 'G5', 'Bb5'],
         ['C4', 'D4', 'Eb4', 'G4', 'Ab4', 'B4'],
-        [['C4', 'E4', 'G4'], ['F4', 'Ab4', 'C5'], ['Eb4', 'Gb4', 'Bb4'], ['Eb4', 'G4', 'Bb4'], ['D4', 'F4', 'Ab4', 'C5']],
+        ['C4', 'E4', 'G4'], ['F4', 'Ab4', 'C5'], ['Eb4', 'Gb4', 'Bb4'], ['Eb4', 'G4', 'Bb4'], ['D4', 'F4', 'Ab4', 'C5'],
       ],
     ]);
   });

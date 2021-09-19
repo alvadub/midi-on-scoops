@@ -105,29 +105,24 @@ export function reduce(input, context, callback) {
   }, []).reduce((memo, item) => {
     const prev = memo[memo.length - 1];
 
-    // FIXME: spread other stuff...
-    if (item[1] === Infinity && typeof item[0] === 'string') {
-      console.log(item[0]);
-      return memo;
-    }
-
-    if (Array.isArray(prev) && Array.isArray(item) && item.length === 2) {
+    if (
+      Array.isArray(prev)
+      && Array.isArray(item)
+      && typeof item[0] === 'number'
+      && item.length === 2
+    ) {
       const offset = item[1] === Infinity ? prev.length : item[1];
       const [base, length] = String(offset).split(/\D/);
 
       memo.pop();
       memo.push(...prev.slice(item[0] - 1, base));
 
-      if (length > 0) {
-        if (String(offset).includes('>')) {
-          const parts = memo.slice(-length - 1);
+      if (String(offset).includes('>')) {
+        const parts = memo.slice(-length - 1);
 
-          parts.pop();
-          parts.reverse();
-          memo.push(...parts);
-        }
-      } else {
-        memo.push(...prev.slice(item[0] - 1, item[1]));
+        parts.pop();
+        parts.reverse();
+        memo.push(...parts);
       }
       return memo;
     }

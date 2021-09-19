@@ -58,10 +58,12 @@ export function reduce(input, context, callback) {
         break;
 
       case 'slice':
-        prev.push(cur.value);
+        if (Array.isArray(last)) {
+          prev[prev.length - 1] = last.slice(cur.value[0] - 1, cur.value[1]);
+        } else {
+          prev.push(cur.value);
+        }
         break;
-        // console.log({ prev, last, cur });
-        // return prev.slice(cur.value[0], cur.value[1]);
 
       case 'mode':
         prev[prev.length - 1] = `${last} ${cur.value}`;
@@ -103,14 +105,21 @@ export function reduce(input, context, callback) {
   }, []).reduce((memo, item) => {
     const prev = memo[memo.length - 1];
 
+    // FIXME: spread other stuff...
+    if (item[1] === Infinity && typeof item[0] === 'string') {
+      console.log(item[0]);
+      return memo;
+    }
+
     if (Array.isArray(prev) && Array.isArray(item) && item.length === 2) {
-      const [base, length] = item[1].split(/\D/);
+      const offset = item[1] === Infinity ? prev.length : item[1];
+      const [base, length] = String(offset).split(/\D/);
 
       memo.pop();
       memo.push(...prev.slice(item[0] - 1, base));
 
       if (length > 0) {
-        if (item[1].includes('>')) {
+        if (String(offset).includes('>')) {
           const parts = memo.slice(-length - 1);
 
           parts.pop();

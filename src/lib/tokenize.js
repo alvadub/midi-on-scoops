@@ -1,9 +1,9 @@
-import * as harmonics from 'harmonics';
+import { inlineChord } from 'harmonics';
 
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
 export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
-export const RE_CHORD = /^[a-gA-G][^#\s]*\d+$/;
+export const RE_CHORD = /^[a-gA-G][^#\s]*\d+(?:\.\.)?$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
 export const RE_PROG = /^[ivIV]{1,3}°?$/;
@@ -131,11 +131,9 @@ export function transform(expression) {
     }
 
     if (type === 'chord' && typeof value === 'string') {
-      item.value = harmonics.inlineChord(value.replace(RE_TRIM, ''));
+      item.value = inlineChord(value.replace(RE_TRIM, ''));
 
-      if (value.indexOf('...') > -1) {
-        item.spread = true;
-      } else if (value.indexOf('..') > -1) {
+      if (value.includes('..')) {
         item.unfold = true;
       }
     }

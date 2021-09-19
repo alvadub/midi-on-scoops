@@ -39,7 +39,7 @@ export function build(midi, bpm = 120) {
           const tick = e[i];
 
           if (tick[0] > 0) {
-            const note = tick[1] || 90;
+            const note = tick[1] || 60;
 
             if (Array.isArray(note)) {
               track.noteOff(chan, '', q);

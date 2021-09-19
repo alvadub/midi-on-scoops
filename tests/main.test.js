@@ -303,6 +303,8 @@ describe('midi', () => {
       > A % % %
     `));
 
+    // console.log(require('util').inspect(midi,{depth:5,colors:1}));
+
     const c = [60, 63, 67];
     const l = 112;
 

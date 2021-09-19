@@ -120,11 +120,12 @@ export function reduce(input, context, callback) {
     if (typeof item === 'string' && item.includes(' ')) {
       const chunks = item.split(' ');
 
+      // FIXME: check next-param to slice/pick/mirror
       if (chunks.some(isProgression)) {
         const offset = chunks.findIndex(isProgression);
         const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];
 
-        memo.push(...getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(x => fn(inlineChord(x))));
+        memo.push(getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(x => fn(inlineChord(x))));
       } else {
         memo.push(fn(scale(item)));
       }

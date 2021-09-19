@@ -100,9 +100,11 @@ export function mix(ctx) {
     return reduce(track, scenes).reduce((memo, cur) => {
       if (!memo[cur.name]) memo[cur.name] = [];
 
+      const tracks = [];
       cur.track.forEach(clip => {
-        memo[cur.name].push([cur.midi, clip]);
+        tracks.push([cur.midi, ...clip]);
       });
+      memo[cur.name].push(tracks);
       return memo;
     }, {});
   });

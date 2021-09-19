@@ -12,37 +12,37 @@ export function build(midi, bpm = 120) {
   let ch = 0;
   midi.forEach(channels => {
     channels.forEach(tracks => {
-      tracks.forEach(e => {
-        const track = new Track();
+      const track = new Track();
 
-        track.setTempo(bpm);
-        file.addTrack(track);
+      track.setTempo(bpm);
+      file.addTrack(track);
 
-        let chan = e[0] === '0' ? 9 : ch;
-        if (chan !== 9) {
-          chan = o[e[0]] || (o[e[0]] = chan); // eslint-disable-line
-          track.instrument(chan, e[0]);
-          ch += 1;
-        }
+      // tracks.forEach(e => {
+      //   let chan = e[0] === '0' ? 9 : ch;
+      //   if (chan !== 9) {
+      //     chan = o[e[0]] || (o[e[0]] = chan); // eslint-disable-line
+      //     track.instrument(chan, e[0]);
+      //     ch += 1;
+      //   }
 
-        for (let i = 1; i < e.length; i += 1) {
-          const tick = e[i];
+      //   for (let i = 1; i < e.length; i += 1) {
+      //     const tick = e[i];
 
-          if (tick[0] > 0) {
-            const note = tick[1] || 90;
+      //     if (tick[0] > 0) {
+      //       const note = tick[1] || 90;
 
-            if (Array.isArray(note)) {
-              track.noteOff(chan, '', q);
-              track.addChord(chan, note, q, tick[0]);
-            } else {
-              track.noteOn(chan, note, q, tick[0]);
-              track.noteOff(chan, note, q);
-            }
-          } else {
-            track.noteOff(chan, '', q * 2);
-          }
-        }
-      });
+      //       if (Array.isArray(note)) {
+      //         track.noteOff(chan, '', q);
+      //         track.addChord(chan, note, q, tick[0]);
+      //       } else {
+      //         track.noteOn(chan, note, q, tick[0]);
+      //         track.noteOff(chan, note, q);
+      //       }
+      //     } else {
+      //       track.noteOff(chan, '', q * 2);
+      //     }
+      //   }
+      // });
     });
   });
   return file.toBytes();

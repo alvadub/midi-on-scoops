@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
+const jsmidgen = require('jsmidgen');
 const { expect } = require('chai');
 
 const {
@@ -219,7 +220,30 @@ describe('mixup', () => {
       # track
       #1 ---x x---
     `))).to.eql([
-      { track: [['1', [0, 0, 0, 127, 127, 0, 0, 0], []]] },
+      { track: [['1', [[0], [0], [0], [127], [127], [0], [0], [0]]]] },
+    ]);
+
+    expect(mix(parse(`
+      # track
+      #1 125 ---x x---
+    `))).to.eql([
+      { track: [['1', [[0], [0], [0], [125], [127], [0], [0], [0]]]] },
+    ]);
+
+    expect(mix(parse(`
+      # track
+      #1 ---x x---
+         100  120
+    `))).to.eql([
+      { track: [['1', [[0], [0], [0], [100], [120], [0], [0], [0]]]] },
+    ]);
+
+    expect(mix(parse(`
+      # track
+      #1 100 ---x x---
+         120
+    `))).to.eql([
+      { track: [['1', [[0], [0], [0], [100], [120], [0], [0], [0]]]] },
     ]);
 
     expect(mix(parse(`
@@ -240,18 +264,82 @@ describe('mixup', () => {
 
       > A A B A
     `))).to.eql([
-      { track:
-         [['1', [127, 0, 0, 0, 0, 0, 127, 0], []],
-           ['1', [127, 0, 0, 0, 0, 0, 127, 0], []],
-           ['1', [0, 127, 0, 0, 127, 0, 0, 0], []],
-           ['1', [0, 127, 0, 0, 127, 127, 0, 0], []],
-           ['2', [0, 0, 0, 0, 0, 0, 0, 127], [48]],
-           ['1', [127, 0, 0, 0, 0, 0, 127, 0], []]],
-        other:
-         [['3', [0, 0, 0, 115, 0, 0, 0, 0], []],
-           ['3', [0, 0, 0, 115, 0, 0, 0, 0], []],
-           ['3', [0, 0, 0, 0, 0, 127, 0, 127], []],
-           ['3', [0, 0, 0, 115, 0, 0, 0, 0], []]] },
+      {
+        track: [
+          ['1', [[127], [0], [0], [0], [0], [0], [127], [0]]],
+          ['1', [[127], [0], [0], [0], [0], [0], [127], [0]]],
+          ['1', [[0], [127], [0], [0], [127], [0], [0], [0]]],
+          ['1', [[0], [127], [0], [0], [127], [127], [0], [0]]],
+          ['2', [[0], [0], [0], [0], [0], [0], [0], [127, 48]]],
+          ['1', [[127], [0], [0], [0], [0], [0], [127], [0]]],
+        ],
+        other: [
+          ['3', [[0], [0], [0], [127], [0], [0], [0], [127]]],
+          ['3', [[0], [0], [0], [127], [0], [0], [0], [127]]],
+          ['3', [[0], [0], [0], [0], [0], [127], [0], [127]]],
+          ['3', [[0], [0], [0], [127], [0], [0], [0], [127]]],
+        ],
+      },
     ]);
   });
+});
+
+describe.skip('midi', () => {
+  it('should encode output', async () => {
+    const file = new jsmidgen.File();
+    const test = [{ a: ['1', [127, 0, 0, 0, 127, 0, 0, 0], []] }];
+
+    test.forEach(info => {
+      Object.keys(info).forEach(key => {
+        const track = new jsmidgen.Track();
+
+        track.setTempo(140);
+        file.addTrack(track);
+
+        console.log(key, info[key]);
+
+        // const [ch, clip, notes] = info[key];
+        // // track
+        // clip.forEach(tick => {
+        //   if (tick > 0) {
+        //     const note =
+        //     track.noteOn(ch, note, 100, tick);
+        //     track.noteOff(ch, note, 100, tick);
+        //   } else {
+        //     track.noteOff(ch, '', 100);
+        //   }
+        // });
+      });
+    });
+
+    // NOTE
+      // track.noteOn(channel, noteObj.note, noteObj.length, level);
+      // track.noteOff(channel, noteObj.note, noteObj.length, level);
+
+      // track.addChord(channel, noteObj.note, noteObj.length, level);
+
+    // HACK
+      // track.setInstrument(channel, 0, _delay);
+      // track.addNote(channel, '', noteObj.length, 0, 1);
+
+    // OFF
+      // track.noteOff(channel, '', noteObj.length);
+
+    const { exec } = require('child_process');
+    const fs = require('fs-extra');
+    const out = '/tmp/test.midi';
+
+    fs.outputFileSync(out, file.toBytes(), 'binary');
+
+    await new Promise(ok => {
+      exec(`timidity ${out}`, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+        }
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
+        ok();
+      });
+    });
+  }).timeout(3000);
 });

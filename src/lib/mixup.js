@@ -3,19 +3,21 @@ import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
 
-export function convert(values, cycle, reset) {
+export function pack(values, notes) {
   return value => {
     let result = value;
     if (Array.isArray(value)) result = value.map(pitch);
     else if (typeof value === 'string') {
       if (isPattern(value)) {
-        let offset = reset || 0;
+        let offset = 0;
         result = value.split('').map(x => {
-          if (values.length > 0 && x !== '-') {
-            if (cycle && offset > values.length) offset = reset;
-            return values[offset++] || 0; // eslint-disable-line
+          const token = [x === '-' ? 0 : 127];
+          if (x !== '-') {
+            token[0] = typeof values[offset] !== 'undefined' ? values[offset] : token[0] || 0;
+            if (typeof notes[offset] !== 'undefined') token[1] = notes[offset];
+            offset += 1;
           }
-          return x === '-' ? 0 : 127;
+          return token;
         });
       } else {
         result = pitch(value);
@@ -35,12 +37,11 @@ export function mix(ctx) {
       const track = [];
 
       clips.forEach(clip => {
-        const fn = convert(clip.values ? reduce(clip.values, ctx.data) : []);
+        const values = clip.values ? reduce(clip.values, ctx.data) : [];
+        const notes = clip.data ? pitch(reduce(clip.data, ctx.data)) : [];
+        const fn = pack(values, notes);
 
-        track.push({
-          send: reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []),
-          notes: clip.data ? reduce(clip.data, ctx.data, fn) : [],
-        });
+        track.push(reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []));
       });
 
       if (!scenes[key]) scenes[key] = [];
@@ -57,7 +58,7 @@ export function mix(ctx) {
       if (!memo[cur.name]) memo[cur.name] = [];
 
       cur.track.forEach(clip => {
-        memo[cur.name].push([cur.midi, clip.send, clip.notes]);
+        memo[cur.name].push([cur.midi, clip]);
       });
       return memo;
     }, {});

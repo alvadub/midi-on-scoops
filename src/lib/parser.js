@@ -159,6 +159,7 @@ export function parse(buffer) {
       } else if (line.indexOf('# ') === 0) {
         if (track) {
           tracks[track] = info;
+          volumes = [];
           prefix = '';
           info = {};
         }

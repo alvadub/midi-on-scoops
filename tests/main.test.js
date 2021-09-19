@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
+const harmonics = require('harmonics');
 const jsmidgen = require('jsmidgen');
 const { expect } = require('chai');
 
@@ -288,36 +289,55 @@ describe('mixup', () => {
 describe('midi', () => {
   it('should encode output', async () => {
     const file = new jsmidgen.File();
-    const x = [60, 63, 67];
-    const y = 42;
-    const test = [
-      {
+    const all = harmonics.scale('C major');
+    console.log(all);
+
+    const test = [];
+
+    function push(name, pick = [1, 3, 5]) {
+      const scale = harmonics.scale(name);
+      const notes = pitch(scale);
+      const a = notes[pick[0] - 1];
+      const b = notes[pick[1] - 1];
+      const c = notes[pick[2] - 1];
+      const x = [a, b, c];
+      const y = 42;
+      const _1 = notes[0];
+      const _2 = notes[1];
+      const _3 = notes[2];
+      const _4 = notes[3];
+      const _5 = notes[4];
+      const _6 = notes[4];
+      const piano = _ => [[0], [0], [60, _], [0], [0], [0], [60, _], [0], [0], [0], [60, _], [0], [0], [0], [60, _], [0]];
+      const bass = () => [[50, _1], [0], [50, _2], [0], [50, _3], [0], [50, _4], [0], [50, _5], [0], [50, _4], [0], [50, _3], [0], [50, _2], [0]];
+      const drums = _ => [[60, _], [0], [60, _], [0], [60, _], [0], [60, _], [0], [60, _], [0], [60, _], [0], [60, _], [0], [60, _], [0]];
+      test.push({
         a: [
           ['1', [
-            [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0],
-            [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0], [0], [0], [60, x], [0],
+            piano(x), piano(x),
           ]],
         ],
         b: [
           ['2', [
-            [50, 48], [0], [50, 50], [0], [50, 51], [0], [50, 53], [0], [50, 55], [0], [50, 53], [0], [50, 51], [0], [50, 55], [0],
-            [50, 48], [0], [50, 50], [0], [50, 51], [0], [50, 53], [0], [50, 55], [0], [50, 53], [0], [50, 51], [0], [50, 55], [0], [50, 48],
+            bass(), bass(),
           ]],
         ],
         c: [
           ['0', [
-            [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0],
-            [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y], [0], [60, y],
-          ]],
+          drums(y), drums(y),
+        ]],
         ],
-      },
-    ];
+      });
+    }
+    push('C3 minor');
+    console.log(require('util').inspect(test, { depth: 10, colors: 1 }));
 
     const q = (128 / 16) * 3;
     const o = {};
 
-    let ch = 0;
+    let ch;
     test.forEach(info => {
+      // ch = 0;
       Object.keys(info).forEach(key => {
         info[key].forEach(clips => {
           const track = new jsmidgen.Track();

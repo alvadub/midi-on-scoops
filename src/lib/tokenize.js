@@ -184,6 +184,11 @@ export function transform(expression) {
       return prev;
     }
 
+    if (cur.charAt() === '#') {
+      add('channel', cur);
+      return prev;
+    }
+
     if (isNote(cur) || isChord(cur) || RE_MODE.test(cur) || RE_NUMBER.test(cur)) {
       carry.push(cur);
 

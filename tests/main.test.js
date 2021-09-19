@@ -74,18 +74,18 @@ describe('parser', () => {
   it('should extract channels', () => {
     const sample = `
       # drums
-      35  x--- ---- x--- ----
-      35  ---- x--- ---- x---
-      14  ---- ---- x--- ----
+      #35  x--- ---- x--- ----
+      #35  ---- x--- ---- x---
+      #14  ---- ---- x--- ----
     `;
 
     expect(parse(sample).tracks).to.eql({
       drums: {
-        35: [
+        '#35': [
           { clips: [p('x---'), p('----'), p('x---'), p('----')] },
           { clips: [p('----'), p('x---'), p('----'), p('x---')] },
         ],
-        14: [{ clips: [p('----'), p('----'), p('x---'), p('----')] }],
+        '#14': [{ clips: [p('----'), p('----'), p('x---'), p('----')] }],
       },
     });
   });
@@ -93,12 +93,12 @@ describe('parser', () => {
   it('should extract values', () => {
     const sample = `
       # multiple
-      1 2/3 4*5 67% .
+      #1 2/3 4*5 67%
     `;
 
     expect(parse(sample).tracks).to.eql({
       multiple: {
-        1: [{ values: [n(2 / 3), n(4 * 5), n(85.09), v('.')] }],
+        '#1': [{ values: [n(2 / 3), n(4 * 5), n(85.09)] }],
       },
     });
   });
@@ -107,16 +107,16 @@ describe('parser', () => {
     const sample = `
       # skanking
 
-            120  %    115  125
-      1 120 ---- x--- ---- x--- c4 %
+              120       115
+      #1 ---- x--- ---- x--- c4 %
     `;
 
     expect(parse(sample).tracks).to.eql({
       skanking: {
-        1: [{
+        '#1': [{
           data: [t('c4', { repeat: 2 })],
           clips: [p('----'), p('x---'), p('----'), p('x---')],
-          values: [n(120), n(120, { repeat: 2 }), n(115), n(125)],
+          values: [n(120), n(115)],
         }],
       },
     });
@@ -127,10 +127,10 @@ describe('parser', () => {
       # mix
 
         @A
-          1 120 x--- ---- c5
+          #1 120 x--- ---- c5
 
         @B
-          1 .   x--- x--- d5
+          #1 .   x--- x--- d5
 
       foo: A A B A
       main: foo *4
@@ -144,12 +144,12 @@ describe('parser', () => {
       main: [[m('main')]],
       tracks: {
         mix: {
-          '1.A': [{
+          '#1.A': [{
             data: [t('c5')],
             clips: [p('x---'), p('----')],
             values: [n(120)],
           }],
-          '1.B': [{
+          '#1.B': [{
             data: [t('d5')],
             clips: [p('x---'), p('x---')],
             values: [v('.')],
@@ -210,7 +210,7 @@ describe('mixup', () => {
   it('should compose tracks', () => {
     expect(mix(parse(`
       # track
-      1 ---x x---
+      #1 ---x x---
     `))).to.eql([{
       type: 'channel',
       // value: ['track', [
@@ -221,11 +221,11 @@ describe('mixup', () => {
     expect(mix(parse(`
       # track
         @A
-          1 x--- --x-
+          #1 x--- --x-
         @B
-          1 -x-- x---
-          1 -x-- x---
-          2 ---- ---x
+          #1 -x-- x---
+          #1 -x-- x---
+          #2 ---- ---x
       > A A B A
     `))).to.eql([{
       type: 'channel',

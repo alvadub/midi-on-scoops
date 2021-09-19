@@ -104,7 +104,7 @@ export function reduce(input, context) {
         else prev.push(...value);
       } break;
       default: {
-        console.log({prev, cur});
+        // console.log({prev, cur});
         throw new Error('FIXME');
       }
     }
@@ -149,7 +149,7 @@ export function parse(buffer) {
         if (value.length > 0) {
           data[name] = transform(value.join(' '));
         }
-      } else if (line.charAt() === '#') {
+      } else if (line.indexOf('# ') === 0) {
         if (track) {
           tracks[track] = info;
           suffix = '';
@@ -168,7 +168,7 @@ export function parse(buffer) {
       } else {
         const ticks = transform(line);
 
-        if (ticks.every(x => x.type === 'number')) {
+        if (ticks[0].type !== 'channel') {
           volumes = ticks;
           return;
         }

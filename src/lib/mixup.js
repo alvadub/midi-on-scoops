@@ -48,6 +48,6 @@ export function mix(ctx) {
   //   console.log(index[key].tracks);
   // });
 
-  console.log(require('util').inspect(ctx, { colors: true, depth: 10 }));
+  // console.log(require('util').inspect(ctx, { colors: true, depth: 10 }));
   return [{ type: 'channel' }];
 }

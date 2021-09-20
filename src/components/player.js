@@ -1,6 +1,6 @@
 export default class Player {
   constructor() {
-    this.tracks = [];
+    this.data = [];
     this.beats = [];
     this.bars = 8;
     this.bpm = 127;
@@ -24,47 +24,22 @@ export default class Player {
     this.volumesDrum = [];
   }
 
-  contextTime() {
-    return this.audioContext.currentTime;
-  }
-
-  preloadSounds() {
-    const sounds = [];
-
-    this.tracks.forEach(idx => {
-      try {
-        if (idx[0] && idx[0][0]) sounds.push(...idx.map(x => x.reduce((prev, y) => prev.concat(y[0]), [])));
-      } catch (e) {
-        console.log('SKIP', e);
-      }
+  preload() {
+    this.data.forEach(sections => {
+      if (!sections) return;
+      sections.forEach(parts => {
+        if (!parts) return;
+        parts.forEach(clip => {
+          this.cacheInstrument(parseInt(clip[0], 10));
+        });
+      });
     });
-
-    [...new Set(sounds.reduce((memo, cur) => memo.concat(cur), []))].forEach(nth => {
-      if (nth === '0') this.cacheDrum(nth);
-      else this.cacheInstrument(nth);
-    });
-  }
-
-  playLoopMachine(tempo) {
-    this.bpm = tempo || this.bpm;
-    this.startPlayLoop(this.beats, this.bpm, this.fraq);
-  }
-
-  stopLoopMachine() {
-    this.stopPlayLoop();
-  }
-
-  setLoopMachine(data) {
-    this.tracks = data || this.tracks;
-    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || 4;
-    this.fraq = 1 / this.bars;
-    this.preloadSounds();
 
     for (let i = 0; i < this.bars; i += 1) {
       const drums = [];
       const notes = [];
 
-      this.tracks.forEach(track => {
+      this.data.forEach(track => {
         if (!track) return;
         track.forEach(clips => {
           if (!clips) return;
@@ -78,11 +53,11 @@ export default class Player {
               } else {
                 if (Array.isArray(chunk)) {
                   chunk.forEach(tone => {
-                    notes.push([clip[0], tone, 1 / 16]);
+                    notes.push([clip[0], tone, 1 / 16, level]);
                   });
                 }
                 if (typeof chunk === 'number') {
-                  notes.push([clip[0], chunk, 1 / 16]);
+                  notes.push([clip[0], chunk, 1 / 16, level]);
                 }
               }
             }
@@ -92,6 +67,26 @@ export default class Player {
 
       this.beats[i] = [drums, notes];
     }
+  }
+
+  contextTime() {
+    return this.audioContext.currentTime;
+  }
+
+  playLoopMachine(tempo) {
+    this.bpm = tempo || this.bpm;
+    this.startPlayLoop(this.beats, this.bpm, this.fraq);
+  }
+
+  stopLoopMachine() {
+    this.stopPlayLoop();
+  }
+
+  setLoopMachine(data) {
+    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || 4;
+    this.data = data || this.data;
+    this.fraq = 1 / this.bars;
+    this.preload();
   }
 
   startPlayLoop(beats, bpm, density, fromBeat) {
@@ -166,6 +161,7 @@ export default class Player {
 
   playDrumsAt(when, drums) {
     for (let i = 0; i < drums.length; i += 1) {
+      console.log(drums[i]);
       this.playDrum(when, drums[i]);
     }
   }
@@ -186,62 +182,17 @@ export default class Player {
 
     for (let i = 0; i < chords.length; i += 1) {
       const chord = chords[i];
-      const [instrument, pitches, duration] = chord;
+      const [instrument, pitches, duration, level] = chord;
 
-      let kind = 0;
-      if (chord.length > 3) {
-        kind = chord[3];
-      }
-
-      if (kind === 1) {
-        this.playStrumDownAt(when, instrument, pitches, duration * N);
-      } else if (kind === 2) {
-        this.playStrumUpAt(when, instrument, pitches, duration * N);
-      } else if (kind === 3) {
-        this.playSnapAt(when, instrument, pitches, duration * N);
-      } else {
-        this.playChordAt(when, instrument, pitches, duration * N);
-      }
+      this.playChordAt(when, instrument, pitches, duration * N, level);
     }
   }
 
-  // make more generic!
-  playChordAt(when, instrument, pitches, duration) {
+  playChordAt(when, instrument, pitches, duration, level) {
     const info = this.player.loader.instrumentInfo(instrument);
 
     if (window[info.variable]) {
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
-      // this.player.queueChord(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
-    } else {
-      this.cacheInstrument(instrument);
-    }
-  }
-
-  playStrumUpAt(when, instrument, pitches, duration) {
-    const info = this.player.loader.instrumentInfo(instrument);
-
-    if (window[info.variable]) {
-      this.player.queueStrumUp(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
-    } else {
-      this.cacheInstrument(instrument);
-    }
-  }
-
-  playStrumDownAt(when, instrument, pitches, duration) {
-    const info = this.player.loader.instrumentInfo(instrument);
-
-    if (window[info.variable]) {
-      this.player.queueStrumDown(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
-    } else {
-      this.cacheInstrument(instrument);
-    }
-  }
-
-  playSnapAt(when, instrument, pitches, duration) {
-    const info = this.player.loader.instrumentInfo(instrument);
-
-    if (window[info.variable]) {
-      this.player.queueSnap(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, this.volumeInstrumentAdjust(instrument));
+      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, (1 / 127) * level);
     } else {
       this.cacheInstrument(instrument);
     }

@@ -35,7 +35,7 @@ function k(values, notes = []) {
 }
 
 function play(midi, bpm) {
-  const out = '/tmp/test.midi';
+  const out = '/tmp/test.mid';
 
   fs.outputFileSync(out, build(midi, bpm), 'binary');
 

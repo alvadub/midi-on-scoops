@@ -1,48 +1,34 @@
 <script>
   import Player from './player.js';
-  import { parse } from '../lib/parser';
+  import { mix, parse } from '../lib';
 
   // FIXME: implements, first, a good parser for these inputs...
   // here we'll have 2 axis, horizontally we stack bars...
   // vertically we can create layers of those stacks...
   // then, we can use the Y-axis to play as scenes!
 
-  let value = `# skanking demo
+  let value = `
 
-; our variables
-%X  a4|c5|e5
-%Y  g4|d4|a#4
+%d C4|Eb4|G4
 
-@A
+# piano
+  @A
+    #3 115 --x- --x- --x- --x- %d % % %
 
-  ; drumkit
-  #3       ---- ---- ---- ---- x--- ---- ---- ----
-  #14      ---- ---- ---- ---- x--- ---- ---- ----
-  #37      x--- x--- ---- x--- x--- ---- x--- ----
+## bass
+  @A
+    #6 112 x-x- x-x- x-x- x-x- C3 minor ..5>3
 
-           120  %    115  125  %    %    115  120
-  #35      x--- x--- x--- x--- x--- x--- x--- x--- ; after comment
+> A
 
-  ; chords
-  #15      ---- ---- x--- ---- ---- ---- x--- ---- %X %
-  #165     ---- x--- ---- x--- ---- x--- ---- x--- %X % % %
-
-@B
-
-  ; chords
-  #15      ---- ---- x--- ---- ---- ---- x--- ---- %Y %
-  #183     ---- x--- ---- x--- ---- x--- ---- x--- %Y % % %
-
-  ; how to handle duration, e.g. x__-
-  ; how to repeat from previous stacks?
-  ; they should merge from previous ones? then extends?
-
-> A A B A
 `;
 
   function getData(input) {
-    console.log(parse(input));
-    return [];
+    try {
+      return mix(parse(input));
+    } catch (e) {
+      // ignore
+    }
   }
 
   window.p = window.p || null;
@@ -51,7 +37,7 @@
     p.setLoopMachine(getData(value));
   }, 200);
 
-  let tempo = (p && p.bpm) || 127;
+  let tempo = (p && p.bpm) || 90;
 
   function stop() {
     if (p) p.stopLoopMachine();
@@ -59,7 +45,7 @@
 
   function play() {
     stop();
-    if (p) p.playLoopMachine();
+    if (p) p.playLoopMachine(tempo);
   }
 
   $: if (p) {

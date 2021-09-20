@@ -29,13 +29,19 @@ export default class Player {
   }
 
   preloadSounds() {
+    const sounds = [];
+
     this.tracks.forEach(idx => {
       try {
-        if (idx.length > (this.bars + 1)) this.cacheInstrument(idx[0]);
-        else this.cacheDrum(idx[0]);
+        if (idx[0] && idx[0][0]) sounds.push(...idx.map(x => x.reduce((prev, y) => prev.concat(y[0]), [])));
       } catch (e) {
         console.log('SKIP', e);
       }
+    });
+
+    [...new Set(sounds.reduce((memo, cur) => memo.concat(cur), []))].forEach(nth => {
+      if (nth === '0') this.cacheDrum(nth);
+      else this.cacheInstrument(nth);
     });
   }
 
@@ -50,38 +56,41 @@ export default class Player {
 
   setLoopMachine(data) {
     this.tracks = data || this.tracks;
-    this.bars = Array.isArray(this.tracks[0]) ? this.tracks[0].length - 1 : 2;
+    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || 4;
     this.fraq = 1 / this.bars;
     this.preloadSounds();
 
-    const clips = this.tracks.reduce((memo, track) => {
-      const chunk = track.slice(this.bars + 1);
-      memo.push(chunk);
-      return memo;
-    }, []);
-
-    for (let i = 1; i <= this.bars; i += 1){
+    for (let i = 0; i < this.bars; i += 1) {
       const drums = [];
       const notes = [];
 
-      this.tracks.forEach((track, k) => {
-        if (track[i]) {
-          if (track.length > (this.bars + 1)) {
-            const chunk = clips[k].shift();
+      this.tracks.forEach(track => {
+        if (!track) return;
+        track.forEach(clips => {
+          if (!clips) return;
+          clips.forEach(clip => {
+            if (clip[i + 2]) {
+              const [level, chunk] = clip[i + 2];
 
-            // FIXME: adjust volumes
-            if (Array.isArray(chunk)) {
-              chunk.forEach(tone => {
-                notes.push([track[0], tone, 1/16]);
-              });
-            } else if (typeof chunk === 'number') {
-              notes.push([track[0], chunk, 1/16]);
+              if (clip[0] > 127) {
+                clip[0] -= 127;
+                drums.push(clip[i + 2]);
+              } else {
+                if (Array.isArray(chunk)) {
+                  chunk.forEach(tone => {
+                    notes.push([clip[0], tone, 1 / 16]);
+                  });
+                }
+                if (typeof chunk === 'number') {
+                  notes.push([clip[0], chunk, 1 / 16]);
+                }
+              }
             }
-          } else drums.push(track[0]);
-        }
+          });
+        });
       });
 
-      this.beats[i - 1] = [drums, notes];
+      this.beats[i] = [drums, notes];
     }
   }
 
@@ -89,22 +98,21 @@ export default class Player {
     this.stopPlayLoop();
     this.loopStarted = true;
 
-    const wholeNoteDuration = 4 * 60 / bpm;
+    const wholeNoteDuration = (4 * 60) / bpm;
 
     this.beatIndex = fromBeat < beats.length ? fromBeat : 0;
     this.playBeatAt(this.contextTime(), beats[this.beatIndex], bpm);
 
     let nextLoopTime = this.contextTime() + density * wholeNoteDuration;
-
     this.loopIntervalID = setInterval(() => {
-      if (this.contextTime() > nextLoopTime - density * wholeNoteDuration ) {
+      if (this.contextTime() > nextLoopTime - density * wholeNoteDuration) {
         this.beatIndex += 1;
         if (this.beatIndex >= beats.length) {
           this.beatIndex = 0;
         }
 
         this.playBeatAt(nextLoopTime, beats[this.beatIndex], bpm);
-        nextLoopTime = nextLoopTime + density * wholeNoteDuration;
+        nextLoopTime += density * wholeNoteDuration;
       }
     }, 22);
   }
@@ -158,7 +166,7 @@ export default class Player {
 
   playDrumsAt(when, drums) {
     for (let i = 0; i < drums.length; i += 1) {
-      this.playDrum(when, drums[i],);
+      this.playDrum(when, drums[i]);
     }
   }
 
@@ -174,9 +182,9 @@ export default class Player {
     this.playDrumsAt(when, beat[0]);
 
     const chords = beat[1];
-    const N = 4 * 60 / bpm;
+    const N = (4 * 60) / bpm;
 
-    for (var i = 0; i < chords.length; i++) {
+    for (let i = 0; i < chords.length; i += 1) {
       const chord = chords[i];
       const [instrument, pitches, duration] = chord;
 

@@ -26,6 +26,7 @@
 %F a3|c#4|f#4
 %G b3|d#4|g#4
 %A c#4|e4|a4
+%A_ c#4|e4|a4|g4
 %E b3|d4|f#4
 %C d3|f#4|a4 ; how to sum notes to chords?
 %B c#4|f4|g#3|b4
@@ -35,6 +36,8 @@
     #518      ---- ---- ---- ---- ---- ---- ---- ---- ; how to auto-fill missing tracks?
   @A
     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
+  @A_ ; @A7 is not working?
+    #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A_ %G
   @B
     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %E % % %
   @C
@@ -49,6 +52,8 @@
     #393      ---- ---- ---- ---- ---- ---- ---- ---- ; if present, it gets played... if missing, then is muted...
   @A
     #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
+  @A_
+    #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
   @B
     #393  112 x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
   @C
@@ -58,12 +63,17 @@
 
 ## drums
   @INTRO
-    #2081 100 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+    #2081 100 x--- x--- x--- x--- x--- x--- x--- x---
     #2113     x--- ---- ---- ---- ---- ---- ---- ----
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
   @A
     #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; this should be repeated if omitted
+    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
+    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
+    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
+  @A_
+    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
     #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
@@ -83,12 +93,11 @@
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
 
-> INTRO A *4
+> INTRO A %
+> A *4 ; cabasas / half synth
 > A % B A B A
-> A % B A B A C *3 D A % B A
-> A % B A B A
-> A % B A B A C *3 D A % B A
-
+> A % B A_ C *3 D ; CHORUS?!!!
+> INTRO
 `;
 
   function build(midi) {

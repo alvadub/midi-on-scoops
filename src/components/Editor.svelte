@@ -7,13 +7,28 @@
   // vertically we can create layers of those stacks...
   // then, we can use the Y-axis to play as scenes!
 
+  // how to add?
+  //  %x Cm_4
+  //  %y %x +7n ; plus its 7th
+  //  %y %x -1n ; plus its 8th - 1n (2 semitones)
+  //  %y %x -1.5 ; transport all by -3 semitones
+  // how to drop?
+  //  %x c3|e3|g3
+  //  %y %x :2 ; drops notes c3|g3
+
+  // %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+  // %c b2 e2 g2 b2 g2 e2 c#2 e2
+  // %d %c +1.5 ; shifts all by 3 semitones?
+
   let length = 16;
   let value = `
+
 %F a3|c#4|f#4
 %G b3|d#4|g#4
 %A c#4|e4|a4
 %E b3|d4|f#4
-%C c#4|e4|g#4
+%C d3|f#4|a4 ; how to sum notes to chords?
+%B c#4|f4|g#3|b4
 
 # synth
   @INTRO
@@ -23,7 +38,9 @@
   @B
     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %E % % %
   @C
-    #518      x--- --x- ---- ---- x--- --x- ---- ---- %C % % %
+    #518      x--- --x- ---- ---- x--- --x- ---- ---- %C % %F %
+  @D
+    #518      x--- --x- ---- ---- x--- --x- ---- ---- %C % %B % ; it would be possible to omit pattern and reuse previous plus notes?
 
 ## bass
   %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
@@ -36,6 +53,8 @@
     #393  112 x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
   @C
     #393      ---- ---- ---- ---- ---- ---- ---- ----
+  @D
+    #393      ---- ---- ---- ---- ---- ---- ---- ----
 
 ## drums
   @INTRO
@@ -44,22 +63,32 @@
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
   @A
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; this should be repeated if omitted
     #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
   @B
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; this too, also...
     #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
   @C
+    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; even this...
+    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
+    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
+    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
+  @D < INTRO ; we could extend like this? and then just redeclare input?
     #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
     #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
 
-> INTRO A % A % B A B A C % A %
+> INTRO A *4
+> A % B A B A
+> A % B A B A C *3 D A % B A
+> A % B A B A
+> A % B A B A C *3 D A % B A
+
 `;
 
   function build(midi) {

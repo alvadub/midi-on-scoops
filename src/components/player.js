@@ -33,7 +33,9 @@ export default class Player {
         if (!parts) return;
         parts.forEach(clip => {
           if (clip.length - 2 > count) count = clip.length - 2;
-          const info = this.player.loader.instrumentInfo(clip[0]);
+          const info = clip[0] >= 2000
+            ? this.player.loader.drumInfo(clip[0] - 2000)
+            : this.player.loader.instrumentInfo(clip[0]);
           this.cacheInstrument(info);
         });
       });
@@ -51,9 +53,8 @@ export default class Player {
             if (clip[i + 2]) {
               const [level, chunk] = clip[i + 2];
 
-              if (clip[0] > 127) {
-                clip[0] -= 127;
-                drums.push(clip[i + 2]);
+              if (clip[0] >= 2000) {
+                drums.push([clip[0] - 2000, level]);
               } else {
                 if (Array.isArray(chunk)) {
                   chunk.forEach(tone => {
@@ -144,13 +145,16 @@ export default class Player {
     if (window[info.variable]) {
       const pitch = window[info.variable].zones[0].keyRangeLow;
 
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1 / 16, (1 / 127) * level);
+      if (level > 0) {
+        this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1 / 64, (1 / 127) * level);
+      }
     } else {
       this.cacheInstrument(info);
     }
   }
 
   playBeatAt(when, beat, bpm) {
+    if (!beat) return;
     const chords = beat[1];
     const N = (4 * 60) / bpm;
 

@@ -103,10 +103,10 @@ describe('parser', () => {
     expect(parse(sample).tracks).to.eql({
       drums: {
         '#35': [
-          { input: [p('x---'), p('----'), p('x---'), p('----')], length: 16 },
-          { input: [p('----'), p('x---'), p('----'), p('x---')], length: 16 },
+          { input: [p('x---'), p('----'), p('x---'), p('----')] },
+          { input: [p('----'), p('x---'), p('----'), p('x---')] },
         ],
-        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')], length: 16 }],
+        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')] }],
       },
     });
   });
@@ -137,7 +137,6 @@ describe('parser', () => {
         '#1': [{
           data: [t('c4', { repeat: 2 })],
           input: [p('----'), p('x---'), p('----'), p('x---')],
-          length: 16,
           values: [n(120), n(115)],
         }],
       },
@@ -169,18 +168,26 @@ describe('parser', () => {
           'A#1': [{
             data: [t('c5')],
             input: [p('x---'), p('----')],
-            length: 8,
             values: [n(120)],
           }],
           'B#1': [{
             data: [t('d5')],
             input: [p('x---'), p('x---')],
-            length: 8,
             values: [v('.')],
           }],
         },
       },
     });
+  });
+
+  it('should extend tracks', () => {
+    const ast = parse(`
+      # track
+        @A
+          #1 x--- x---
+        @B < A
+    `);
+    console.log(require('util').inspect(ast, { depth: 10, colors: true }));
   });
 });
 
@@ -316,7 +323,7 @@ describe.skip('midi', () => {
   }).timeout(60000);
 
   // FIXME: this is not working...
-  it.only('should play billy jean', async () => {
+  it.skip('should play billy jean', async () => {
     await play(mix(parse(`
       %F a3|c#4|f#4
       %G b3|d#4|g#4

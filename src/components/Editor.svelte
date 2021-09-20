@@ -148,7 +148,7 @@
   setTimeout(() => {
     p = window.p || new Player();
     p.setLoopMachine(getData(value), length);
-    setTimeout(play, 2000);
+    // setTimeout(play, 2000);
   }, 200);
 
   $: if (p) {

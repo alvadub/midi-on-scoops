@@ -7,26 +7,25 @@
   // vertically we can create layers of those stacks...
   // then, we can use the Y-axis to play as scenes!
 
-  let length = 32;
+  let length = 16;
   let value = `
 
 %F a3|c#4|f#4
 %G b3|d#4|g#4
 %A c#4|e4|a4
-%G b3|d#4|g#4
 
 # synth
   @A
-    #3 115 x--- ---- ---- x--- ---- ---- ---- ---- %F %G
+    #3 115 x--- --x- ---- ---- %F %G
   @B
-    #3 115 x--- ---- ---- x--- ---- ---- ---- ---- %A %G
+    #3 115 x--- --x- ---- ---- %A %G
 
 ## bass
   %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
   @A
-    #6 112 x--- x--- x--- x--- x--- x--- x--- x--- %c
+    #6 112 x-x- x-x- x-x- x-x- %c
   @B
-    #6 112 x--- x--- x--- x--- x--- x--- x--- x--- %c
+    #6 112 x-x- x-x- x-x- x-x- %c
 
 > A B
 
@@ -87,7 +86,7 @@
   setTimeout(() => {
     p = window.p || new Player();
     p.setLoopMachine(getData(value), length);
-    setTimeout(play, 1000);
+    setTimeout(play, 2000);
   }, 200);
 
   $: if (p) {

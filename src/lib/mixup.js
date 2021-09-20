@@ -4,10 +4,12 @@ import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
 
-export function build(midi, bpm = 120) {
+export function build(midi, bpm = 120, length = 16) {
   const file = new File();
   const q = 16;
   const o = {};
+
+  bpm *= length / q;
 
   let ch = 0;
   function get(nth, name) {

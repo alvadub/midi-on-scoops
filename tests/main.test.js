@@ -34,10 +34,10 @@ function k(values, notes = []) {
   return { send: values, notes };
 }
 
-function play(midi, bpm) {
+function play(midi, bpm, length) {
   const out = '/tmp/test.mid';
 
-  fs.outputFileSync(out, build(midi, bpm), 'binary');
+  fs.outputFileSync(out, build(midi, bpm, length), 'binary');
 
   return new Promise(ok => {
     exec(`timidity ${out}`, (error, stdout, stderr) => {
@@ -288,7 +288,7 @@ describe('mixup', () => {
   });
 });
 
-describe('midi', () => {
+describe.skip('midi', () => {
   it('should encode output', async () => {
     const midi = mix(parse(`
       # piano
@@ -312,6 +312,30 @@ describe('midi', () => {
 
     expect(midi[0][1]).to.eql(midi[0][0]);
 
-    await play(midi, 90);
+    await play(midi, 90, 16);
+  }).timeout(60000);
+
+  // FIXME: this is not working...
+  it.only('should play billy jean', async () => {
+    await play(mix(parse(`
+      %F a3|c#4|f#4
+      %G b3|d#4|g#4
+      %A c#4|e4|a4
+
+      # synth
+        @A
+          #1 115 x--- --x- ---- ---- %F %G
+        @B
+          #1 115 x--- --x- ---- ---- %A %G
+
+      ## bass
+        %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+        @A
+          #1 112 x-x- x-x- x-x- x-x- %c
+        @B
+          #1 112 x-x- x-x- x-x- x-x- %c
+
+      > A B
+    `)), 116, 16);
   }).timeout(60000);
 });

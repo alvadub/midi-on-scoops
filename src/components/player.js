@@ -43,11 +43,11 @@ export default class Player {
       const drums = [];
       const notes = [];
 
-      this.data.forEach(track => {
-        if (!track) return;
-        track.forEach(clips => {
-          if (!clips) return;
-          clips.forEach(clip => {
+      this.data.forEach(sections => {
+        if (!sections) return;
+        sections.forEach(parts => {
+          if (!parts) return;
+          parts.forEach(clip => {
             if (clip[i + 2]) {
               const [level, chunk] = clip[i + 2];
 

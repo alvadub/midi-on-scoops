@@ -9,17 +9,22 @@
 
   let value = `
 
-%d C4|Eb4|G4
+%F a3|c#4|f#4
+%G b3|d#4|g#4
+%A c#4|e4|a4
+%G b3|d#4|g#4
 
-# piano
+# synth
   @A
-    #3 115 --x- --x- --x- --x- %d % % %
+    #3 115 x--- ---- ---- x--- ---- ---- ---- ---- %F %G ; %A %G
 
 ## bass
   @A
-    #6 112 x-x- x-x- x-x- x-x- C3 minor ..5>3
+    #6 112 x--- x--- x--- x--- x--- x--- x--- x--- f#2 c#2 e2 f#2 e2 c#2 b1 c#2
 
 > A
+
+
 
 `;
 
@@ -37,7 +42,7 @@
     p.setLoopMachine(getData(value));
   }, 200);
 
-  let tempo = (p && p.bpm) || 90;
+  let tempo = (p && p.bpm) || 116;
 
   function stop() {
     if (p) p.stopLoopMachine();

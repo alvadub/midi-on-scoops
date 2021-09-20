@@ -20,8 +20,6 @@ export default class Player {
     this.echo.output.connect(this.output);
     this.equalizer.output.connect(this.echo.input);
     this.output.connect(this.destination);
-    this.volumesInstrument = [];
-    this.volumesDrum = [];
   }
 
   preload() {
@@ -30,7 +28,8 @@ export default class Player {
       sections.forEach(parts => {
         if (!parts) return;
         parts.forEach(clip => {
-          this.cacheInstrument(parseInt(clip[0], 10));
+          const info = this.player.loader.instrumentInfo(clip[0]);
+          this.cacheInstrument(info);
         });
       });
     });
@@ -123,78 +122,49 @@ export default class Player {
   }
 
   // make methods more generic...
-  cacheInstrument(n) {
-    const info = this.player.loader.instrumentInfo(n);
-
-    if (!window[info.variable]) {
+  cacheInstrument(info) {
+    if (info && !window[info.variable]) {
+      if (window[info.variable + 127]) return;
+      window[info.variable + 127] = true;
       this.player.loader.startLoad(this.audioContext, info.url, info.variable);
-      this.player.loader.waitLoad(function () {
+      this.player.loader.waitLoad(() => {
         console.log('cached', n, info.title);
-      });
-    }
-  }
-
-  cacheDrum(n) {
-    const info = this.player.loader.drumInfo(n);
-
-    if (!window[info.variable]) {
-      this.player.loader.startLoad(this.audioContext, info.url, info.variable);
-      this.player.loader.waitLoad(function () {
-        console.log('cached', n, info.title);
+        delete window[info.variable + 127];
       });
     }
   }
 
   playDrum(when, drum) {
-    const info = this.player.loader.drumInfo(drum);
+    const [instrument, level] = drum;
+    const info = this.player.loader.drumInfo(instrument);
 
     if (window[info.variable]) {
       const pitch = window[info.variable].zones[0].keyRangeLow;
-      const volume = this.volumeDrumAdjust(drum);
 
-      // FIXME: adjust this one
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1/16, volume);
+      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1 / 16, (1 / 127) * level);
     } else {
-      this.cacheDrum(drum);
+      this.cacheInstrument(info);
     }
-  }
-
-  playDrumsAt(when, drums) {
-    for (let i = 0; i < drums.length; i += 1) {
-      console.log(drums[i]);
-      this.playDrum(when, drums[i]);
-    }
-  }
-
-  volumeInstrumentAdjust(instrument) {
-    return typeof this.volumesInstrument[instrument] !== 'undefined' ? this.volumesInstrument[instrument] : 1;
-  }
-
-  volumeDrumAdjust(drum) {
-    return typeof this.volumesDrum[drum] !== 'undefined' ? this.volumesDrum[drum] : 1;
   }
 
   playBeatAt(when, beat, bpm) {
-    this.playDrumsAt(when, beat[0]);
-
     const chords = beat[1];
     const N = (4 * 60) / bpm;
+
+    for (let i = 0; i < beat[0].length; i += 1) {
+      this.playDrum(when, beat[0][i]);
+    }
 
     for (let i = 0; i < chords.length; i += 1) {
       const chord = chords[i];
       const [instrument, pitches, duration, level] = chord;
+      const info = this.player.loader.instrumentInfo(instrument);
 
-      this.playChordAt(when, instrument, pitches, duration * N, level);
-    }
-  }
-
-  playChordAt(when, instrument, pitches, duration, level) {
-    const info = this.player.loader.instrumentInfo(instrument);
-
-    if (window[info.variable]) {
-      this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration, (1 / 127) * level);
-    } else {
-      this.cacheInstrument(instrument);
+      if (window[info.variable]) {
+        this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration * N, (1 / 127) * level);
+      } else {
+        this.cacheInstrument(info);
+      }
     }
   }
 }

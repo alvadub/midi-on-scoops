@@ -82,7 +82,7 @@ export default class Player {
   }
 
   setLoopMachine(data) {
-    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || 4;
+    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || this.bars || 4;
     this.data = data || this.data;
     this.fraq = 1 / this.bars;
     this.preload();
@@ -128,7 +128,7 @@ export default class Player {
       window[info.variable + 127] = true;
       this.player.loader.startLoad(this.audioContext, info.url, info.variable);
       this.player.loader.waitLoad(() => {
-        console.log('cached', n, info.title);
+        console.log('cached', info.title);
         delete window[info.variable + 127];
       });
     }

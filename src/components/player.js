@@ -22,19 +22,24 @@ export default class Player {
     this.output.connect(this.destination);
   }
 
-  preload() {
+  preload(data, length) {
+    this.data = data || this.data;
+    this.bars = length || this.bars || 16;
+
+    let count = 0;
     this.data.forEach(sections => {
       if (!sections) return;
       sections.forEach(parts => {
         if (!parts) return;
         parts.forEach(clip => {
+          if (clip.length - 2 > count) count = clip.length - 2;
           const info = this.player.loader.instrumentInfo(clip[0]);
           this.cacheInstrument(info);
         });
       });
     });
 
-    for (let i = 0; i < this.bars; i += 1) {
+    for (let i = 0; i < count; i += 1) {
       const drums = [];
       const notes = [];
 
@@ -81,11 +86,10 @@ export default class Player {
     this.stopPlayLoop();
   }
 
-  setLoopMachine(data) {
-    this.bars = (data[0] && data[0][0] && data[0][0][0] && data[0][0][0].length - 2) || this.bars || 4;
-    this.data = data || this.data;
+  setLoopMachine(data, length) {
+    this.beats.length = 0;
+    this.preload(data, length);
     this.fraq = 1 / this.bars;
-    this.preload();
   }
 
   startPlayLoop(beats, bpm, density, fromBeat) {
@@ -121,7 +125,6 @@ export default class Player {
     this.player.cancelQueue(this.audioContext);
   }
 
-  // make methods more generic...
   cacheInstrument(info) {
     if (info && !window[info.variable]) {
       if (window[info.variable + 127]) return;

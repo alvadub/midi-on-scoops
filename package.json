@@ -47,6 +47,7 @@
     "harmonics": "^1.0.8",
     "less": "^4.1.1",
     "less-plugin-autoprefix": "^2.0.0",
+    "midi-writer-js": "^2.0.1",
     "mocha": "^9.1.1",
     "mortero": "0.0.45",
     "pug": "^3.0.2",
@@ -55,7 +56,6 @@
   },
   "dependencies": {
     "fs-extra": "^10.0.0",
-    "jsmidgen": "^0.1.5",
     "keypress": "^0.2.1",
     "node-watch": "^0.7.1",
     "wargs": "^0.9.5"

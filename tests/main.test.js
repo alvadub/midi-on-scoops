@@ -234,6 +234,39 @@ describe('reducer', () => {
   });
 });
 
+// tracks should be merged together, this means same instrument is flattened to a single track...
+// where all their indices are merged, so different values can be applied on several ticks at once...
+// even we could use multiple values to target specific ticks, chunks of them, and later merge all related
+
+// at the end, we should end up with the same configuration, e.g. [ins, name, ...ticks]
+// where every tick would have all of those parameters...
+
+/*
+
+# hi hat
+#1 120     x--- x---
+#1 110     --x- --x-
+           .    115
+
+#1 length  4t % 4 4t
+#1 panning .5 .4 .5 .6
+
+['1', 'hi hat', [
+  { v: 120, p: .5, l: 85 },
+  { v: 0 },
+  { v: 110, p: .4, l: 85 },
+  { v: 0 },
+  { v: 120, p: .5, l: 128 },
+  { v: 0 },
+  { v: 115, p: .6, l: 85 },
+  { v: 0 },
+]]
+
+*/
+
+// import MIDIWriter from 'midi-writer-js';
+// console.log(MIDIWriter.Utils.getTickDuration('2'));
+
 describe('mixup', () => {
   it('should compose simple tracks', () => {
     expect(mix(parse(`

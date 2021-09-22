@@ -84,8 +84,8 @@ export default class Player {
     if (changed) this.stopPlayLoop();
 
     this.beats.length = 0;
-    this.bpm = tempo || this.bpm;
-    this.bars = length || this.bars || 16;
+    this.bpm = tempo || 127;
+    this.bars = length || 16;
     this.offset = transpose || 0;
     this.preload(data);
     this.fraq = 1 / this.bars;

@@ -134,7 +134,7 @@
   }
 
   window.p = window.p || null;
-  let tempo = (p && p.bpm) || 110;
+  let tempo = (p && p.bpm) || 116;
   let playing;
 
   function stop() {

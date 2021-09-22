@@ -182,22 +182,24 @@ describe('parser', () => {
     const ast = parse(`
       # track
         @A
-          #1 x--- x---
+          #1 x--- x--- C4 D4
         @B < A
-          #1 110 120
+          #1 110 120   G4 A4
 
       # other
         @C
           #1 ---x ---x
     `);
 
-    const A1 = { input: [{ type: 'pattern', value: 'x---' }, { type: 'pattern', value: 'x---' }] };
+    const D = [{ type: 'note', value: 'C4' }, { type: 'note', value: 'D4' }];
+    const D1 = [{ type: 'note', value: 'G4' }, { type: 'note', value: 'A4' }];
+    const A1 = { data: D, input: [{ type: 'pattern', value: 'x---' }, { type: 'pattern', value: 'x---' }] };
     const AA1 = { values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }] };
 
     expect(ast.tracks).to.eql({
       track: {
         'A#1': [A1],
-        'B#1': [A1, AA1],
+        'B#1': [{ ...A1, data: D1 }, AA1],
       },
       other: {
         'C#1': [{ input: [{ type: 'pattern', value: '---x' }, { type: 'pattern', value: '---x' }] }],

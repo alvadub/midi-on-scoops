@@ -211,30 +211,36 @@ export function parse(buffer) {
           return;
         }
 
+        const notes = ticks.findIndex(x => x.type === 'note' || x.type === 'chord');
         const index = ticks.findIndex(x => x.type === 'pattern');
-        const input = ticks.slice(0, index > 0 ? index : 1);
-        const values = index > 0 ? ticks.slice(index) : ticks;
-        const offset = values.findIndex(x => x.type !== 'pattern');
+        const value = index > 0 ? ticks.slice(index) : ticks;
+        const offset = value.findIndex(x => x.type !== 'pattern');
+        const inputs = ticks.slice(0, index > 0 ? index : 1);
 
-        channel = prefix + input[0].value;
+        channel = prefix + inputs[0].value;
         if (!info[channel]) {
           info[channel] = [];
         }
 
         let spec;
-        if (offset > 0) {
+        if (notes > 0 && index === -1) {
+          const end = info[channel][info[channel].length - 1];
+
+          end.data = value.slice(notes);
+          spec = { values: value.slice(1, notes) };
+        } else if (offset > 0) {
           spec = {
-            data: values.slice(offset),
-            input: values.slice(0, offset),
+            data: value.slice(offset),
+            input: value.slice(0, offset),
           };
         } else if (offset === 0) {
-          spec = { values: values.slice(1) };
+          spec = { values: value.slice(1) };
         } else {
-          spec = { input: values };
+          spec = { input: value };
         }
 
-        if (input.length > 1) {
-          spec.values = input.slice(1);
+        if (inputs.length > 1) {
+          spec.values = inputs.slice(1);
         }
         info[channel].push(spec);
       }

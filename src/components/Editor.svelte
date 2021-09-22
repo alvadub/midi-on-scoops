@@ -36,12 +36,12 @@
     #518      ---- ---- ---- ---- ---- ---- ---- ---- ; how to auto-fill missing tracks?
   @A ; @A7 is not working?
     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
-  @B
-    #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %E % % %
-  @C
-    #518      x--- --x- ---- ---- x--- --x- ---- ---- %C % %F %
-  @D
-    #518      x--- --x- ---- ---- x--- --x- ---- ---- %C % %B % ; it would be possible to omit pattern and reuse previous plus notes?
+  @B < A
+    #518 75   %E % % %
+  @C < A
+    #518      %C % %F %
+  @D < A
+    #518      %C % %B % ; it would be possible to omit pattern and reuse previous plus notes?
 
 ## bass
   %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
@@ -59,7 +59,7 @@
 ## drums
   @INTRO
     #2081 100 x--- x--- x--- x--- x--- x--- x--- x---
-    #2113     x--- ---- ---- ---- ---- ---- ---- --x-
+    #2113     x-x- ---- ---- ---- ---- ---- ---- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
   @A < INTRO
@@ -68,14 +68,14 @@
   @C < A
   @D < A
 
-> INTRO A %
-> A *4 ; cabasas / half synth
-> A % B A B A
+;> INTRO A %
+;> A *4 ; cabasas / half synth
+;> A % B A B A
 > A % B A C *3 D
-> A % B A B A
-> A % B A B A
-> A % B A C *3 D ; CHORUS?!!! Em F#m Em -> Am7 -> Em F#m <- G F#m
-> A % B A B A
+;> A % B A B A
+;> A % B A B A
+;> A % B A C *3 D ; CHORUS?!!! Em F#m Em -> Am7 -> Em F#m <- G F#m
+;> A % B A B A
 `;
 
   function build(midi) {

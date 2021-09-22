@@ -1,6 +1,6 @@
 <script>
   import Player from './player.js';
-  import { parse } from '../lib';
+  import { parse, merge } from '../lib';
 
   // FIXME: implements, first, a good parser for these inputs...
   // here we'll have 2 axis, horizontally we stack bars...
@@ -116,8 +116,8 @@
         parts.forEach(e => {
           const { track } = get(e[0], e[1]);
 
-          for (let i = 2; i < e.length; i += 1) {
-            track.push(e[i]);
+          for (let i = 0; i < e[2].length; i += 1) {
+            track.push([e[2][i].v, e[2][i].n]);
           }
         });
       });
@@ -127,7 +127,7 @@
 
   function getData(input) {
     try {
-      return build(mix(parse(input)));
+      return build(merge(parse(input)));
     } catch (e) {
       // ignore
     }

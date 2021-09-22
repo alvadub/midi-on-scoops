@@ -1,8 +1,8 @@
 import { getChordsByProgression } from 'scribbletune/src/progression';
 import { scale, inlineChord } from 'harmonics';
 
-import { isProgression, isPattern, transform } from './tokenize';
-import { repeat, range, flatten } from './utils';
+import { isProgression, transform } from './tokenize';
+import { repeat, clone } from './utils';
 
 export function reduce(input, context, callback) {
   if (!Array.isArray(input)) return input;
@@ -182,7 +182,18 @@ export function parse(buffer) {
       } else if (line.charAt() === '>') {
         main.push(transform(line.substr(1).trim()));
       } else if (line.charAt() === '@') {
-        prefix = line.substr(1).split(' ')[0];
+        const [name, ...extend] = line.substr(1).split(' ');
+
+        if (extend[0] === '<') {
+          const key = `${extend[1]}#`;
+
+          Object.keys(info)
+            .filter(x => x.indexOf(key) === 0)
+            .forEach(k => {
+              info[`${name}#${k.split('#')[1]}`] = clone(info[k]);
+            });
+        }
+        prefix = name;
       } else if (line.indexOf(':') > 0) {
         const [name, ...value] = line.split(':');
 

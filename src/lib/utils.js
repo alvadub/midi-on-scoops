@@ -1,3 +1,19 @@
+export function flatten(value) {
+  return value.reduce((prev, cur) => prev.concat(cur), []);
+}
+
+export function repeat(value, times) {
+  const out = [];
+
+  while (times) {
+    out.push(value);
+
+    times -= 1;
+  }
+
+  return out;
+}
+
 export function range(min, max, step) {
   const acc = [];
   if (!step) {
@@ -15,20 +31,17 @@ export function range(min, max, step) {
   return acc;
 }
 
-export function repeat(value, times) {
-  const out = [];
+export function clone(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(clone);
 
-  while (times) {
-    out.push(value);
+  const copy = {};
 
-    times -= 1;
-  }
+  Object.keys(value).forEach(key => {
+    copy[key] = clone(value[key]);
+  });
 
-  return out;
-}
-
-export function flatten(value) {
-  return value.reduce((prev, cur) => prev.concat(cur), []);
+  return copy;
 }
 
 export function zip(a, b, cb) {

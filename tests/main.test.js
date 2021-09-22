@@ -178,14 +178,33 @@ describe('parser', () => {
     });
   });
 
-  it.skip('should extend tracks', () => {
+  it('should extend tracks', () => {
     const ast = parse(`
       # track
         @A
           #1 x--- x---
         @B < A
+          #1 110 120
+
+      # other
+        @C
+          #1 ---x ---x
     `);
-    console.log(require('util').inspect(ast, { depth: 10, colors: true }));
+
+    const A1 = { input: [{ type: 'pattern', value: 'x---' }, { type: 'pattern', value: 'x---' }] };
+    const AA1 = { values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }] };
+
+    expect(ast.tracks).to.eql({
+      track: {
+        'A#1': [A1],
+        'B#1': [A1, AA1],
+      },
+      other: {
+        'C#1': [{ input: [{ type: 'pattern', value: '---x' }, { type: 'pattern', value: '---x' }] }],
+      },
+    });
+
+    // console.log(require('util').inspect(ast, { depth: 10, colors: true }));
   });
 });
 
@@ -316,7 +335,7 @@ describe('remix', () => {
 });
 
 describe('midi', () => {
-  it('should encode output', async () => {
+  it.skip('should encode output', async () => {
     const midi = merge(parse(`
       # piano
         @A
@@ -353,25 +372,65 @@ describe('midi', () => {
 
   // FIXME: this is not working...
   it.skip('should play billy jean', async () => {
-    await play(mix(parse(`
+    await play(merge(parse(`
       %F a3|c#4|f#4
       %G b3|d#4|g#4
       %A c#4|e4|a4
 
       # synth
         @A
-          #1 115 x--- --x- ---- ---- %F %G
-        @B
-          #1 115 x--- --x- ---- ---- %A %G
+          #1 115 x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
 
       ## bass
         %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
         @A
-          #1 112 x-x- x-x- x-x- x-x- %c
-        @B
-          #1 112 x-x- x-x- x-x- x-x- %c
+          #2 112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
 
-      > A B
+      > A
     `)), 116, 16);
+
+    // await play(merge(parse(`
+    //   %F a3|c#4|f#4
+    //   %G b3|d#4|g#4
+    //   %A c#4|e4|a4
+    //   %E b3|d4|f#4
+    //   %C d3|f#4|a4 ; how to sum notes to chords?
+    //   %B c#4|f4|g#3|b4
+
+    //   # synth
+    //     @INTRO
+    //       #1      ---- ---- ---- ---- ---- ---- ---- ---- ; how to auto-fill missing tracks?
+    //     @A ; @A7 is not working?
+    //       #1 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
+    //     @B
+    //       #1 75   x--- --x- ---- ---- x--- --x- ---- ---- %E % % %
+    //     @C
+    //       #1      x--- --x- ---- ---- x--- --x- ---- ---- %C % %F %
+    //     @D
+    //       #1      x--- --x- ---- ---- x--- --x- ---- ---- %C % %B % ; it would be possible to omit pattern and reuse previous plus notes?
+
+    //   ## bass
+    //     %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+    //     %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
+    //     @INTRO
+    //       #1      ---- ---- ---- ---- ---- ---- ---- ---- ; if present, it gets played... if missing, then is muted...
+    //     @A
+    //       #1  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
+    //     @B
+    //       #1  112 x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
+    //     @C
+    //       #1      ---- ---- ---- ---- ---- ---- ---- ----
+    //     @D
+    //       #1      ---- ---- ---- ---- ---- ---- ---- ----
+
+    //   ;> INTRO A %
+    //   ;> A *4 ; cabasas / half synth
+    //   > A % B A B A
+    //   > A % B A C *3 D
+    //   ;> A % B A B A
+    //   ;> A % B A B A
+    //   ;> A % B A C *3 D ; CHORUS?!!! Em F#m Em -> Am7 -> Em F#m <- G F#m
+    //   ;> A % B A B A
+    // `)), 116, 16);
   }).timeout(60000);
 });

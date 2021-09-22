@@ -232,15 +232,9 @@ describe('reducer', () => {
   });
 });
 
-// import MIDIWriter from 'midi-writer-js';
-// console.log(MIDIWriter.Utils.getTickDuration('2'));
-
 describe('remix', () => {
   it('should merge track channels', () => {
     const sample = `
-      .5: 5
-      .4: 4
-      .6: 6
       4t: 7
 
       # hi hat
@@ -254,48 +248,47 @@ describe('remix', () => {
 
     const test = merge(parse(sample));
 
-    expect(test).to.eql([
-      ['#1', 'hi hat', [
-        { v: 120, n: 'a1', l: 7, p: 5 }, { v: 0 }, { v: 110, n: 'a3', l: 7, p: 4 }, { v: 0 },
-        { v: 120, n: 'a2', l: 4, p: 5 }, { v: 0 }, { v: 115, n: 'a4', l: 7, p: 6 }, { v: 0 },
+    expect(test).to.eql([[[
+      ['1', 'hi hat', [
+        { v: 120, n: 'a1', l: 7, p: 0.5 }, { v: 0 }, { v: 110, n: 'a3', l: 7, p: 0.4 }, { v: 0 },
+        { v: 120, n: 'a2', l: 4, p: 0.5 }, { v: 0 }, { v: 115, n: 'a4', l: 7, p: 0.6 }, { v: 0 },
       ]],
-    ]);
+    ]]]);
   });
 
-  it.skip('should compose simple tracks', () => {
-    expect(mix(parse(`
+  it('should compose simple tracks', () => {
+    expect(merge(parse(`
       # track
       #1 -x
     `))).to.eql([
-      [[['1', 'track', [0], [127]]]],
+      [[['1', 'track', [{ v: 0 }, { v: 127 }]]]],
     ]);
 
-    expect(mix(parse(`
+    expect(merge(parse(`
       # track
       #1 125 ---x
     `))).to.eql([
-      [[['1', 'track', [0], [0], [0], [125]]]],
+      [[['1', 'track', [{ v: 0 }, { v: 0 }, { v: 0 }, { v: 125 }]]]],
     ]);
 
-    expect(mix(parse(`
+    expect(merge(parse(`
       # track
       #1 ---x x---
          100  120
     `))).to.eql([
-      [[['1', 'track', [0], [0], [0], [100], [120], [0], [0], [0]]]],
+      [[['1', 'track', [{ v: 0 }, { v: 0 }, { v: 0 }, { v: 100 }, { v: 120 }, { v: 0 }, { v: 0 }, { v: 0 }]]]],
     ]);
   });
 
-  it.skip('should compose mixed tracks', () => {
-    const A1 = ['1', 'track', [127], [0], [0], [0], [0], [0], [127], [0]];
-    const B1 = ['1', 'track', [0], [127], [0], [0], [127], [0], [0], [0]];
-    const B1_ = ['1', 'track', [0], [127], [0], [0], [127], [127], [0], [0]];
-    const B2 = ['2', 'track', [0], [0], [0], [0], [0], [0], [0], [115, 60]];
+  it('should compose mixed tracks', () => {
+    const A1 = ['1', 'track', [{ v: 127 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 127 }, { v: 0 }]];
+    const B1 = ['1', 'track', [{ v: 0 }, { v: 127 }, { v: 0 }, { v: 0 }, { v: 127 }, { v: 127 }, { v: 0 }, { v: 0 }]];
+    const B2 = ['2', 'track', [{ v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 115, n: 'C4' }]];
 
-    const AA1 = ['3', 'other', [0], [0], [0], [127], [0], [0], [0], [127]];
-    const BB1 = ['3', 'other', [0], [0], [0], [0], [0], [127], [0], [127]];
+    const AA1 = ['3', 'other', [{ v: 0 }, { v: 0 }, { v: 0 }, { v: 127 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 127 }]];
+    const BB1 = ['3', 'other', [{ v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 0 }, { v: 127 }, { v: 0 }, { v: 127 }]];
 
-    const midi = mix(parse(`
+    const midi = merge(parse(`
       # track
         @A
           #1 x--- --x-
@@ -317,7 +310,7 @@ describe('remix', () => {
 
     expect(midi[0][0]).to.eql([A1, AA1]);
     expect(midi[0][1]).to.eql([A1, AA1]);
-    expect(midi[0][2]).to.eql([B1, B1_, B2, BB1]);
+    expect(midi[0][2]).to.eql([B1, B2, BB1]);
     expect(midi[0][3]).to.eql([A1, AA1]);
   });
 });

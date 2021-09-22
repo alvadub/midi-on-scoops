@@ -2,7 +2,7 @@ import { inlineChord } from 'harmonics';
 
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^[x_-]+$/;
-export const RE_NUMBER = /^\d+(?:\.\d+)?$/;
+export const RE_NUMBER = /^(?:\.?\d+|\d+(?:\.\d+)?)$/;
 export const RE_CHORD = /^[a-gA-G][^#\s]*\d+(?:\.\.)?$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
@@ -10,7 +10,6 @@ export const RE_PROG = /^[ivIV]{1,3}°?$/;
 export const RE_TRIM = /\.+$/;
 
 const CACHE = {};
-const TONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 export function level(value) {
   if (!CACHE[value]) {
@@ -28,38 +27,6 @@ export function level(value) {
       CACHE[value] = parseFloat(value);
     }
   }
-  return CACHE[value];
-}
-
-export function pitch(value) {
-  if (Array.isArray(value)) return value.map(pitch);
-  if (typeof value !== 'string') return false;
-  if (CACHE[value]) return CACHE[value];
-
-  const parts = value.split(/(?=-?\d+)/);
-
-  if (parts.length > 2) {
-    throw new TypeError(`Unknown '${value}' value`);
-  }
-
-  const base = parts[0][0].toUpperCase();
-  const sub = parts[0][1];
-
-  let offset = TONES[base];
-  if (sub === '#') offset += 1;
-  if (sub === 'b') offset -= 1;
-
-  let note = parseInt(parts.pop(), 10);
-  if (offset > 11) {
-    offset = 0;
-    note += 1;
-  }
-  if (offset < 0) {
-    offset = 11;
-    note -= 1;
-  }
-
-  CACHE[value] = (note * 12 + offset) + 12;
   return CACHE[value];
 }
 

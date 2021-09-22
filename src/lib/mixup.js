@@ -1,9 +1,12 @@
 import { File, Track } from 'jsmidgen';
 import { zip, flatten } from './utils';
-import { pitch, isPattern } from './tokenize';
+import { isPattern } from './tokenize';
 import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
+
+// import MIDIWriter from 'midi-writer-js';
+// console.log(MIDIWriter.Utils.getTickDuration('2'));
 
 export function build(midi, bpm = 120, length = 16) {
   const file = new File();
@@ -63,8 +66,7 @@ export function build(midi, bpm = 120, length = 16) {
 export function pack(values, notes) {
   return value => {
     let result = value;
-    if (Array.isArray(value)) result = value.map(pitch);
-    else if (typeof value === 'string') {
+    if (typeof value === 'string') {
       if (isPattern(value)) {
         let offset = 0;
         result = value.split('').map(x => {
@@ -77,59 +79,20 @@ export function pack(values, notes) {
           }
           return token;
         });
-      } else {
-        result = pitch(value);
       }
     }
     return result;
   };
 }
 
-export function mix(ctx) {
-  const scenes = {};
-
-  Object.entries(ctx.tracks).forEach(([src, tracks]) => {
-    Object.entries(tracks).forEach(([ch, clips]) => {
-      const [tag, midi] = ch.split('#');
-      const key = tag || DEFAULT;
-      const track = [];
-
-      clips.forEach(clip => {
-        const values = clip.values ? reduce(clip.values, ctx.data) : [];
-        const notes = clip.data ? pitch(reduce(clip.data, ctx.data)) : [];
-        const fn = pack(values, notes);
-
-        track.push(reduce(clip.input, ctx.data, fn).reduce((memo, cur) => memo.concat(cur), []));
-      });
-
-      if (!scenes[key]) scenes[key] = { tracks: [] };
-      scenes[key].tracks.push({ src, midi, track });
-    });
-  });
-
-  if (!ctx.main.length) {
-    ctx.main = [[{ type: 'value', value: DEFAULT }]];
-  }
-
-  return ctx.main.map(track => {
-    return reduce(track, scenes).map(item => {
-      return [].concat(item).reduce((memo, x) => {
-        x.tracks.forEach(t => {
-          t.track.forEach(_ => {
-            memo.push([t.midi, t.src, ..._]);
-          });
-        });
-        return memo;
-      }, []);
-    });
-  });
-}
-
 export function merge(ctx) {
-  const test = [];
+  const scenes = {};
 
   Object.entries(ctx.tracks).forEach(([name, channels]) => {
     Object.entries(channels).forEach(([ch, clips]) => {
+      const [tag, midi] = ch.split('#');
+      const key = tag || DEFAULT;
+
       let ticks;
       let inc = 0;
       clips.forEach(clip => {
@@ -152,7 +115,9 @@ export function merge(ctx) {
         }
 
         if (ticks) {
-          const mode = clip.values[0].type === 'mode' && clip.values[0].value;
+          const mode = clip.values
+            && clip.values[0]
+            && clip.values[0].type === 'mode' ? clip.values[0].value : null;
 
           ticks.forEach(tick => {
             if (tick.v > 0) {
@@ -162,9 +127,22 @@ export function merge(ctx) {
           });
         }
       });
-      test.push([ch, name, ticks]);
+
+      if (!scenes[key]) scenes[key] = { tracks: [] };
+      scenes[key].tracks.push([midi, name, ticks]);
     });
   });
 
-  return test;
+  if (!ctx.main.length) {
+    ctx.main = [[{ type: 'value', value: DEFAULT }]];
+  }
+
+  return ctx.main.map(track => {
+    return reduce(track, scenes).map(item => {
+      return [].concat(item).reduce((memo, x) => {
+        memo.push(...x.tracks);
+        return memo;
+      }, []);
+    });
+  });
 }

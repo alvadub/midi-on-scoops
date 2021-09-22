@@ -195,7 +195,7 @@ export function parse(buffer) {
 
           const end = info[channel][info[channel].length - 1];
 
-          if (!end.values) end.values = [];
+          if (!end.values) end.values = [{ type: 'number', value: 127 }];
           end.values.push(...ticks);
           return;
         }

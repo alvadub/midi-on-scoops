@@ -1,6 +1,6 @@
 <script>
   import Player from './player.js';
-  import { mix, parse } from '../lib';
+  import { parse } from '../lib';
 
   // FIXME: implements, first, a good parser for these inputs...
   // here we'll have 2 axis, horizontally we stack bars...

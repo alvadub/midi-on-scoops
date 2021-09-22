@@ -59,29 +59,14 @@
 ## drums
   @INTRO
     #2081 100 x--- x--- x--- x--- x--- x--- x--- x---
-    #2113     x--- ---- ---- ---- ---- ---- ---- ----
+    #2113     x--- ---- ---- ---- ---- ---- ---- --x-
     #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
     #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
-  @A
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; this should be repeated if omitted
-    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
-    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
-    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
-  @B
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; this too, also...
-    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
-    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
-    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
-  @C
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- ; even this...
-    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
-    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
-    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
-  @D < INTRO ; we could extend like this? and then just redeclare input?
-    #2081 120 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
-    #2113 90  --x- --x- --x- --x- --x- --x- --x- --x-
-    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
-    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
+  @A < INTRO
+    #2081 120 --x- --x- --x- --x- --x- --x- --x- --x-
+  @B < A
+  @C < A
+  @D < A
 
 > INTRO A %
 > A *4 ; cabasas / half synth
@@ -94,35 +79,32 @@
 `;
 
   function build(midi) {
-    const piece = [];
+    const mix = [];
 
-    let group;
     function get(nth, name) {
       const key = nth + name;
 
       if (!get[key]) {
-        const track = [nth, name];
+        const track = [nth, name, []];
 
-        group.push(track);
+        mix.push(track);
         get[key] = { track };
       }
       return get[key];
     }
 
     midi.forEach(section => {
-      group = [];
-      piece.push(group);
       section.forEach(parts => {
         parts.forEach(e => {
           const { track } = get(e[0], e[1]);
 
           for (let i = 0; i < e[2].length; i += 1) {
-            track.push([e[2][i].v, e[2][i].n]);
+            track[2].push(e[2][i]);
           }
         });
       });
     });
-    return [piece];
+    return mix;
   }
 
   function getData(input) {

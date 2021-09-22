@@ -1,3 +1,5 @@
+import { Utils } from 'midi-writer-js';
+
 export default class Player {
   constructor() {
     this.data = [];
@@ -27,47 +29,32 @@ export default class Player {
     this.bars = length || this.bars || 16;
 
     let count = 0;
-    this.data.forEach(sections => {
-      if (!sections) return;
-      sections.forEach(parts => {
-        if (!parts) return;
-        parts.forEach(clip => {
-          if (clip.length - 2 > count) count = clip.length - 2;
-          const info = clip[0] >= 2000
-            ? this.player.loader.drumInfo(clip[0] - 2000)
-            : this.player.loader.instrumentInfo(clip[0]);
-          this.cacheInstrument(info);
-        });
-      });
+    this.data.forEach(track => {
+      if (track[2].length > count) count = track[2].length;
+
+      const info = track[0] >= 2000
+        ? this.player.loader.drumInfo(track[0] - 2000)
+        : this.player.loader.instrumentInfo(track[0]);
+
+      this.cacheInstrument(info);
     });
 
     for (let i = 0; i < count; i += 1) {
       const drums = [];
       const notes = [];
 
-      this.data.forEach(sections => {
-        if (!sections) return;
-        sections.forEach(parts => {
-          if (!parts) return;
-          parts.forEach(clip => {
-            if (clip[i + 2]) {
-              const [level, chunk] = clip[i + 2];
+      this.data.forEach(track => {
+        const tick = track[2][i];
 
-              if (clip[0] >= 2000) {
-                drums.push([clip[0] - 2000, level]);
-              } else {
-                if (Array.isArray(chunk)) {
-                  chunk.forEach(tone => {
-                    notes.push([clip[0], tone, 1 / 16, level]);
-                  });
-                }
-                if (typeof chunk === 'number') {
-                  notes.push([clip[0], chunk, 1 / 16, level]);
-                }
-              }
-            }
+        if (track[0] >= 2000) {
+          drums.push([track[0] - 2000, tick.v]);
+        } else if (Array.isArray(tick.n)) {
+          tick.n.forEach(tone => {
+            notes.push([track[0], Utils.getPitch(tone), 1 / 16, tick.v]);
           });
-        });
+        } else if (tick.n) {
+          notes.push([track[0], Utils.getPitch(tick.n), 1 / 16, tick.v]);
+        }
       });
 
       this.beats[i] = [drums, notes];
@@ -155,16 +142,14 @@ export default class Player {
 
   playBeatAt(when, beat, bpm) {
     if (!beat) return;
-    const chords = beat[1];
     const N = (4 * 60) / bpm;
 
     for (let i = 0; i < beat[0].length; i += 1) {
       this.playDrum(when, beat[0][i]);
     }
 
-    for (let i = 0; i < chords.length; i += 1) {
-      const chord = chords[i];
-      const [instrument, pitches, duration, level] = chord;
+    beat[1].forEach(note => {
+      const [instrument, pitches, duration, level] = note;
       const info = this.player.loader.instrumentInfo(instrument);
 
       if (window[info.variable]) {
@@ -172,6 +157,6 @@ export default class Player {
       } else {
         this.cacheInstrument(info);
       }
-    }
+    });
   }
 }

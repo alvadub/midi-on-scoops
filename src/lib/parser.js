@@ -25,6 +25,11 @@ export function reduce(input, context, callback) {
       return prev;
     }
 
+    if (cur.type === 'value' && cur.value === '.') {
+      if (prev.length > 0) prev.push(prev[0]);
+      return prev;
+    }
+
     if (old.type === 'pattern' && cur.type === 'pattern') {
       prev[prev.length - 1] += cur.value;
       return prev;
@@ -185,7 +190,7 @@ export function parse(buffer) {
       } else {
         const ticks = transform(line);
 
-        if (ticks[0].type !== 'channel') {
+        if (!ticks[0] || ticks[0].type !== 'channel') {
           if (!channel) throw new TypeError(`Missing channel, given '${line}'`);
 
           const end = info[channel][info[channel].length - 1];

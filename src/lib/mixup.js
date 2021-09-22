@@ -1,4 +1,5 @@
 import { File, Track } from 'jsmidgen';
+import { zip, flatten } from './utils';
 import { pitch, isPattern } from './tokenize';
 import { reduce } from './parser';
 
@@ -67,12 +68,12 @@ export function pack(values, notes) {
       if (isPattern(value)) {
         let offset = 0;
         result = value.split('').map(x => {
-          const token = [x === '-' ? 0 : 127];
+          const token = { v: x === '-' ? 0 : 127 };
           if (x !== '-') {
-            token[0] = typeof values[offset] !== 'undefined' ? values[offset] : token[0] || 0;
-            if (typeof notes[offset] !== 'undefined') token[1] = notes[offset];
-            if (values.length === 1) token[0] = values[0];
-            offset += 1;
+            token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
+            if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
+            if (values.length === 1) token.v = values[0];
+            if (token.v || token.n) offset += 1;
           }
           return token;
         });
@@ -122,4 +123,48 @@ export function mix(ctx) {
       }, []);
     });
   });
+}
+
+export function merge(ctx) {
+  const test = [];
+
+  Object.entries(ctx.tracks).forEach(([name, channels]) => {
+    Object.entries(channels).forEach(([ch, clips]) => {
+      let ticks;
+      let inc = 0;
+      clips.forEach(clip => {
+        const values = clip.values ? reduce(clip.values, ctx.data) : [];
+        const notes = clip.data ? reduce(clip.data, ctx.data) : [];
+
+        if (clip.input) {
+          if (values.length > 1) values.shift();
+
+          const input = flatten(reduce(clip.input, ctx.data, pack(values, notes)));
+
+          if (!ticks) {
+            ticks = input;
+            return;
+          }
+
+          zip(ticks, input, (a, b) => {
+            if (b.v > 0) a.v = b.v;
+          });
+        }
+
+        if (ticks) {
+          const mode = clip.values[0].type === 'mode' && clip.values[0].value;
+
+          ticks.forEach(tick => {
+            if (tick.v > 0) {
+              if (!tick.n && notes.length > 0) tick.n = notes.shift();
+              if (mode && values.length > 0) tick[mode[0].toLowerCase()] = values.shift();
+            }
+          });
+        }
+      });
+      test.push([ch, name, ticks]);
+    });
+  });
+
+  return test;
 }

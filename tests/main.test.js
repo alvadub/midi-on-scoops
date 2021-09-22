@@ -315,9 +315,9 @@ describe('remix', () => {
   });
 });
 
-describe.skip('midi', () => {
-  it.skip('should encode output', async () => {
-    const midi = mix(parse(`
+describe('midi', () => {
+  it('should encode output', async () => {
+    const midi = merge(parse(`
       # piano
         @A
           #1 115 --x- --x- --x- --x- Cm_4 % % %
@@ -329,12 +329,21 @@ describe.skip('midi', () => {
       > A % % %
     `));
 
-    const c = [60, 63, 67];
+    const f = g => {
+      const o = { v: g[0] };
+      if (g[1]) o.n = g[1];
+      return o;
+    };
+    const c = ['C4', 'Eb4', 'G4'];
     const l = 112;
 
     expect(midi[0][0]).to.eql([
-      ['1', 'piano', [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0]],
-      ['1', 'bass', [l, 48], [0], [l, 50], [0], [l, 51], [0], [l, 53], [0], [l, 55], [0], [l, 53], [0], [l, 51], [0], [l, 50], [0]],
+      ['1', 'piano', [
+        [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0],
+      ].map(f)],
+      ['1', 'bass', [
+        [l, 'C3'], [0], [l, 'D3'], [0], [l, 'Eb3'], [0], [l, 'F3'], [0], [l, 'G3'], [0], [l, 'F3'], [0], [l, 'Eb3'], [0], [l, 'D3'], [0],
+      ].map(f)],
     ]);
 
     expect(midi[0][1]).to.eql(midi[0][0]);

@@ -40,17 +40,17 @@ export function build(midi, bpm = 120, length = 16) {
           track.instrument(chan, e[0]);
         }
 
-        for (let i = 2; i < e.length; i += 1) {
-          const tick = e[i];
+        for (let i = 0; i < e[2].length; i += 1) {
+          const tick = e[2][i];
 
-          if (tick[0] > 0) {
-            const note = tick[1] || 60;
+          if (tick.v > 0) {
+            const note = tick.n || 'C3';
 
             if (Array.isArray(note)) {
               track.noteOff(chan, '', q);
-              track.addChord(chan, note, q, tick[0]);
+              track.addChord(chan, note, q, tick.v);
             } else {
-              track.noteOn(chan, note, q, tick[0]);
+              track.noteOn(chan, note, q, tick.v);
               track.noteOff(chan, note, q);
             }
           } else {

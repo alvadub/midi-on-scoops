@@ -194,7 +194,7 @@ describe('parser', () => {
     const D = [{ type: 'note', value: 'C4' }, { type: 'note', value: 'D4' }];
     const D1 = [{ type: 'note', value: 'G4' }, { type: 'note', value: 'A4' }];
     const A1 = { data: D, input: [{ type: 'pattern', value: 'x---' }, { type: 'pattern', value: 'x---' }] };
-    const AA1 = { values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }] };
+    const AA1 = { input: A1.input, values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }] };
 
     expect(ast.tracks).to.eql({
       track: {

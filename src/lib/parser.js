@@ -211,7 +211,7 @@ export function parse(buffer) {
           return;
         }
 
-        const notes = ticks.findIndex(x => x.type === 'note' || x.type === 'chord');
+        const notes = ticks.findIndex(x => ['note', 'chord', 'param'].includes(x.type));
         const index = ticks.findIndex(x => x.type === 'pattern');
         const value = index > 0 ? ticks.slice(index) : ticks;
         const offset = value.findIndex(x => x.type !== 'pattern');
@@ -227,7 +227,10 @@ export function parse(buffer) {
           const end = info[channel][info[channel].length - 1];
 
           end.data = value.slice(notes);
-          spec = { values: value.slice(1, notes) };
+          spec = {
+            input: end.input,
+            values: value.slice(1, notes),
+          };
         } else if (offset > 0) {
           spec = {
             data: value.slice(offset),

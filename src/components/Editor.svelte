@@ -158,5 +158,4 @@
 <button on:click={stop}>Stop</button>
 <input type="number" bind:value={tempo} />
 <input type="number" bind:value={length} />
-<textarea bind:value cols="64" rows="30" />
-
+<textarea bind:value style="width:100%;height:98%" />

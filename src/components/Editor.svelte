@@ -23,7 +23,6 @@
 
   let length = 16;
   let value = `
-
 %F a3|c#4|f#4
 %G b3|d#4|g#4
 %A c#4|e4|a4
@@ -33,49 +32,51 @@
 
 # synth
   @INTRO
-    #518      ---- ---- ---- ---- ---- ---- ---- ---- ; how to auto-fill missing tracks?
-  @A ; @A7 is not working?
+    #518      ---- ---- ---- ---- ---- ---- ---- ----
+  @N < INTRO
+  @A
     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
   @B < A
-    #518 75   %E % % %
+    #518      %E % % %
   @C < A
     #518      %C % %F %
   @D < A
-    #518      %C % %B % ; it would be possible to omit pattern and reuse previous plus notes?
+    #518      %C % %B %
 
 ## bass
   %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
   %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
   @INTRO
-    #393      ---- ---- ---- ---- ---- ---- ---- ---- ; if present, it gets played... if missing, then is muted...
+    #393      ---- ---- ---- ---- ---- ---- ---- ----
   @A
     #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
+  @N < A
   @B
-    #393  112 x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
-  ; extend is needed to fill with silence... what if, by default, we extend from empty bars when tags are declared on tracks? (same as missing?)
+    #393      x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
   @C < INTRO
   @D < INTRO
 
 ## drums
   @INTRO
-    #2081 100 x--- x--- x--- x--- x--- x--- x--- x---
-    #2113     x-x- ---- ---- ---- ---- ---- ---- --x-
-    #2028 120 ---- x--- ---- x--- ---- x--- ---- x---
-    #2001 120 x--- ---- x--- ---- x--- ---- x--- ----
+    #2123     ---- ---- ---- ---- ---- ---- ---- ----
+    #2081 50  x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+    #2028     ---- x--- ---- x--- ---- x--- ---- x---
+    #2001     x--- ---- x--- ---- x--- ---- x--- ----
   @A < INTRO
-    #2081 120 --x- --x- --x- --x- --x- --x- --x- --x-
+    #2123 90  x--- x--- x--- x--- x--- x--- x--- x---
+    #2123 70  --x- --x- --x- --x- --x- --x- --x- --x-
+  @N < A
   @B < A
   @C < A
   @D < A
 
-;> INTRO A %
-;> A *4 ; cabasas / half synth
-;> A % B A B A
+> INTRO N *2 A %
+> A % B A B A
 > A % B A C *3 D
-;> A % B A B A
-;> A % B A B A
-;> A % B A C *3 D ; CHORUS?!!! Em F#m Em -> Am7 -> Em F#m <- G F#m
-;> A % B A B A
+> A % B A B A
+> A % B A B A
+> A % B A C *3 D
+> A % B A B A
 `;
 
   function build(midi) {
@@ -127,8 +128,10 @@
   }
 
   function play() {
+    stop();
     if (p) {
       playing = true;
+      p.setLoopMachine(getData(value), tempo, length);
       p.playLoopMachine();
     }
   }
@@ -139,9 +142,7 @@
   });
 
   $: if (p) {
-    p.setLoopMachine(getData(value), tempo, length);
-
-    if (playing) {
+    if (p.setLoopMachine(getData(value), tempo, length) && playing) {
       p.playLoopMachine(p.beatIndex);
     }
   }

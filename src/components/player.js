@@ -73,15 +73,20 @@ export default class Player {
   }
 
   setLoopMachine(data, tempo, length) {
+    const changed = tempo !== this.bpm || length !== this.bars;
+
+    if (changed) this.stopPlayLoop();
+
     this.beats.length = 0;
     this.bpm = tempo || this.bpm;
     this.bars = length || this.bars || 16;
     this.preload(data);
     this.fraq = 1 / this.bars;
+
+    return changed;
   }
 
   startPlayLoop(beats, bpm, density, fromBeat) {
-    this.stopPlayLoop();
     this.loopStarted = true;
 
     const wholeNoteDuration = (4 * 60) / bpm;

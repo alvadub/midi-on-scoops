@@ -24,6 +24,10 @@ export default class Player {
     this.output.connect(this.destination);
   }
 
+  pitch(value) {
+    return Utils.getPitch(value) + this.offset;
+  }
+
   preload(data) {
     this.data = data || this.data;
 
@@ -49,10 +53,10 @@ export default class Player {
           drums.push([track[0] - 2000, tick.v]);
         } else if (Array.isArray(tick.n)) {
           tick.n.forEach(tone => {
-            notes.push([track[0], Utils.getPitch(tone), 1 / 16, tick.v]);
+            notes.push([track[0], this.pitch(tone), 1 / 16, tick.v]);
           });
         } else if (tick.n) {
-          notes.push([track[0], Utils.getPitch(tick.n), 1 / 16, tick.v]);
+          notes.push([track[0], this.pitch(tick.n), 1 / 16, tick.v]);
         }
       });
 
@@ -72,14 +76,17 @@ export default class Player {
     this.stopPlayLoop();
   }
 
-  setLoopMachine(data, tempo, length) {
-    const changed = tempo !== this.bpm || length !== this.bars;
+  setLoopMachine(data, tempo, length, transpose) {
+    const changed = tempo !== this.bpm
+      || length !== this.bars
+      || transpose !== this.offset;
 
     if (changed) this.stopPlayLoop();
 
     this.beats.length = 0;
     this.bpm = tempo || this.bpm;
     this.bars = length || this.bars || 16;
+    this.offset = transpose || 0;
     this.preload(data);
     this.fraq = 1 / this.bars;
 

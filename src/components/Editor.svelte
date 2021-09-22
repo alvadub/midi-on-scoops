@@ -21,6 +21,7 @@
   // %c b2 e2 g2 b2 g2 e2 c#2 e2
   // %d %c +1.5 ; shifts all by 3 semitones?
 
+  let transpose = 0;
   let length = 16;
   let value = `
 %F a3|c#4|f#4
@@ -79,6 +80,22 @@
 > A % B A B A
 `;
 
+//   let value = `
+
+// # tetris
+// %a E4   B3 C4 D4   C4 B3 A3   A3 C4 E4   D4 C4 B3   B3 C4 D4   E4 C4 A3 A3
+// %b D4   F4 A4 G4   F4 E4 E4   C4 E4 D4   C4 B3 B3   C4 D4 E4   C4 A3 A3
+
+// @A
+//   #2 x-xx x-xx x-xx x-xx x-xx x-x- x-x- x--- %a
+
+// @B
+//   #2 x-xx x-x- x-xx --x- x-xx x-xx x-x- x--- %b
+
+// > A B
+
+// `;
+
   function build(midi) {
     const mix = [];
 
@@ -117,7 +134,7 @@
   }
 
   window.p = window.p || null;
-  let tempo = (p && p.bpm) || 116;
+  let tempo = (p && p.bpm) || 110;
   let playing;
 
   function stop() {
@@ -131,18 +148,19 @@
     stop();
     if (p) {
       playing = true;
-      p.setLoopMachine(getData(value), tempo, length);
+      p.setLoopMachine(getData(value), tempo, length, transpose);
       p.playLoopMachine();
     }
   }
 
   onMount(() => {
     p = window.p || new Player();
-    p.setLoopMachine(getData(value), length);
+    p.setLoopMachine(getData(value), tempo, length, transpose);
+    setTimeout(play, 1000);
   });
 
   $: if (p) {
-    if (p.setLoopMachine(getData(value), tempo, length) && playing) {
+    if (p.setLoopMachine(getData(value), tempo, length, transpose) && playing) {
       p.playLoopMachine(p.beatIndex);
     }
   }
@@ -159,4 +177,5 @@
 <button on:click={stop}>Stop</button>
 <input type="number" bind:value={tempo} />
 <input type="number" bind:value={length} />
+<input type="number" bind:value={transpose} />
 <textarea bind:value style="width:100%;height:98%" />

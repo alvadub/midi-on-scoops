@@ -24,9 +24,8 @@ export default class Player {
     this.output.connect(this.destination);
   }
 
-  preload(data, length) {
+  preload(data) {
     this.data = data || this.data;
-    this.bars = length || this.bars || 16;
 
     let count = 0;
     this.data.forEach(track => {
@@ -44,7 +43,7 @@ export default class Player {
       const notes = [];
 
       this.data.forEach(track => {
-        const tick = track[2][i];
+        const tick = track[2][i] || {};
 
         if (track[0] >= 2000) {
           drums.push([track[0] - 2000, tick.v]);
@@ -65,18 +64,19 @@ export default class Player {
     return this.audioContext.currentTime;
   }
 
-  playLoopMachine(tempo) {
-    this.bpm = tempo || this.bpm;
-    this.startPlayLoop(this.beats, this.bpm, this.fraq);
+  playLoopMachine(fromBeat) {
+    this.startPlayLoop(this.beats, this.bpm, this.fraq, fromBeat);
   }
 
   stopLoopMachine() {
     this.stopPlayLoop();
   }
 
-  setLoopMachine(data, length) {
+  setLoopMachine(data, tempo, length) {
     this.beats.length = 0;
-    this.preload(data, length);
+    this.bpm = tempo || this.bpm;
+    this.bars = length || this.bars || 16;
+    this.preload(data);
     this.fraq = 1 / this.bars;
   }
 

@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import Player from './player.js';
   import { parse, merge } from '../lib';
 
@@ -51,10 +52,9 @@
     #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
   @B
     #393  112 x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
-  @C
-    #393      ---- ---- ---- ---- ---- ---- ---- ----
-  @D
-    #393      ---- ---- ---- ---- ---- ---- ---- ----
+  ; extend is needed to fill with silence... what if, by default, we extend from empty bars when tags are declared on tracks? (same as missing?)
+  @C < INTRO
+  @D < INTRO
 
 ## drums
   @INTRO
@@ -117,27 +117,32 @@
 
   window.p = window.p || null;
   let tempo = (p && p.bpm) || 116;
+  let playing;
 
   function stop() {
-    if (p) p.stopLoopMachine();
+    if (p && playing) {
+      playing = false;
+      p.stopLoopMachine();
+    }
   }
 
   function play() {
-    stop();
-    if (p) p.playLoopMachine(tempo);
+    if (p) {
+      playing = true;
+      p.playLoopMachine();
+    }
   }
 
-  setTimeout(() => {
+  onMount(() => {
     p = window.p || new Player();
     p.setLoopMachine(getData(value), length);
-    // setTimeout(play, 2000);
-  }, 200);
+  });
 
   $: if (p) {
-    if (p.bpm !== tempo) {
-      p.playLoopMachine(tempo);
-    } else {
-      p.setLoopMachine(getData(value), length);
+    p.setLoopMachine(getData(value), tempo, length);
+
+    if (playing) {
+      p.playLoopMachine(p.beatIndex);
     }
   }
 </script>

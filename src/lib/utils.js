@@ -7,7 +7,6 @@ export function repeat(value, times) {
 
   while (times) {
     out.push(value);
-
     times -= 1;
   }
 
@@ -16,6 +15,7 @@ export function repeat(value, times) {
 
 export function range(min, max, step) {
   const acc = [];
+
   if (!step) {
     for (let i = min; i <= max; i += 1) {
       acc.push(i);

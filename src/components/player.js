@@ -42,6 +42,8 @@ export default class Player {
       this.cacheInstrument(info);
     });
 
+    const duration = Utils.getTickDuration('32') / 256;
+
     for (let i = 0; i < count; i += 1) {
       const drums = [];
       const notes = [];
@@ -53,10 +55,10 @@ export default class Player {
           drums.push([track[0] - 2000, tick.v]);
         } else if (Array.isArray(tick.n)) {
           tick.n.forEach(tone => {
-            notes.push([track[0], this.pitch(tone), 1 / 16, tick.v]);
+            notes.push([track[0], this.pitch(tone), duration, tick.v]);
           });
         } else if (tick.n) {
-          notes.push([track[0], this.pitch(tick.n), 1 / 16, tick.v]);
+          notes.push([track[0], this.pitch(tick.n), duration, tick.v]);
         }
       });
 

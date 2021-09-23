@@ -27,104 +27,127 @@
 
   let transpose = 0;
   let length = 16;
-  let value = `
-%F a3|c#4|f#4
-%G b3|d#4|g#4
-%A c#4|e4|a4
-%E b3|d4|f#4
-%C d3|f#4|a4 ; how to sum notes to chords?
-%B c#4|f4|g#3|b4
+  let value = '';
+//   let value = `
+// %F a3|c#4|f#4
+// %G b3|d#4|g#4
+// %A c#4|e4|a4
+// %E b3|d4|f#4
+// %C d3|f#4|a4 ; how to sum notes to chords?
+// %B c#4|f4|g#3|b4
 
-# synth
-  @INTRO
-    #518      ---- ---- ---- ---- ---- ---- ---- ----
-  @N < INTRO
-  @A
-    #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
-  @B < A
-    #518      %E % % %
-  @C < A
-    #518      %C % %F %
-  @D < A
-    #518      %C % %B %
+// # synth
+//   @INTRO
+//     #518      ---- ---- ---- ---- ---- ---- ---- ----
+//   @N < INTRO
+//   @A
+//     #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
+//   @B < A
+//     #518      %E % % %
+//   @C < A
+//     #518      %C % %F %
+//   @D < A
+//     #518      %C % %B %
 
-## bass
-  %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
-  %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
-  @INTRO
-    #393      ---- ---- ---- ---- ---- ---- ---- ----
-  @A
-    #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
-  @N < A
-  @B
-    #393      x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
-  @C < INTRO
-  @D < INTRO
+// ## bass
+//   %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+//   %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
+//   @INTRO
+//     #393      ---- ---- ---- ---- ---- ---- ---- ----
+//   @A
+//     #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
+//   @N < A
+//   @B
+//     #393      x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
+//   @C < INTRO
+//   @D < INTRO
 
-## drums
-  @INTRO
-    #2123     ---- ---- ---- ---- ---- ---- ---- ----
-    #2081 50  x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
-    #2028     ---- x--- ---- x--- ---- x--- ---- x---
-    #2001     x--- ---- x--- ---- x--- ---- x--- ----
-  @A < INTRO
-    #2123 90  x--- x--- x--- x--- x--- x--- x--- x---
-    #2123 70  --x- --x- --x- --x- --x- --x- --x- --x-
-  @N < A
-  @B < A
-  @C < A
-  @D < A
+// ## drums
+//   @INTRO
+//     #2123     ---- ---- ---- ---- ---- ---- ---- ----
+//     #2081 50  x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+//     #2028     ---- x--- ---- x--- ---- x--- ---- x---
+//     #2001     x--- ---- x--- ---- x--- ---- x--- ----
+//   @A < INTRO
+//     #2123 90  x--- x--- x--- x--- x--- x--- x--- x---
+//     #2123 70  --x- --x- --x- --x- --x- --x- --x- --x-
+//   @N < A
+//   @B < A
+//   @C < A
+//   @D < A
 
-> INTRO N *2 A %
-> A % B A B A
-> A % B A C *3 D
-> A % B A B A
-> A % B A B A
-> A % B A C *3 D
-> A % B A B A
-`;
+// > INTRO N *2 A %
+// > A % B A B A
+// > A % B A C *3 D
+// > A % B A B A
+// > A % B A B A
+// > A % B A C *3 D
+// > A % B A B A
+// `;
+
+// value = `
+// %a E4 B3 C4 D4 C4 B3 A3
+// %b A3 C4 E4 D4 C4 B3
+// %c B3 C4 D4 E4 C4 A3 A3
+
+// %d D4 F4 A4 G4 F4 E4
+// %e E4 C4 E4 D4 C4 B3
+
+// %f E4 C4 D4 B3 C4 A3 Ab3 B3
+// %g E4 C4 D4 B3 C4 E4 A3 Ab3
+
+// # piano
+//   @A
+//     #3 x-xx x-xx x-xx x-xx x-xx x-x- x-x- x--- %a %b %c
+//   @B
+//     #3 -x-x x-xx x-xx x-xx x-xx x-x- x-x- x--- %d %e %c
+//   @C
+//     #3 x--- x--- x--- x--- x--- x--- x--- x--- %f
+//   @D < C
+//     #3 %g
+
+// %x E2 E2 A2 A2 Ab2 E2 A2
+// %y D2 D2 C2 C2 E2 E2 A2
+// %z A2 A2 Ab2 Ab2 A2 A2 Ab3
+// %z_ A2 A2 Ab2 Ab2 A2 A2 A4 Ab4
+
+// # bass
+//   @A
+//     #2 x--- x--- x--- x--- x--- x--- x--- ---- %x
+//   @B < A
+//     #2 %y
+//   @C < A
+//     #2 %z
+//   @D
+//     #2 x--- x--- x--- x--- x--- x-x- x--- ---- %z_
+
+// > A B A B C D
+// `.trim();
+// transpose = 12;
+// length = 16;
+// tempo = 75;
+
+transpose = 0;
+length = 8;
+tempo = 146;
 
 value = `
-%a E4 B3 C4 D4 C4 B3 A3
-%b A3 C4 E4 D4 C4 B3
-%c B3 C4 D4 E4 C4 A3 A3
+; Locks - Iration Steppas
 
-%d D4 F4 A4 G4 F4 E4
-%e E4 C4 E4 D4 C4 B3
+# Skanking
 
-%f E4 C4 D4 B3 C4 A3 Ab3 B3
-%g E4 C4 D4 B3 C4 E4 A3 Ab3
+%Cm c4|eb3|g3 %
+%Fm c4|f3|g#3 %
 
-# piano
-  @A
-    #3 x-xx x-xx x-xx x-xx x-xx x-x- x-x- x--- %a %b %c
-  @B
-    #3 -x-x x-xx x-xx x-xx x-xx x-x- x-x- x--- %d %e %c
-  @C
-    #3 x--- x--- x--- x--- x--- x--- x--- x--- %f
-  @D < C
-    #3 %g
+#14 50 --x---x- --x---x- --x---x- --x---x- %Cm %Fm %Cm %Fm
 
-%x E2 E2 A2 A2 Ab2 E2 A2
-%y D2 D2 C2 C2 E2 E2 A2
-%z A2 A2 Ab2 Ab2 A2 A2 Ab3
-%z_ A2 A2 Ab2 Ab2 A2 A2 A4 Ab4
+# Brass
 
-# bass
-  @A
-    #2 x--- x--- x--- x--- x--- x--- x--- ---- %x
-  @B < A
-    #2 %y
-  @C < A
-    #2 %z
-  @D
-    #2 x--- x--- x--- x--- x--- x-x- x--- ---- %z_
-
-> A B A B C D
+;--[xx]x [x-][xx][xx]x --x_ [xx]---
+%b d#5 d5 c5 a#4 % a4 a#4 a4 g4 c5 d5 d#5
+#633 60 ----xxx- x-xxxxx- ----x--- xx------ %b
+#630 30 ----xxx- x-xxxxx- ----x--- xx------ %b
 `.trim();
-transpose = 12;
-length = 16;
-tempo = 75;
 
   function build(midi) {
     const mix = [];

@@ -96,17 +96,17 @@ describe('parser', () => {
     const sample = `
       # drums
       #35  x--- ---- x--- ----
-      #35  ---- x--- ---- x---
-      #14  ---- ---- x--- ----
+      #35  ---- [xx-x]--- ---- x---
+      #14  [1]--- ---- ---- ----
     `;
 
     expect(parse(sample).tracks).to.eql({
       drums: {
         '#35': [
           { input: [p('x---'), p('----'), p('x---'), p('----')] },
-          { input: [p('----'), p('x---'), p('----'), p('x---')] },
+          { input: [p('----'), p('[xx-x]---'), p('----'), p('x---')] },
         ],
-        '#14': [{ input: [p('----'), p('----'), p('x---'), p('----')] }],
+        '#14': [{ input: [p('[1]---'), p('----'), p('----'), p('----')] }],
       },
     });
   });
@@ -209,6 +209,17 @@ describe('parser', () => {
 });
 
 describe('reducer', () => {
+  it('should resolve durations', () => {
+    const input = [{ type: 'pattern', value: '[1]--x' }];
+
+    expect(reduce(input, {}, pack([120], ['c3', 'c4']))).to.eql([[
+      [{ l: '1', v: 120, n: 'c3' }],
+      { v: 0 },
+      { v: 0 },
+      { v: 120, n: 'c4' },
+    ]]);
+  });
+
   it('should resolve numbers', () => {
     const ctx = parse(`
       A: 1

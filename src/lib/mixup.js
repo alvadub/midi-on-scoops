@@ -1,12 +1,10 @@
+import { Utils } from 'midi-writer-js';
 import { File, Track } from 'jsmidgen';
 import { zip, flatten } from './utils';
-import { isPattern } from './tokenize';
+import { split, isPattern } from './tokenize';
 import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
-
-// import MIDIWriter from 'midi-writer-js';
-// console.log(MIDIWriter.Utils.getTickDuration('2'));
 
 export function build(midi, bpm = 120, length = 16) {
   const file = new File();
@@ -64,21 +62,34 @@ export function build(midi, bpm = 120, length = 16) {
 }
 
 export function pack(values, notes) {
+  let offset;
+  function resolve(x) {
+    if (Array.isArray(x)) {
+      return x.map(resolve);
+    }
+
+    let token;
+    if (!'-x_'.includes(x)) {
+      token = { v: 127, l: x };
+    } else {
+      token = { v: x === '-' ? 0 : 127 };
+    }
+
+    if (x !== '-') {
+      token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
+      if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
+      if (values.length === 1) token.v = values[0];
+      if (token.v || token.n) offset += 1;
+    }
+    return token;
+  }
+
   return value => {
     let result = value;
     if (typeof value === 'string') {
       if (isPattern(value)) {
-        let offset = 0;
-        result = value.split('').map(x => {
-          const token = { v: x === '-' ? 0 : 127 };
-          if (x !== '-') {
-            token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
-            if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
-            if (values.length === 1) token.v = values[0];
-            if (token.v || token.n) offset += 1;
-          }
-          return token;
-        });
+        offset = 0;
+        result = split(value).map(resolve);
       }
     }
     return result;

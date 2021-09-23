@@ -139,11 +139,10 @@ value = `
 %Cm c4|eb3|g3 %
 %Fm c4|f3|g#3 %
 
-#14 50 --x---x- --x---x- --x---x- --x---x- %Cm %Fm %Cm %Fm
+#4 50 --x---x- --x---x- --x---x- --x---x- %Cm %Fm %Cm %Fm
 
-# Brass
+# Brasses
 
-;--[xx]x [x-][xx][xx]x --x_ [xx]---
 %b d#5 d5 c5 a#4 % a4 a#4 a4 g4 c5 d5 d#5
 #633 60 ----xxx- x-xxxxx- ----x--- xx------ %b
 #630 30 ----xxx- x-xxxxx- ----x--- xx------ %b
@@ -205,7 +204,7 @@ value = `
   onMount(() => {
     p = window.p || new Player();
     p.setLoopMachine(getData(value), tempo, length, transpose);
-    setTimeout(play, 1000);
+    // setTimeout(play, 1000);
   });
 
   $: if (p) {

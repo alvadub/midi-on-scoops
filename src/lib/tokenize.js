@@ -1,7 +1,7 @@
 import { inlineChord } from 'harmonics';
 
 export const RE_SEPARATOR = /\|/;
-export const RE_PATTERN = /^[x_-]+$/;
+export const RE_PATTERN = /^(?:[x_-]|\[.+?\])+$/;
 export const RE_NUMBER = /^(?:\.?\d+|\d+(?:\.\d+)?)$/;
 export const RE_CHORD = /^[a-gA-G][^#\s]*\d+(?:\.\.)?$/;
 export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
@@ -10,6 +10,20 @@ export const RE_PROG = /^[ivIV]{1,3}°?$/;
 export const RE_TRIM = /\.+$/;
 
 const CACHE = {};
+
+export function split(value) {
+  let data = [];
+  try {
+    data = JSON.stringify(value.split(/(?=[\d[\]x_-])/));
+    data = data.replace(/,"\[",/g, ', [');
+    data = data.replace(/"\[",/g, '[');
+    data = data.replace(/,"\]"/g, ']');
+    data = JSON.parse(data);
+  } catch (e) {
+    // ignore
+  }
+  return data;
+}
 
 export function level(value) {
   if (!CACHE[value]) {

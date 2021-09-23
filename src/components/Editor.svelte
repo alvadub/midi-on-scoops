@@ -21,6 +21,10 @@
   // %c b2 e2 g2 b2 g2 e2 c#2 e2
   // %d %c +1.5 ; shifts all by 3 semitones?
 
+  window.p = window.p || null;
+  let tempo = (p && p.bpm) || 116;
+  let playing;
+
   let transpose = 0;
   let length = 16;
   let value = `
@@ -80,21 +84,47 @@
 > A % B A B A
 `;
 
-//   let value = `
+value = `
+%a E4 B3 C4 D4 C4 B3 A3
+%b A3 C4 E4 D4 C4 B3
+%c B3 C4 D4 E4 C4 A3 A3
 
-// # tetris
-// %a E4   B3 C4 D4   C4 B3 A3   A3 C4 E4   D4 C4 B3   B3 C4 D4   E4 C4 A3 A3
-// %b D4   F4 A4 G4   F4 E4 E4   C4 E4 D4   C4 B3 B3   C4 D4 E4   C4 A3 A3
+%d D4 F4 A4 G4 F4 E4
+%e E4 C4 E4 D4 C4 B3
 
-// @A
-//   #2 x-xx x-xx x-xx x-xx x-xx x-x- x-x- x--- %a
+%f E4 C4 D4 B3 C4 A3 Ab3 B3
+%g E4 C4 D4 B3 C4 E4 A3 Ab3
 
-// @B
-//   #2 x-xx x-x- x-xx --x- x-xx x-xx x-x- x--- %b
+# piano
+  @A
+    #3 x-xx x-xx x-xx x-xx x-xx x-x- x-x- x--- %a %b %c
+  @B
+    #3 -x-x x-xx x-xx x-xx x-xx x-x- x-x- x--- %d %e %c
+  @C
+    #3 x--- x--- x--- x--- x--- x--- x--- x--- %f
+  @D < C
+    #3 %g
 
-// > A B
+%x E2 E2 A2 A2 Ab2 E2 A2
+%y D2 D2 C2 C2 E2 E2 A2
+%z A2 A2 Ab2 Ab2 A2 A2 Ab3
+%z_ A2 A2 Ab2 Ab2 A2 A2 A4 Ab4
 
-// `;
+# bass
+  @A
+    #2 x--- x--- x--- x--- x--- x--- x--- ---- %x
+  @B < A
+    #2 %y
+  @C
+    #2 x--- x--- x--- x--- x--- x--- x--- ---- %z
+  @D
+    #2 x--- x--- x--- x--- x--- x-x- x--- ---- %z_
+
+> A B A B C D
+`.trim();
+transpose = 12;
+length = 16;
+tempo = 75;
 
   function build(midi) {
     const mix = [];
@@ -132,10 +162,6 @@
       // ignore
     }
   }
-
-  window.p = window.p || null;
-  let tempo = (p && p.bpm) || 116;
-  let playing;
 
   function stop() {
     if (p && playing) {

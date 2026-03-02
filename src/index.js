@@ -248,6 +248,7 @@ function evalBlock() {
   if (!data.length) return;
 
   p.updateTracks(data);
+  updateBeatDots();
   syncMixer(data);
   editorApi.flashLines(block.startLine, block.endLine);
   showStatus(`Block updated: ${block.name}`, playing ? 'playing' : 'ready');
@@ -397,6 +398,26 @@ function setQueryLoad(name) {
 function updatePlayButton() {
   const playBtn = document.getElementById('play-btn');
   if (playBtn) playBtn.textContent = playing ? '▶ Playing...' : '▶ Play';
+}
+
+function updateBeatDots() {
+  const beatDotsContainer = document.getElementById('beat-dots');
+  if (!beatDotsContainer) return;
+  
+  const actualBeatCount = p.beats.length;
+  const currentDotCount = beatDotsContainer.children.length;
+  
+  // Remove extra dots if beats decreased
+  while (beatDotsContainer.children.length > actualBeatCount) {
+    beatDotsContainer.removeChild(beatDotsContainer.lastChild);
+  }
+  
+  // Add more dots if beats increased
+  while (beatDotsContainer.children.length < actualBeatCount) {
+    const dot = document.createElement('span');
+    dot.className = 'beat-dot';
+    beatDotsContainer.appendChild(dot);
+  }
 }
 
 function loadPresetByName(name) {
@@ -632,6 +653,7 @@ function play() {
   playing = true;
   const data = getData(editorApi.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
+  updateBeatDots();
   syncMixer(data);
   p.playLoopMachine();
   updatePlayButton();
@@ -655,6 +677,7 @@ function updateLoop() {
 
   const data = getData(editorApi.getValue());
   const changed = p.setLoopMachine(data, tempo, bars, transpose);
+  updateBeatDots();
   syncMixer(data);
   if (changed && playing) {
     p.playLoopMachine(p.beatIndex);
@@ -664,7 +687,8 @@ function updateLoop() {
 function beatIndicator() {
   const dots = document.querySelectorAll('.beat-dot');
   const activeIndex = p.loopStarted ? p.beatIndex : -1;
-  dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
+  // Fill all dots up to and including the current beat (progress bar effect)
+  dots.forEach((dot, i) => dot.classList.toggle('active', i <= activeIndex));
   requestAnimationFrame(beatIndicator);
 }
 
@@ -676,6 +700,7 @@ async function bootstrap() {
   bindGlobalShortcuts();
   const data = getData(editor.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
+  updateBeatDots();
   syncMixer(data);
   setReadyStatus();
   requestAnimationFrame(beatIndicator);

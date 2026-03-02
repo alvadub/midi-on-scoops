@@ -11,6 +11,8 @@ export default class Player {
     this.trackState = new Map();
     this.delayDivision = 3 / 8;
     this.onBeat = null;
+    this.beatIndex = 0;
+    this.loopStarted = false;
     this.initAudio();
   }
 
@@ -155,7 +157,7 @@ export default class Player {
 
     let nextLoopTime = this.contextTime() + density * wholeNoteDuration;
     this.loopIntervalID = setInterval(() => {
-      if (this.contextTime() > nextLoopTime - density * wholeNoteDuration) {
+      while (this.contextTime() >= nextLoopTime) {
         this.beatIndex += 1;
         if (this.beatIndex >= beats.length) {
           this.beatIndex = 0;

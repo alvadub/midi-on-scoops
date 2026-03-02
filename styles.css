@@ -120,7 +120,7 @@ select {
   z-index: 0;
 }
 .hl-line {
-  display: block;
+  xdisplay: block;
 }
 #statusbar {
   background-color: rgba(16, 38, 63, 0.92);

@@ -1,3 +1,4 @@
+export { merge, parse } from '../utils';
 export * from './utils';
 export * from './mixup';
 export * from './parser';

@@ -2,6 +2,8 @@
 *.log
 *.mid
 *.midi
+.claude
+.journal
 cache.json
 .DS_Store
 /dist

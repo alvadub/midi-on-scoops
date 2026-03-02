@@ -179,9 +179,13 @@ tempo = 146;
 
   function getData(input) {
     try {
-      return build(merge(parse(input)));
+      console.log('parse:', parse, 'merge:', merge, 'build:', build);
+      const result = build(merge(parse(input)));
+      console.log('getData result:', result);
+      return result;
     } catch (e) {
-      // ignore
+      console.error('getData error:', e);
+      return [];
     }
   }
 
@@ -195,6 +199,9 @@ tempo = 146;
   function play() {
     stop();
     if (p) {
+      if (p.audioContext.state === 'suspended') {
+        p.audioContext.resume();
+      }
       playing = true;
       p.setLoopMachine(getData(value), tempo, length, transpose);
       p.playLoopMachine();

@@ -10,7 +10,7 @@ const builder = require('./builder');
 
 const children = [];
 const argv = wargs(process.argv.slice(2), {
-  boolean: 'b',
+  boolean: ['b', 'fluidsynth'],
   alias: {
     o: 'output',
     b: 'bundle',
@@ -26,12 +26,15 @@ Usage:
 Options:
   -b, --bundle       # Export tracks as a single .midi file
   -o, --output       # Directory for exported .midi files  (default: generated)
+  --fluidsynth       # Use FluidSynth instead of timidity
 
 Additional args after -- will set the default playback arguments, e.g.
   dub play track -- fluidsynth -i --gain 2 Unison.sf2
+  dub play track --fluidsynth -- /path/to/soundfont.sf2
 
 Examples:
   dub play examples/billy_jean
+  dub play examples/billy_jean --fluidsynth -- ~/Music/soundfonts/GeneralUser.sf2
   dub watch path/to/music
   dub export -b src/*.dub -o sample
 
@@ -156,24 +159,41 @@ async function play(file, isExport) {
       }
 
       const deferred = [];
+      const useFluidSynth = argv.flags.fluidsynth;
+
+      // Check if fluidsynth args include a soundfont
+      const hasSoundfont = argv.raw.some(arg => arg.match(/\.sf2$/i));
+      if (useFluidSynth && !hasSoundfont) {
+        log(`\n        ⚠ Warning: FluidSynth requires a soundfont (.sf2 file)\n        Usage: dub play file.dub --fluidsynth -- /path/to/soundfont.sf2\n\n`);
+      }
 
       destFiles.forEach(midi => {
-        let cmd = [_bin].concat(_argv);
+        let cmd;
+        let args;
 
-        if (midi.settings.playback) {
-          cmd = midi.settings.playback.split(' ').map(x => {
-            if (/\.sf2/i.test(x)) {
-              return path.resolve(file, '..', x);
-            }
+        if (useFluidSynth) {
+          // Use FluidSynth for playback
+          cmd = 'fluidsynth';
+          // Support additional fluidsynth args via -- [args]
+          args = argv.raw.length ? argv.raw : [];
+          args = args.concat([midi.filepath]);
+        } else {
+          cmd = [_bin].concat(_argv);
 
-            return x;
-          });
+          if (midi.settings.playback) {
+            cmd = midi.settings.playback.split(' ').map(x => {
+              if (/\.sf2/i.test(x)) {
+                return path.resolve(file, '..', x);
+              }
+              return x;
+            });
+          }
+          args = cmd.slice(1).concat(midi.filepath);
+          cmd = cmd[0];
         }
 
         deferred.push(new Promise((resolve, reject) => {
-          const args = cmd.slice(1).concat(midi.filepath);
-
-          const child = spawn(cmd[0], args, {
+          const child = spawn(cmd, args, {
             detached: false,
           });
 
@@ -279,8 +299,10 @@ if (['watch', 'play'].includes(command) || !argv._.length) {
     }
   });
 
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+  }
 }
 
 try {

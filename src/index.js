@@ -239,6 +239,15 @@ function getData(input) {
   }
 }
 
+function getMaxPatternSlots() {
+  if (!lastContext || !lastContext.trackPatternSlots) return 0;
+  
+  const slots = Object.values(lastContext.trackPatternSlots);
+  if (slots.length === 0) return 0;
+  
+  return Math.max(...slots);
+}
+
 function evalBlock() {
   if (!editorApi) return;
   const source = editorApi.getValue();
@@ -405,7 +414,6 @@ function updateBeatDots() {
   if (!beatDotsContainer) return;
   
   const actualBeatCount = p.beats.length;
-  const currentDotCount = beatDotsContainer.children.length;
   
   // Remove extra dots if beats decreased
   while (beatDotsContainer.children.length > actualBeatCount) {
@@ -417,6 +425,26 @@ function updateBeatDots() {
     const dot = document.createElement('span');
     dot.className = 'beat-dot';
     beatDotsContainer.appendChild(dot);
+  }
+}
+
+function updateToolbarBeats() {
+  const beatIndicatorContainer = document.getElementById('beat-indicator');
+  if (!beatIndicatorContainer) return;
+  
+  const maxSlots = getMaxPatternSlots();
+  if (maxSlots === 0) return; // Don't update if no patterns found
+  
+  // Remove extra dots
+  while (beatIndicatorContainer.children.length > maxSlots) {
+    beatIndicatorContainer.removeChild(beatIndicatorContainer.lastChild);
+  }
+  
+  // Add more dots
+  while (beatIndicatorContainer.children.length < maxSlots) {
+    const dot = document.createElement('span');
+    dot.className = 'beat-dot-header';
+    beatIndicatorContainer.appendChild(dot);
   }
 }
 
@@ -510,14 +538,23 @@ function createDOM(initialText, initialPreset) {
       loadPresetByName(presetSelect.value);
     }
   });
-  presetLabel.appendChild(presetSelect);
+   presetLabel.appendChild(presetSelect);
 
-  toolbar.appendChild(aboutLink);
-  toolbar.appendChild(playBtn);
-  toolbar.appendChild(stopBtn);
-  toolbar.appendChild(mixerBtn);
-  toolbar.appendChild(midiBtn);
-  toolbar.appendChild(presetLabel);
+   const beatIndicator = document.createElement('div');
+   beatIndicator.id = 'beat-indicator';
+   for (let i = 0; i < 16; i += 1) {
+     const dot = document.createElement('span');
+     dot.className = 'beat-dot-header';
+     beatIndicator.appendChild(dot);
+   }
+
+   toolbar.appendChild(aboutLink);
+   toolbar.appendChild(playBtn);
+   toolbar.appendChild(stopBtn);
+   toolbar.appendChild(mixerBtn);
+   toolbar.appendChild(midiBtn);
+   toolbar.appendChild(beatIndicator);
+   toolbar.appendChild(presetLabel);
 
   editorApi = createEditor(initialText, {
     resolveNote: resolveNoteTooltip,
@@ -654,6 +691,7 @@ function play() {
   const data = getData(editorApi.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
+  updateToolbarBeats();
   syncMixer(data);
   p.playLoopMachine();
   updatePlayButton();
@@ -678,6 +716,7 @@ function updateLoop() {
   const data = getData(editorApi.getValue());
   const changed = p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
+  updateToolbarBeats();
   syncMixer(data);
   if (changed && playing) {
     p.playLoopMachine(p.beatIndex);
@@ -686,9 +725,12 @@ function updateLoop() {
 
 function beatIndicator() {
   const dots = document.querySelectorAll('.beat-dot');
+  const headerDots = document.querySelectorAll('.beat-dot-header');
   const activeIndex = p.loopStarted ? p.beatIndex : -1;
   // Fill all dots up to and including the current beat (progress bar effect)
   dots.forEach((dot, i) => dot.classList.toggle('active', i <= activeIndex));
+  // Header dots show only the current beat
+  headerDots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
   requestAnimationFrame(beatIndicator);
 }
 
@@ -701,6 +743,7 @@ async function bootstrap() {
   const data = getData(editor.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
+  updateToolbarBeats();
   syncMixer(data);
   setReadyStatus();
   requestAnimationFrame(beatIndicator);

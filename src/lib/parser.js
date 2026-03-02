@@ -154,6 +154,7 @@ export function parse(buffer) {
   const tracks = {};
   const main = [];
   const data = {};
+  const trackPatternSlots = {};
 
   let channel = null;
   let prefix = '';
@@ -245,6 +246,54 @@ export function parse(buffer) {
         if (inputs.length > 1) {
           spec.values = inputs.slice(1);
         }
+        
+        // Count pattern slots for this channel
+        function countPatternSlots(patternString) {
+          let count = 0;
+          let i = 0;
+          while (i < patternString.length) {
+            if (patternString[i] === '[') {
+              // Skip the bracketed group as 1 slot
+              const endBracket = patternString.indexOf(']', i);
+              if (endBracket > i) {
+                count += 1;
+                i = endBracket + 1;
+              } else {
+                i += 1;
+              }
+            } else if (patternString[i] === 'x' || patternString[i] === '-' || patternString[i] === '_') {
+              // Each individual character is 1 slot
+              count += 1;
+              i += 1;
+            } else {
+              i += 1;
+            }
+          }
+          return count;
+        }
+        
+        let patternSlots = 0;
+        if (spec.input && Array.isArray(spec.input)) {
+          spec.input.forEach(token => {
+            if (token.type === 'pattern' && typeof token.value === 'string') {
+              patternSlots += countPatternSlots(token.value);
+            }
+          });
+        }
+        if (spec.data && Array.isArray(spec.data)) {
+          spec.data.forEach(token => {
+            if (token.type === 'pattern' && typeof token.value === 'string') {
+              patternSlots += countPatternSlots(token.value);
+            }
+          });
+        }
+        
+        // Accumulate slot count for this channel
+        if (!trackPatternSlots[channel]) {
+          trackPatternSlots[channel] = 0;
+        }
+        trackPatternSlots[channel] += patternSlots;
+        
         info[channel].push(spec);
       }
     } catch (e) {
@@ -257,5 +306,5 @@ export function parse(buffer) {
   if (track) {
     tracks[track] = info;
   }
-  return { main, data, tracks };
+  return { main, data, tracks, trackPatternSlots };
 }

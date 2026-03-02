@@ -109,7 +109,7 @@ export function highlight(input) {
       const [base, comment] = splitComment(line);
       const rendered = renderBase(base);
       const content = !comment ? rendered : `${rendered}${span('tok-comment', comment)}`;
-      return span('hl-line', content, { line: lineNumber });
+      return `<span class="hl-line" data-line="${lineNumber}">${content}</span>`;
     })
-    .join('\n');
+    .join('');
 }

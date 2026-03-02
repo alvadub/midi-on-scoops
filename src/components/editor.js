@@ -109,13 +109,24 @@ function clampTooltip(x, y, width = 320) {
 
 function charOffsetOfElement(root, target) {
   if (!root || !target || !root.contains(target)) return -1;
-  const range = document.createRange();
-  range.selectNodeContents(root);
-  range.setEndBefore(target);
-  const domOffset = range.toString().length;
   const lineEl = target.closest('[data-line]');
   const lineNumber = lineEl ? parseInt(lineEl.dataset.line, 10) : 0;
-  return domOffset + (Number.isNaN(lineNumber) ? 0 : lineNumber);
+  if (!lineEl || Number.isNaN(lineNumber)) return -1;
+
+  // Measure offset within this line only (avoids cross-block range.toString() quirks
+  // where empty display:block spans contribute \n characters to the result)
+  const lineRange = document.createRange();
+  lineRange.selectNodeContents(lineEl);
+  lineRange.setEndBefore(target);
+  const offsetInLine = lineRange.toString().length;
+
+  // Sum character lengths of all preceding lines + 1 newline each
+  const allLines = root.querySelectorAll('[data-line]');
+  let total = offsetInLine;
+  for (let i = 0; i < lineNumber; i++) {
+    total += (allLines[i] ? allLines[i].textContent.length : 0) + 1;
+  }
+  return total;
 }
 
 export function createEditor(initialText, options = {}) {

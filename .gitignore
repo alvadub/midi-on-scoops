@@ -4,6 +4,7 @@
 *.midi
 .claude
 .journal
+*TASKS.md
 cache.json
 .DS_Store
 /dist

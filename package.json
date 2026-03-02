@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "npm run build -- -w",
     "dist": "npm run build -- -q",
+    "deploy": "npm run dist && node bin/deploy.js",
     "check": "eslint 'src/**/*.{js,pug,svelte}'",
     "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081",
     "mocha": "NODE_ENV=test _mocha -c  --exit --verbose --recursive",

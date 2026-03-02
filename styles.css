@@ -87,6 +87,10 @@ select {
   flex: 1;
   overflow: hidden;
 }
+#editor-wrap.scrub-hover #editor,
+#editor-wrap.scrub-active #editor {
+  cursor: ew-resize;
+}
 #editor,
 #editor-hl {
   position: absolute;
@@ -114,6 +118,9 @@ select {
   background: rgba(7, 17, 28, 0.35);
   border: none;
   z-index: 0;
+}
+.hl-line {
+  display: block;
 }
 #statusbar {
   background-color: rgba(16, 38, 63, 0.92);
@@ -310,6 +317,55 @@ select {
 .tok-error {
   -webkit-text-decoration: underline wavy var(--highlight);
           text-decoration: underline wavy var(--highlight);
+}
+.tok-velocity {
+  cursor: ew-resize;
+}
+.tok-number {
+  cursor: ew-resize;
+}
+.hl-line.block-flash {
+  background: rgba(108, 246, 174, 0.2);
+  -webkit-animation: block-flash 0.8s ease-out;
+          animation: block-flash 0.8s ease-out;
+}
+.tok-active {
+  background: rgba(255, 208, 92, 0.45);
+  border-radius: 2px;
+  -webkit-animation: token-flash 0.15s ease-out;
+          animation: token-flash 0.15s ease-out;
+}
+@-webkit-keyframes block-flash {
+  from {
+    background: rgba(108, 246, 174, 0.35);
+  }
+  to {
+    background: rgba(108, 246, 174, 0);
+  }
+}
+@keyframes block-flash {
+  from {
+    background: rgba(108, 246, 174, 0.35);
+  }
+  to {
+    background: rgba(108, 246, 174, 0);
+  }
+}
+@-webkit-keyframes token-flash {
+  from {
+    background: rgba(255, 208, 92, 0.7);
+  }
+  to {
+    background: rgba(255, 208, 92, 0.35);
+  }
+}
+@keyframes token-flash {
+  from {
+    background: rgba(255, 208, 92, 0.7);
+  }
+  to {
+    background: rgba(255, 208, 92, 0.35);
+  }
 }
 #var-tooltip {
   position: fixed;

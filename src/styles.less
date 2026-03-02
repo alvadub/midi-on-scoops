@@ -2,7 +2,7 @@
   --bg: #0d1b2a;
   --surface: #10263f;
   --accent: #1f5a8a;
-  --highlight: #ff4f3f;
+  --highlight: #00FF88;
   --text: #f5f7ff;
   --muted: #5e7690;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
@@ -150,19 +150,57 @@ select {
 
 #beat-dots {
   display: flex;
-  gap: 4px;
   align-items: center;
-}
-
-.beat-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  flex: 1;
+  height: 4px;
   background-color: var(--muted);
-  transition: background-color 0.05s;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-right: 1em;
 }
 
-.beat-dot.active {
+#progress-bar {
+  height: 100%;
+  background-color: var(--highlight);
+  width: 0%;
+  transition: width 0.05s;
+}
+
+#beat-indicator-bar {
+  display: flex;
+  width: 100%;
+  height: 3px;
+  background-color: var(--surface);
+}
+
+.beat-segment {
+  flex: 1;
+  height: 100%;
+  background-color: var(--muted);
+  border-right: 1px solid var(--surface);
+}
+
+.beat-segment:last-child {
+  border-right: none;
+}
+
+.beat-segment:first-child {
+  border-left: none;
+}
+
+.beat-segment.beat-bar4 {
+  background-color: color-mix(in srgb, var(--muted) 88%, var(--highlight));
+}
+
+.beat-segment.beat-bar8 {
+  background-color: color-mix(in srgb, var(--muted) 78%, var(--highlight));
+}
+
+.beat-segment.beat-bar16 {
+  background-color: color-mix(in srgb, var(--muted) 66%, var(--highlight));
+}
+
+.beat-segment.active {
   background-color: var(--highlight);
 }
 
@@ -306,6 +344,16 @@ select {
   color: #c3e88d;
   text-decoration: underline dotted rgba(195, 232, 141, 0.45);
 }
+
+.tok-section-def {
+  color: #c3e88d;
+  cursor: pointer;
+  text-decoration: underline dotted rgba(195, 232, 141, 0.35);
+}
+
+.tok-section-def:hover {
+  text-decoration: underline;
+}
 .tok-inherit { color: #94afc8; }
 .tok-arrangement { color: #4ee0df; }
 .tok-var-def { color: #ffd166; }
@@ -326,6 +374,10 @@ select {
 .hl-line.block-flash {
   background: rgba(108, 246, 174, 0.2);
   animation: block-flash 0.8s ease-out;
+}
+
+.hl-line[data-muted-section] {
+  opacity: 0.4;
 }
 
 .tok-active {
@@ -373,6 +425,33 @@ select {
   display: block;
   margin: 0 auto;
   opacity: 0.92;
+}
+
+#suggest-list {
+  position: absolute;
+  z-index: 120;
+  min-width: 8rem;
+  max-height: 12.5rem;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.2em;
+  background: rgba(12, 30, 48, 0.98);
+  border: 1px solid var(--muted);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+
+#suggest-list li {
+  padding: 0.3em 0.45em;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#suggest-list li[data-active="1"],
+#suggest-list li:hover {
+  background: rgba(255, 79, 63, 0.22);
 }
 
 #about-link {

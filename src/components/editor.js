@@ -1,4 +1,4 @@
-import { highlight } from '../highlight';
+import { classify, highlight } from '../highlight';
 
 const DIATONIC = { c: 0, d: 1, e: 2, f: 3, g: 4, a: 5, b: 6 };
 const E4_DIATONIC = 4 * 7 + 2;
@@ -147,12 +147,32 @@ export function createEditor(initialText, options = {}) {
   tip.id = 'var-tooltip';
   tip.hidden = true;
   tip.innerHTML = '<strong></strong><span class="tooltip-resolved"></span><div class="tooltip-staff"></div>';
+  const suggestList = document.createElement('ul');
+  suggestList.id = 'suggest-list';
+  suggestList.hidden = true;
+  suggestList.setAttribute('role', 'listbox');
+  suggestList.setAttribute('aria-label', 'Completions');
   const tipTitle = tip.querySelector('strong');
   const tipBody = tip.querySelector('.tooltip-resolved');
   const tipStaff = tip.querySelector('.tooltip-staff');
   const flashTimers = new Set();
   let scrubState = null;
   let activeTokens = [];
+  let mutedSections = new Set();
+  let suggestState = {
+    open: false,
+    items: [],
+    activeIndex: 0,
+    token: null,
+  };
+  const SUGGESTIONS_ENABLED = options.suggestions !== false;
+  const MODE_CANDIDATES = ['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'];
+  const NOTE_CANDIDATES = 'ABCDEFG'.split('').flatMap(note => (
+    ['', '#', 'b'].flatMap(accidental => (
+      [3, 4, 5].map(octave => `${note}${accidental}${octave}`)
+    ))
+  ));
+  const ALL_CANDIDATES = [...NOTE_CANDIDATES, ...MODE_CANDIDATES];
 
   const tooltipHandlers = [
     options.resolveNote && {
@@ -223,6 +243,7 @@ export function createEditor(initialText, options = {}) {
 
   function sync() {
     pre.innerHTML = `${highlight(ta.value)}\n`;
+    applySectionMuteVisuals();
   }
 
   function hideTooltip() {
@@ -238,6 +259,142 @@ export function createEditor(initialText, options = {}) {
   function clearActiveTokenHighlight() {
     activeTokens.forEach(token => token.classList.remove('tok-active'));
     activeTokens = [];
+  }
+
+  function applySectionMuteVisuals() {
+    const lines = pre.querySelectorAll('.hl-line');
+    let section = null;
+    lines.forEach(line => {
+      const header = line.querySelector('[data-section-def]');
+      if (header && header.dataset.sectionDef) {
+        section = header.dataset.sectionDef.toUpperCase();
+      }
+      const isMuted = Boolean(section) && mutedSections.has(section);
+      line.toggleAttribute('data-muted-section', isMuted);
+    });
+  }
+
+  function getPartialToken() {
+    const pos = ta.selectionStart;
+    const before = ta.value.slice(0, pos);
+    const match = before.match(/(\S+)$/);
+    if (!match) return null;
+    return {
+      text: match[1],
+      start: pos - match[1].length,
+      end: pos,
+    };
+  }
+
+  function getSuggestions(partial) {
+    if (!partial || !partial.text || partial.text.length < 1) return [];
+    if (classify(partial.text)) return [];
+    const low = partial.text.toLowerCase();
+    return ALL_CANDIDATES
+      .filter(candidate => candidate.toLowerCase().startsWith(low))
+      .slice(0, 8);
+  }
+
+  function getCaretCoords() {
+    const mirror = document.createElement('div');
+    const style = window.getComputedStyle(ta);
+    const props = [
+      'font', 'fontSize', 'fontFamily', 'fontWeight', 'lineHeight',
+      'letterSpacing', 'textTransform', 'textIndent', 'whiteSpace', 'wordSpacing',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'boxSizing',
+    ];
+    props.forEach(prop => {
+      mirror.style[prop] = style[prop];
+    });
+    mirror.style.position = 'absolute';
+    mirror.style.visibility = 'hidden';
+    mirror.style.pointerEvents = 'none';
+    mirror.style.top = '0';
+    mirror.style.left = '0';
+    mirror.style.width = `${ta.clientWidth}px`;
+    mirror.style.overflow = 'hidden';
+    mirror.style.whiteSpace = 'pre-wrap';
+    mirror.style.wordWrap = 'break-word';
+
+    const before = ta.value.slice(0, ta.selectionStart);
+    const marker = document.createElement('span');
+    marker.textContent = '\u200b';
+    mirror.textContent = before;
+    mirror.appendChild(marker);
+    wrap.appendChild(mirror);
+    const top = marker.offsetTop - ta.scrollTop;
+    const left = marker.offsetLeft - ta.scrollLeft;
+    wrap.removeChild(mirror);
+    return { top, left };
+  }
+
+  function hideSuggest() {
+    suggestState.open = false;
+    suggestState.items = [];
+    suggestState.activeIndex = 0;
+    suggestState.token = null;
+    suggestList.hidden = true;
+    suggestList.innerHTML = '';
+  }
+
+  function renderSuggestItems() {
+    suggestList.innerHTML = suggestState.items
+      .map((item, index) => (
+        `<li role="option" data-value="${item}" data-active="${index === suggestState.activeIndex ? '1' : '0'}">${item}</li>`
+      ))
+      .join('');
+  }
+
+  function showSuggest(items, token) {
+    if (!items.length) {
+      hideSuggest();
+      return;
+    }
+    const coords = getCaretCoords();
+    const lineHeight = parseFloat(window.getComputedStyle(ta).lineHeight) || 20;
+    suggestState.open = true;
+    suggestState.items = items;
+    suggestState.activeIndex = 0;
+    suggestState.token = token;
+    renderSuggestItems();
+    suggestList.style.left = `${Math.max(0, coords.left)}px`;
+    suggestList.style.top = `${Math.max(0, coords.top + lineHeight)}px`;
+    suggestList.hidden = false;
+  }
+
+  function updateSuggestions() {
+    if (!SUGGESTIONS_ENABLED) return;
+    const partial = getPartialToken();
+    if (!partial) {
+      hideSuggest();
+      return;
+    }
+    const items = getSuggestions(partial);
+    if (!items.length) {
+      hideSuggest();
+      return;
+    }
+    showSuggest(items, partial);
+  }
+
+  function moveSuggest(delta) {
+    if (!suggestState.open || !suggestState.items.length) return;
+    const size = suggestState.items.length;
+    suggestState.activeIndex = (suggestState.activeIndex + delta + size) % size;
+    renderSuggestItems();
+  }
+
+  function acceptSuggestion(value) {
+    if (!suggestState.token) return;
+    const { start, end } = suggestState.token;
+    ta.value = `${ta.value.slice(0, start)}${value}${ta.value.slice(end)}`;
+    const nextPos = start + value.length;
+    ta.selectionStart = nextPos;
+    ta.selectionEnd = nextPos;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    hideSuggest();
   }
 
   function getScrubTarget(elements) {
@@ -352,7 +509,31 @@ export function createEditor(initialText, options = {}) {
   ta.addEventListener('input', () => {
     sync();
     hideTooltip();
+    updateSuggestions();
     if (options.onInput) options.onInput(ta.value);
+  });
+
+  ta.addEventListener('keydown', e => {
+    if (!suggestState.open) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveSuggest(1);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveSuggest(-1);
+      return;
+    }
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      const next = suggestState.items[suggestState.activeIndex];
+      if (next) acceptSuggestion(next);
+      return;
+    }
+    if (e.key === 'Escape') {
+      hideSuggest();
+    }
   });
 
   ta.addEventListener('mousemove', e => {
@@ -399,6 +580,13 @@ export function createEditor(initialText, options = {}) {
   ta.addEventListener('mousedown', e => {
     if (e.button !== 0 || scrubState) return;
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const sectionTarget = elements.find(el => el.dataset && el.dataset.sectionDef);
+    if (sectionTarget && options.onSectionClick) {
+      e.preventDefault();
+      options.onSectionClick(sectionTarget.dataset.sectionDef, e.shiftKey);
+      ta.focus();
+      return;
+    }
     const target = getScrubTarget(elements);
     if (!target) return;
     beginScrub(e, target);
@@ -406,15 +594,28 @@ export function createEditor(initialText, options = {}) {
     document.addEventListener('mouseup', endScrub);
   });
 
+  suggestList.addEventListener('mousedown', e => {
+    const item = e.target.closest('li[data-value]');
+    if (!item) return;
+    e.preventDefault();
+    acceptSuggestion(item.dataset.value);
+    ta.focus();
+  });
+
   ta.addEventListener('mouseleave', () => {
     hideTooltip();
     clearScrubCursor();
+  });
+
+  ta.addEventListener('blur', () => {
+    setTimeout(() => hideSuggest(), 80);
   });
 
   sync();
   wrap.appendChild(pre);
   wrap.appendChild(ta);
   wrap.appendChild(tip);
+  wrap.appendChild(suggestList);
 
   return {
     el: wrap,
@@ -425,10 +626,16 @@ export function createEditor(initialText, options = {}) {
     flashLines,
     flashActiveTokens,
     clearActiveTokenHighlight,
+    setMutedSections: sections => {
+      const source = sections instanceof Set ? [...sections] : Array.isArray(sections) ? sections : [];
+      mutedSections = new Set(source.map(name => String(name).toUpperCase()));
+      applySectionMuteVisuals();
+    },
     setValue: value => {
       ta.value = value;
       sync();
       hideTooltip();
+      hideSuggest();
       clearActiveTokenHighlight();
     },
     focus: () => ta.focus(),

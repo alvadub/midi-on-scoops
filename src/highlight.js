@@ -12,7 +12,7 @@ function span(cls, value, attrs = {}) {
   return `<span class="${cls}"${dataAttrs}>${esc(value)}</span>`;
 }
 
-function classify(token) {
+export function classify(token) {
   if (!token) return null;
   if (token === '<') return 'tok-inherit';
   if (token === '%') return 'tok-var-ref';
@@ -67,7 +67,11 @@ function renderBase(base) {
     return base.replace(/^(\s*#\s+)(.*)$/, (_, p1, p2) => `${esc(p1)}${span('tok-track', p2)}`);
   }
   if (/^\s*@/.test(base)) {
-    return renderTokens(base.replace(/</g, ' < '));
+    const match = base.match(/^(\s*)(@[^\s]+)(.*)$/);
+    if (!match) return renderTokens(base.replace(/</g, ' < '));
+    const [, indent, atToken, rest] = match;
+    const sectionName = atToken.slice(1);
+    return `${esc(indent)}${span('tok-section-def', atToken, { sectionDef: sectionName })}${renderTokens(rest.replace(/</g, ' < '))}`;
   }
   if (/^\s*>/.test(base)) {
     const indent = esc(base.match(/^\s*/)[0]);

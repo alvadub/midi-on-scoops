@@ -142,6 +142,7 @@ export function createMixer(player, options = {}) {
     const name = document.createElement('div');
     name.className = 'm-name';
     name.textContent = shortName(label);
+    name.title = label;
 
     const vu = document.createElement('div');
     vu.className = 'm-vu';
@@ -247,6 +248,7 @@ export function createMixer(player, options = {}) {
       } else {
         const strip = stripMap.get(item.key);
         strip.name.textContent = shortName(item.name);
+        strip.name.title = item.name;
         strip.syncButtons();
       }
     });

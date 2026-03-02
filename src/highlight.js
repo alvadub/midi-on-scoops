@@ -5,9 +5,11 @@ function esc(value) {
     .replace(/>/g, '&gt;');
 }
 
-function span(cls, value, dataVar) {
-  const attrs = dataVar ? ` class="${cls}" data-var="${esc(dataVar)}"` : ` class="${cls}"`;
-  return `<span${attrs}>${esc(value)}</span>`;
+function span(cls, value, attrs = {}) {
+  const dataAttrs = Object.entries(attrs)
+    .map(([key, attrValue]) => ` data-${key}="${esc(attrValue)}"`)
+    .join('');
+  return `<span class="${cls}"${dataAttrs}>${esc(value)}</span>`;
 }
 
 function classify(token) {
@@ -30,7 +32,10 @@ function classify(token) {
 function renderToken(token) {
   const cls = classify(token);
   if (!cls) return esc(token);
-  if (cls === 'tok-var-ref' && token !== '%') return span(cls, token, token);
+  if (cls === 'tok-var-ref' && token !== '%') return span(cls, token, { var: token });
+  if (cls === 'tok-channel') return span(cls, token, { instrument: token.slice(1) });
+  if (cls === 'tok-mode') return span(cls, token, { mode: token.toLowerCase() });
+  if (cls === 'tok-pattern') return span(cls, token, { pattern: '1' });
   return span(cls, token);
 }
 
@@ -60,13 +65,21 @@ function renderBase(base) {
     return renderTokens(base.replace(/</g, ' < '));
   }
   if (/^\s*>/.test(base)) {
-    return span('tok-arrangement', base.trimStart().charAt(0))
-      + renderTokens(base.trimStart().slice(1).replace(/^\s*/, ' '))
-      .replace(/^/, esc(base.match(/^\s*/)[0]));
+    const indent = esc(base.match(/^\s*/)[0]);
+    const body = base.trimStart().slice(1).replace(/^\s*/, ' ');
+    const rendered = body
+      .split(/(\s+)/)
+      .map(part => {
+        if (!part || /\s+/.test(part)) return part;
+        if (/^[A-Z][A-Z0-9]*$/.test(part)) return span('tok-section', part, { section: part });
+        return renderToken(part);
+      })
+      .join('');
+    return `${indent}${span('tok-arrangement', '>')}${rendered}`;
   }
   if (/^\s*%[^\s]+\s+/.test(base)) {
     return base.replace(/^(\s*)(%[^\s]+)(\s*)(.*)$/, (_, i, v, s, rest) => (
-      `${esc(i)}${span('tok-var-def', v, v)}${esc(s)}${renderTokens(rest)}`
+      `${esc(i)}${span('tok-var-def', v, { var: v })}${esc(s)}${renderTokens(rest)}`
     ));
   }
   if (/^\s*#\d+/.test(base)) {
@@ -86,4 +99,3 @@ export function highlight(input) {
     })
     .join('\n');
 }
-

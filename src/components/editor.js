@@ -27,6 +27,33 @@ export function createEditor(initialText, options = {}) {
   tip.innerHTML = '<strong></strong><span class="tooltip-resolved"></span>';
   const tipTitle = tip.querySelector('strong');
   const tipBody = tip.querySelector('.tooltip-resolved');
+  const tooltipHandlers = [
+    options.resolveInstrument && {
+      attr: 'instrument',
+      resolve: options.resolveInstrument,
+      title: value => `#${value}`,
+    },
+    options.resolveMode && {
+      attr: 'mode',
+      resolve: options.resolveMode,
+      title: value => value,
+    },
+    options.resolveSection && {
+      attr: 'section',
+      resolve: options.resolveSection,
+      title: value => `@${value}`,
+    },
+    options.resolveVar && {
+      attr: 'var',
+      resolve: options.resolveVar,
+      title: value => value,
+    },
+    {
+      attr: 'pattern',
+      resolve: () => 'x = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide',
+      title: () => 'Rhythm pattern',
+    },
+  ].filter(Boolean);
 
   function sync() {
     pre.innerHTML = `${highlight(ta.value)}\n`;
@@ -48,22 +75,24 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('mousemove', e => {
-    if (!options.resolveVar) return;
-    const hit = document
-      .elementsFromPoint(e.clientX, e.clientY)
-      .find(el => el.dataset && el.dataset.var);
-    if (!hit) {
+    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const found = tooltipHandlers
+      .map(handler => {
+        const hit = elements.find(el => el.dataset && el.dataset[handler.attr]);
+        return hit ? { handler, value: hit.dataset[handler.attr] } : null;
+      })
+      .find(Boolean);
+    if (!found) {
       hideTooltip();
       return;
     }
-    const name = hit.dataset.var;
-    const text = options.resolveVar(name);
+    const text = found.handler.resolve(found.value);
     if (!text) {
       hideTooltip();
       return;
     }
     const pos = clampTooltip(e.clientX, e.clientY);
-    tipTitle.textContent = name;
+    tipTitle.textContent = found.handler.title(found.value);
     tipBody.textContent = text;
     tip.style.left = `${pos.left}px`;
     tip.style.top = `${pos.top}px`;
@@ -90,4 +119,3 @@ export function createEditor(initialText, options = {}) {
     focus: () => ta.focus(),
   };
 }
-

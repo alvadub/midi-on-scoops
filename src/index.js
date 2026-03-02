@@ -163,6 +163,16 @@ const PRESET_LABELS = {
   locks: 'Locks',
 };
 
+const SCALE_INFO = {
+  major: 'W W H W W W H  -  do re mi fa sol la ti',
+  minor: 'W H W W H W W  -  do re mib fa sol lab sib',
+  dorian: 'W H W W W H W  -  minor with raised 6th',
+  phrygian: 'H W W W H W W  -  minor with lowered 2nd',
+  lydian: 'W W W H W W H  -  major with raised 4th',
+  mixolydian: 'W W H W W H W  -  major with lowered 7th',
+  locrian: 'H W W H W W W  -  diminished flavor',
+};
+
 function build(midi) {
   const mix = [];
 
@@ -214,6 +224,40 @@ function resolveVarTooltip(name) {
   } catch (e) {
     return null;
   }
+}
+
+function resolveInstrumentTooltip(value) {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return null;
+  try {
+    const info = n >= 2000
+      ? p.player.loader.drumInfo(n - 2000)
+      : p.player.loader.instrumentInfo(n);
+    return info && info.title ? info.title : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function resolveModeTooltip(name) {
+  if (!name) return null;
+  return SCALE_INFO[name.toLowerCase()] || null;
+}
+
+function resolveSectionTooltip(name) {
+  if (!editorApi) return null;
+  const lines = editorApi.getValue().split('\n');
+  const sectionHeader = `@${name}`;
+  const start = lines.findIndex(line => line.trim() === sectionHeader);
+  if (start < 0) return null;
+
+  const preview = [];
+  for (let i = start + 1; i < lines.length && preview.length < 4; i += 1) {
+    const line = lines[i];
+    if (/^\s*@/.test(line)) break;
+    if (line.trim()) preview.push(line.trim());
+  }
+  return preview.length ? preview.join(' | ') : null;
 }
 
 function showError(msg) {
@@ -370,6 +414,9 @@ function createDOM(initialText, initialPreset) {
   toolbar.appendChild(presetLabel);
 
   editorApi = createEditor(initialText, {
+    resolveInstrument: resolveInstrumentTooltip,
+    resolveMode: resolveModeTooltip,
+    resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
     onInput: () => {
       const presetSelect = document.getElementById('preset-select');

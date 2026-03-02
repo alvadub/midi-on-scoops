@@ -36,6 +36,8 @@ function renderToken(token) {
   if (cls === 'tok-channel') return span(cls, token, { instrument: token.slice(1) });
   if (cls === 'tok-mode') return span(cls, token, { mode: token.toLowerCase() });
   if (cls === 'tok-pattern') return span(cls, token, { pattern: '1' });
+  if (cls === 'tok-note') return span(cls, token, { note: token });
+  if (cls === 'tok-chord') return span(cls, token, { chord: token });
   return span(cls, token);
 }
 

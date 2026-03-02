@@ -12,6 +12,7 @@ pages:
 	@(git worktree remove $(src) --force > /dev/null 2>&1) || true
 	@git worktree add $(src) $(target)
 	@cd $(src) && rm -rf *
+	@make -s dist
 	@cp -r public/* $(src)
 
 deploy:

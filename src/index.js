@@ -1,3 +1,4 @@
+import { scale } from 'harmonics';
 import Player from './components/player.js';
 import { parse, merge } from './lib';
 import { reduce } from './lib/parser.js';
@@ -244,6 +245,35 @@ function resolveModeTooltip(name) {
   return SCALE_INFO[name.toLowerCase()] || null;
 }
 
+function normalizeNote(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function resolveNoteTooltip(noteStr) {
+  const SEMITONES = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+  const m = noteStr.match(/^([a-gA-G])([#b]?)(\d+)$/);
+  if (!m) return null;
+  const base = SEMITONES[m[1].toLowerCase()];
+  const alt = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
+  const oct = parseInt(m[3], 10);
+  const midi = (oct + 1) * 12 + base + alt;
+  const freq = (440 * Math.pow(2, (midi - 69) / 12)).toFixed(1);
+  const isMiddleC = midi === 60;
+  return `MIDI ${midi} · ${freq} Hz${isMiddleC ? ' · middle C' : ''}`;
+}
+
+function resolveChordTooltip(chordStr) {
+  return chordStr.split('|').map(normalizeNote).join('  ');
+}
+
+function resolveModeNotes(modeName) {
+  try {
+    return scale(`C4 ${modeName}`);
+  } catch {
+    return null;
+  }
+}
+
 function resolveSectionTooltip(name) {
   if (!editorApi) return null;
   const lines = editorApi.getValue().split('\n');
@@ -414,10 +444,13 @@ function createDOM(initialText, initialPreset) {
   toolbar.appendChild(presetLabel);
 
   editorApi = createEditor(initialText, {
-    resolveInstrument: resolveInstrumentTooltip,
+    resolveNote: resolveNoteTooltip,
+    resolveChord: resolveChordTooltip,
     resolveMode: resolveModeTooltip,
+    resolveModeNotes,
     resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
+    resolveInstrument: resolveInstrumentTooltip,
     onInput: () => {
       const presetSelect = document.getElementById('preset-select');
       if (presetSelect) presetSelect.value = '';

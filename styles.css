@@ -264,7 +264,9 @@ select {
   font-weight: 700;
 }
 .tok-section {
-  color: #7ed6ff;
+  color: #c3e88d;
+  -webkit-text-decoration: underline dotted rgba(195, 232, 141, 0.45);
+          text-decoration: underline dotted rgba(195, 232, 141, 0.45);
 }
 .tok-inherit {
   color: #94afc8;

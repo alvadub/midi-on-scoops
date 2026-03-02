@@ -166,6 +166,24 @@ export function createEditor(initialText, options = {}) {
       resolve: options.resolveVar,
       title: value => value,
     },
+    options.resolveVelocity && {
+      attr: 'velocity',
+      resolve: options.resolveVelocity,
+      title: v => `Velocity ${v}`,
+    },
+    {
+      attr: 'repeat',
+      resolve: v => {
+        const n = parseInt(v, 10);
+        return `Plays the preceding sequence ${n} time${n !== 1 ? 's' : ''} in a row`;
+      },
+      title: v => `×${v}`,
+    },
+    {
+      attr: 'number',
+      resolve: () => 'Numeric value — used as velocity, octave, or parameter',
+      title: v => v,
+    },
     {
       attr: 'pattern',
       resolve: () => 'x = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide',

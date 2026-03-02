@@ -274,6 +274,21 @@ function resolveModeNotes(modeName) {
   }
 }
 
+function resolveVelocityTooltip(v) {
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n) || n < 0 || n > 127) return null;
+  const pct = Math.round((n / 127) * 100);
+  const db = n > 0 ? (20 * Math.log10(n / 127)).toFixed(1) : '−∞';
+  const dyn = n === 0 ? 'silent (ppp)'
+    : n <= 25 ? 'very soft (pp)'
+    : n <= 50 ? 'soft (mp)'
+    : n <= 75 ? 'medium (mf)'
+    : n <= 100 ? 'loud (f)'
+    : n <= 115 ? 'very loud (ff)'
+    : 'maximum (fff)';
+  return `${pct}% of max · ${db} dB · ${dyn}`;
+}
+
 function resolveSectionTooltip(name) {
   if (!editorApi) return null;
   const lines = editorApi.getValue().split('\n');
@@ -448,6 +463,7 @@ function createDOM(initialText, initialPreset) {
     resolveChord: resolveChordTooltip,
     resolveMode: resolveModeTooltip,
     resolveModeNotes,
+    resolveVelocity: resolveVelocityTooltip,
     resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
     resolveInstrument: resolveInstrumentTooltip,

@@ -38,6 +38,8 @@ function renderToken(token) {
   if (cls === 'tok-pattern') return span(cls, token, { pattern: '1' });
   if (cls === 'tok-note') return span(cls, token, { note: token });
   if (cls === 'tok-chord') return span(cls, token, { chord: token });
+  if (cls === 'tok-number') return span(cls, token, { number: token });
+  if (cls === 'tok-repeat') return span(cls, token, { repeat: token.slice(1) });
   return span(cls, token);
 }
 
@@ -85,7 +87,16 @@ function renderBase(base) {
     ));
   }
   if (/^\s*#\d+/.test(base)) {
-    return renderTokens(base);
+    let velocityTagged = false;
+    return base.split(/(\s+)/).map(part => {
+      if (/^\s*$/.test(part)) return part;
+      const cls = classify(part);
+      if (cls === 'tok-number' && !velocityTagged) {
+        velocityTagged = true;
+        return span(cls, part, { velocity: part });
+      }
+      return renderToken(part);
+    }).join('');
   }
   return renderTokens(base);
 }

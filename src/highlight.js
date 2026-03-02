@@ -105,11 +105,11 @@ function renderBase(base) {
 export function highlight(input) {
   return String(input || '')
     .split(/\r?\n/)
-    .map(line => {
+    .map((line, lineNumber) => {
       const [base, comment] = splitComment(line);
       const rendered = renderBase(base);
-      if (!comment) return rendered;
-      return `${rendered}${span('tok-comment', comment)}`;
+      const content = !comment ? rendered : `${rendered}${span('tok-comment', comment)}`;
+      return span('hl-line', content, { line: lineNumber });
     })
     .join('\n');
 }

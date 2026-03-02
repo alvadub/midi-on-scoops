@@ -107,6 +107,14 @@ function clampTooltip(x, y, width = 320) {
   return { left, top };
 }
 
+function charOffsetOfElement(root, target) {
+  if (!root || !target || !root.contains(target)) return -1;
+  const range = document.createRange();
+  range.selectNodeContents(root);
+  range.setEndBefore(target);
+  return range.toString().length;
+}
+
 export function createEditor(initialText, options = {}) {
   const wrap = document.createElement('div');
   wrap.id = 'editor-wrap';
@@ -128,6 +136,9 @@ export function createEditor(initialText, options = {}) {
   const tipTitle = tip.querySelector('strong');
   const tipBody = tip.querySelector('.tooltip-resolved');
   const tipStaff = tip.querySelector('.tooltip-staff');
+  const flashTimers = new Set();
+  let scrubState = null;
+  let activeTokens = [];
 
   const tooltipHandlers = [
     options.resolveNote && {
@@ -206,6 +217,128 @@ export function createEditor(initialText, options = {}) {
     tipStaff.hidden = true;
   }
 
+  function clearScrubCursor() {
+    wrap.classList.remove('scrub-hover');
+  }
+
+  function clearActiveTokenHighlight() {
+    activeTokens.forEach(token => token.classList.remove('tok-active'));
+    activeTokens = [];
+  }
+
+  function getScrubTarget(elements) {
+    return elements.find(el => (
+      el.dataset
+      && (typeof el.dataset.number !== 'undefined' || typeof el.dataset.velocity !== 'undefined')
+    ));
+  }
+
+  function parseScrubRaw(raw) {
+    const isFloat = String(raw).includes('.');
+    const decimalPlaces = isFloat ? String(raw).split('.')[1].length : 0;
+    return {
+      value: parseFloat(raw),
+      isFloat,
+      decimalPlaces,
+    };
+  }
+
+  function beginScrub(e, span) {
+    const raw = typeof span.dataset.number !== 'undefined'
+      ? span.dataset.number
+      : span.dataset.velocity;
+    const parsed = parseScrubRaw(raw);
+    if (Number.isNaN(parsed.value)) return;
+
+    const startOffset = charOffsetOfElement(pre, span);
+    if (startOffset < 0) return;
+
+    scrubState = {
+      startX: e.clientX,
+      startValue: parsed.value,
+      isFloat: parsed.isFloat,
+      decimalPlaces: parsed.decimalPlaces,
+      attr: typeof span.dataset.velocity !== 'undefined' ? 'velocity' : 'number',
+      startOffset,
+      currentLength: span.textContent.length,
+      currentText: raw,
+    };
+    wrap.classList.add('scrub-active');
+    hideTooltip();
+    e.preventDefault();
+  }
+
+  function applyScrub(e) {
+    if (!scrubState) return;
+    const STEP_PX = 4;
+    const deltaUnits = Math.round((e.clientX - scrubState.startX) / STEP_PX);
+    const baseStep = scrubState.isFloat ? Math.pow(10, -scrubState.decimalPlaces) : 1;
+    const modifier = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+
+    let nextValue = scrubState.startValue + deltaUnits * baseStep * modifier;
+    if (scrubState.attr === 'velocity') {
+      nextValue = Math.max(1, Math.min(127, Math.round(nextValue)));
+    }
+
+    const nextText = scrubState.isFloat && scrubState.attr !== 'velocity'
+      ? nextValue.toFixed(scrubState.decimalPlaces)
+      : String(Math.round(nextValue));
+    if (nextText === scrubState.currentText) return;
+
+    const start = scrubState.startOffset;
+    const end = start + scrubState.currentLength;
+    ta.value = ta.value.slice(0, start) + nextText + ta.value.slice(end);
+    scrubState.currentLength = nextText.length;
+    scrubState.currentText = nextText;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function endScrub() {
+    if (!scrubState) return;
+    scrubState = null;
+    wrap.classList.remove('scrub-active');
+    document.removeEventListener('mousemove', applyScrub);
+    document.removeEventListener('mouseup', endScrub);
+  }
+
+  function flashLines(startLine, endLine) {
+    const start = Math.max(0, startLine);
+    const end = Math.max(start, endLine);
+    for (let line = start; line <= end; line += 1) {
+      const lineEl = pre.querySelector(`[data-line="${line}"]`);
+      if (!lineEl) continue;
+      lineEl.classList.add('block-flash');
+      const timer = setTimeout(() => {
+        lineEl.classList.remove('block-flash');
+        flashTimers.delete(timer);
+      }, 800);
+      flashTimers.add(timer);
+    }
+  }
+
+  function getPlayableTokenSpans(lineEl) {
+    return [...lineEl.querySelectorAll('span')]
+      .filter(token => token.classList.contains('tok-pattern')
+        || token.classList.contains('tok-note')
+        || token.classList.contains('tok-chord')
+        || token.classList.contains('tok-var-ref')
+        || token.classList.contains('tok-mode')
+        || token.classList.contains('tok-progression'));
+  }
+
+  function flashActiveTokens(lineNumbers, beatIndex) {
+    clearActiveTokenHighlight();
+    lineNumbers.forEach(lineNumber => {
+      const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
+      if (!lineEl) return;
+      const tokenSpans = getPlayableTokenSpans(lineEl);
+      if (!tokenSpans.length) return;
+      const target = tokenSpans[Math.abs(beatIndex) % tokenSpans.length];
+      target.classList.add('tok-active');
+      activeTokens.push(target);
+    });
+  }
+
   ta.addEventListener('scroll', () => {
     pre.scrollTop = ta.scrollTop;
     pre.scrollLeft = ta.scrollLeft;
@@ -218,7 +351,10 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('mousemove', e => {
+    if (scrubState) return;
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const scrubTarget = getScrubTarget(elements);
+    wrap.classList.toggle('scrub-hover', Boolean(scrubTarget));
     const found = tooltipHandlers
       .map(handler => {
         const hit = elements.find(el => el.dataset && el.dataset[handler.attr]);
@@ -255,7 +391,20 @@ export function createEditor(initialText, options = {}) {
     tip.hidden = false;
   });
 
-  ta.addEventListener('mouseleave', hideTooltip);
+  ta.addEventListener('mousedown', e => {
+    if (e.button !== 0 || scrubState) return;
+    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const target = getScrubTarget(elements);
+    if (!target) return;
+    beginScrub(e, target);
+    document.addEventListener('mousemove', applyScrub);
+    document.addEventListener('mouseup', endScrub);
+  });
+
+  ta.addEventListener('mouseleave', () => {
+    hideTooltip();
+    clearScrubCursor();
+  });
 
   sync();
   wrap.appendChild(pre);
@@ -267,10 +416,15 @@ export function createEditor(initialText, options = {}) {
     textarea: ta,
     on: (event, fn) => ta.addEventListener(event, fn),
     getValue: () => ta.value,
+    getCursorPosition: () => ta.selectionStart,
+    flashLines,
+    flashActiveTokens,
+    clearActiveTokenHighlight,
     setValue: value => {
       ta.value = value;
       sync();
       hideTooltip();
+      clearActiveTokenHighlight();
     },
     focus: () => ta.focus(),
   };

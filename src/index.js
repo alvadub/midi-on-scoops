@@ -2,6 +2,7 @@ import { scale } from 'harmonics';
 import Player from './components/player.js';
 import { parse, merge } from './lib';
 import { reduce } from './lib/parser.js';
+import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
 import { createMixer } from './components/mixer.js';
 
@@ -14,6 +15,7 @@ let statusResetTimer = null;
 let editorApi = null;
 let mixerApi = null;
 let lastContext = null;
+let trackLineMap = new Map();
 
 const p = window.p || new Player();
 window.p = p;
@@ -201,7 +203,31 @@ function build(midi) {
   return mix;
 }
 
+function buildTrackLineMap(input) {
+  const map = new Map();
+  let currentTrack = null;
+  String(input || '').split(/\r?\n/).forEach((rawLine, lineNumber) => {
+    const line = rawLine.replace(/;.+?$/, '').trim();
+    if (!line) return;
+
+    if (/^#{1,2}\s+/.test(line) && !/^#\d+/.test(line)) {
+      currentTrack = line.replace(/^#{1,2}\s+/, '').trim();
+      return;
+    }
+
+    if (!currentTrack) return;
+    const match = line.match(/^#(\d+)\b/);
+    if (!match) return;
+    const key = `${parseInt(match[1], 10)}/${currentTrack}`;
+    const prev = map.get(key) || [];
+    if (!prev.includes(lineNumber)) prev.push(lineNumber);
+    map.set(key, prev);
+  });
+  return map;
+}
+
 function getData(input) {
+  trackLineMap = buildTrackLineMap(input);
   try {
     lastContext = parse(input);
     return build(merge(lastContext));
@@ -211,6 +237,20 @@ function getData(input) {
     showError(e.message || 'Parse error');
     return [];
   }
+}
+
+function evalBlock() {
+  if (!editorApi) return;
+  const source = editorApi.getValue();
+  const cursorPos = editorApi.getCursorPosition();
+  const block = blockAtCursor(source, cursorPos);
+  const data = getData(source);
+  if (!data.length) return;
+
+  p.updateTracks(data);
+  syncMixer(data);
+  editorApi.flashLines(block.startLine, block.endLine);
+  showStatus(`Block updated: ${block.name}`, playing ? 'playing' : 'ready');
 }
 
 function resolveVarTooltip(name) {
@@ -478,6 +518,11 @@ function createDOM(initialText, initialPreset) {
   });
 
   editorApi.on('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Enter') {
+      e.preventDefault();
+      evalBlock();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && e.code === 'Enter') {
       e.preventDefault();
       if (playing) stop();
@@ -522,9 +567,15 @@ function createDOM(initialText, initialPreset) {
     const open = mixerApi.toggle();
     workspace.classList.toggle('mixer-open', open);
   });
-  p.onBeat = (key, when) => {
+  p.onBeat = (key, when, beatIndex) => {
     const wait = Math.max(0, (when - p.audioContext.currentTime) * 1000);
-    setTimeout(() => mixerApi.flashVU(key), wait);
+    setTimeout(() => {
+      mixerApi.flashVU(key);
+      if (!editorApi) return;
+      const lines = trackLineMap.get(key);
+      if (!lines || !lines.length) return;
+      editorApi.flashActiveTokens(lines, beatIndex);
+    }, wait);
   };
 
   document.body.appendChild(toolbar);
@@ -591,6 +642,9 @@ function stop() {
   if (playing) {
     playing = false;
     p.stopLoopMachine();
+  }
+  if (editorApi) {
+    editorApi.clearActiveTokenHighlight();
   }
   updatePlayButton();
   setReadyStatus();

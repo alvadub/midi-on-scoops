@@ -137,6 +137,14 @@ export default class Player {
     return changed;
   }
 
+  updateTracks(data) {
+    this.beats.length = 0;
+    this.preload(data);
+    if (!this.beats.length || typeof this.beatIndex !== 'number' || this.beatIndex >= this.beats.length) {
+      this.beatIndex = 0;
+    }
+  }
+
   startPlayLoop(beats, bpm, density, fromBeat) {
     this.loopStarted = true;
 
@@ -326,7 +334,7 @@ export default class Player {
       });
 
       if (touched && typeof this.onBeat === 'function') {
-        this.onBeat(key, when);
+        this.onBeat(key, when, this.beatIndex);
       }
     });
   }

@@ -1,11 +1,9 @@
+; scratch / reference
+
+%chord c3|d3|g3
+
 # track 1
+  @A
+    #1 110 x--- x--- x--- x--- %chord % % %
 
-@tempo: 400
-@instrument: 1
-
-%sequence: x--- *16
-%range: 10..120 /11
-
-notes: c3 d3
-pattern: %sequence
-accentMap: 5 %range 127x3
+> A *2

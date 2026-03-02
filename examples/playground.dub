@@ -1,23 +1,13 @@
+%a C4 phrygian.. ++ I I III IV
+
 # scales
+  @A
+    #3 100 -x-x -x-x -x-x -x-x %a %a
 
-%a: C4 phrygian.. ++ I I III IV
+## drums
+  @A
+    #0 120 [xx]-[xx]- [xx]-[xx]- d#1
+    #0 110 -x-x -x-x d2
+    #0 100 [xx][xx][xx][xx] [xx][xx][xx][xx] f#2
 
-notes: %a %a
-pattern: -x-x *8
-
-# drumkit - zap
-
-@channel: 9
-
-notes: d#1
-pattern: [xx]-[xx]- *8
-
-# drumkit - clap
-
-notes: d2
-pattern: -x-x *8
-
-# drumkit - hat
-
-notes: f#2
-pattern: [xx][xx][xx][xx] *8
+> A *4

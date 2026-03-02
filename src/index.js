@@ -1,11 +1,18 @@
 import Player from './components/player.js';
 import { parse, merge } from './lib';
+import { reduce } from './lib/parser.js';
+import { createEditor } from './components/editor.js';
+import { createMixer } from './components/mixer.js';
 
 let tempo = 146;
 let bars = 8;
 let transpose = 0;
 let playing = false;
 let debounceTimer = null;
+let statusResetTimer = null;
+let editorApi = null;
+let mixerApi = null;
+let lastContext = null;
 
 const p = window.p || new Player();
 window.p = p;
@@ -108,6 +115,54 @@ const TETRIS = `
 > A B A B C D
 `.trim();
 
+const PLAYGROUND = `
+%a C4 phrygian.. ++ I I III IV
+
+# scales
+  @A
+    #3 100 -x-x -x-x -x-x -x-x %a %a
+
+## drums
+  @A
+    #0 120 [xx]-[xx]- [xx]-[xx]- d#1
+    #0 110 -x-x -x-x d2
+    #0 100 [xx][xx][xx][xx] [xx][xx][xx][xx] f#2
+
+> A *4
+`.trim();
+
+const LOCKS = `
+%Cm c4|eb4|g4 %
+%Fm c4|f4|g#4 %
+
+# drums
+  @A
+    #0 127 xxxxxxxxxxx[xx]xxxx [xx]xxxxxxxxxxxxxxx f#2
+    #0 127 --x---x---x-x-x[xx] --x---x---x--[-x]x- c#2
+    #0 90  ----------------x___------------ a3
+    #0 120 --[xx]---[xx]---[xx]---[xx]- d#1
+
+## skanking
+  @A
+    #1 100 -x-x-x-x-x-x-x-x %Cm %Fm
+
+> A *4
+`.trim();
+
+const PRESETS = {
+  tetris: TETRIS,
+  billy_jean: BILLY_JEAN,
+  playground: PLAYGROUND,
+  locks: LOCKS,
+};
+
+const PRESET_LABELS = {
+  tetris: 'Tetris',
+  billy_jean: 'Billy Jean',
+  playground: 'Playground',
+  locks: 'Locks',
+};
+
 function build(midi) {
   const mix = [];
 
@@ -137,64 +192,131 @@ function build(midi) {
 
 function getData(input) {
   try {
-    return build(merge(parse(input)));
+    lastContext = parse(input);
+    return build(merge(lastContext));
   } catch (e) {
+    lastContext = null;
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
     return [];
   }
 }
 
-function showError(msg) {
-  const statusEl = document.getElementById('status-message');
-  if (statusEl) {
-    statusEl.textContent = 'Error: ' + msg;
-    statusEl.style.color = '#e94560';
-    setTimeout(() => {
-      statusEl.textContent = 'Ready';
-      statusEl.style.color = '';
-    }, 3000);
+function resolveVarTooltip(name) {
+  if (!lastContext || !lastContext.data || !lastContext.data[name]) return null;
+  try {
+    const data = reduce(lastContext.data[name], lastContext.data);
+    const out = Array.isArray(data) ? data.flat(Infinity) : [data];
+    const shown = out.slice(0, 16).map(item => (
+      Array.isArray(item) ? item.join('|') : String(item)
+    ));
+    return shown.join('  ') + (out.length > shown.length ? ' …' : '');
+  } catch (e) {
+    return null;
   }
 }
 
-function createDeferredSlider(config) {
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = String(config.min);
-  slider.max = String(config.max);
-  slider.value = String(config.initial);
-
-  const display = document.createElement('span');
-  display.textContent = config.format(config.initial);
-
-  let mouseLeft = false;
-
-  slider.addEventListener('mousedown', () => {
-    mouseLeft = false;
-  });
-
-  slider.addEventListener('mouseleave', () => {
-    mouseLeft = true;
-  });
-
-  slider.addEventListener('mouseup', () => {
-    if (!mouseLeft) {
-      config.commit(parseInt(slider.value));
-    }
-  });
-
-  slider.addEventListener('input', () => {
-    display.textContent = config.format(parseInt(slider.value));
-  });
-
-  return { slider, display };
+function showError(msg) {
+  clearTimeout(statusResetTimer);
+  const statusEl = document.getElementById('status-message');
+  const statusbar = document.getElementById('statusbar');
+  if (statusEl) {
+    statusEl.textContent = `Error: ${msg}`;
+  }
+  if (statusbar) {
+    statusbar.dataset.state = 'error';
+  }
 }
 
-function createDOM() {
+function showStatus(msg, state = 'ready') {
+  clearTimeout(statusResetTimer);
+  const statusEl = document.getElementById('status-message');
+  const statusbar = document.getElementById('statusbar');
+  if (statusEl) {
+    statusEl.textContent = msg;
+  }
+  if (statusbar) {
+    statusbar.dataset.state = state;
+  }
+}
+
+function setReadyStatus() {
+  showStatus('Ready', 'ready');
+}
+
+function markDirty() {
+  showStatus('Unsaved changes', 'warning');
+}
+
+function saveSuccess() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  showStatus(`Saved ${hh}:${mm}`, 'ready');
+}
+
+function setQueryLoad(name) {
+  const url = new URL(window.location.href);
+  if (name) {
+    url.searchParams.set('load', name);
+  } else {
+    url.searchParams.delete('load');
+  }
+  window.history.replaceState({}, '', url.toString());
+}
+
+function updatePlayButton() {
+  const playBtn = document.getElementById('play-btn');
+  if (playBtn) playBtn.textContent = playing ? '▶ Playing...' : '▶ Play';
+}
+
+function loadPresetByName(name) {
+  const preset = PRESETS[name];
+  if (!editorApi || !preset) return;
+
+  editorApi.setValue(preset.trim());
+  localStorage.setItem(STORAGE_KEY, editorApi.getValue());
+  setQueryLoad(name);
+  showStatus(`Loaded preset: ${PRESET_LABELS[name] || name}`, 'ready');
+  updateLoop();
+  editorApi.focus();
+}
+
+function syncMixer(data) {
+  if (!mixerApi) return;
+  mixerApi.update(data);
+}
+
+function bindGlobalShortcuts() {
+  document.addEventListener('keydown', e => {
+    const target = e.target;
+    const editingField = target && (
+      target.tagName === 'TEXTAREA'
+      || target.tagName === 'INPUT'
+      || target.tagName === 'SELECT'
+    );
+
+    if (e.code === 'Space' && !editingField) {
+      e.preventDefault();
+      if (playing) stop();
+      else play();
+    }
+    if (e.code === 'Escape') {
+      stop();
+    }
+  });
+}
+
+function createDOM(initialText, initialPreset) {
   document.body.innerHTML = '';
 
   const toolbar = document.createElement('div');
   toolbar.id = 'toolbar';
+
+  const aboutLink = document.createElement('a');
+  aboutLink.id = 'about-link';
+  aboutLink.href = 'landing.html';
+  aboutLink.textContent = '← About';
 
   const playBtn = document.createElement('button');
   playBtn.id = 'play-btn';
@@ -206,69 +328,61 @@ function createDOM() {
   stopBtn.textContent = '■ Stop';
   stopBtn.addEventListener('click', stop);
 
-  const bpmLabel = document.createElement('label');
-  bpmLabel.textContent = 'BPM ';
-  const { slider: bpmSlider, display: bpmDisplay } = createDeferredSlider({
-    min: 60,
-    max: 200,
-    initial: tempo,
-    format: v => v,
-    commit: v => {
-      tempo = v;
-      updateLoop();
-    },
-  });
-  bpmLabel.appendChild(bpmSlider);
-  bpmLabel.appendChild(bpmDisplay);
+  const mixerBtn = document.createElement('button');
+  mixerBtn.id = 'mixer-btn';
+  mixerBtn.textContent = '⊞ Mixer';
+  const midiBtn = document.createElement('button');
+  midiBtn.id = 'midi-btn';
+  midiBtn.textContent = '🎛 MIDI';
+  midiBtn.disabled = true;
+  midiBtn.title = 'MIDI support comes next';
 
-  const barsLabel = document.createElement('label');
-  barsLabel.textContent = 'Bars ';
-  const barsSelect = document.createElement('select');
-  barsSelect.id = 'bars-select';
-  [4, 8, 16, 32].forEach(n => {
-    const opt = document.createElement('option');
-    opt.value = n;
-    opt.textContent = n;
-    if (n === bars) opt.selected = true;
-    barsSelect.appendChild(opt);
+  const presetLabel = document.createElement('label');
+  presetLabel.className = 'field-group';
+  presetLabel.textContent = 'Preset ';
+  const presetSelect = document.createElement('select');
+  presetSelect.id = 'preset-select';
+  const customOption = document.createElement('option');
+  customOption.value = '';
+  customOption.textContent = 'Custom';
+  presetSelect.appendChild(customOption);
+  Object.keys(PRESETS).forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = PRESET_LABELS[name] || name;
+    presetSelect.appendChild(option);
   });
-  barsSelect.addEventListener('change', (e) => {
-    bars = parseInt(e.target.value);
-    updateLoop();
+  if (initialPreset && PRESETS[initialPreset]) {
+    presetSelect.value = initialPreset;
+  }
+  presetSelect.addEventListener('change', () => {
+    if (presetSelect.value) {
+      loadPresetByName(presetSelect.value);
+    }
   });
-  barsLabel.appendChild(barsSelect);
+  presetLabel.appendChild(presetSelect);
 
-  const transposeLabel = document.createElement('label');
-  transposeLabel.textContent = 'Key ';
-  const { slider: transposeSlider, display: transposeDisplay } = createDeferredSlider({
-    min: -12,
-    max: 12,
-    initial: transpose,
-    format: v => v > 0 ? '+' + v : v,
-    commit: v => {
-      transpose = v;
-      updateLoop();
-    },
-  });
-  transposeLabel.appendChild(transposeSlider);
-  transposeLabel.appendChild(transposeDisplay);
-
+  toolbar.appendChild(aboutLink);
   toolbar.appendChild(playBtn);
   toolbar.appendChild(stopBtn);
-  toolbar.appendChild(bpmLabel);
-  toolbar.appendChild(barsLabel);
-  toolbar.appendChild(transposeLabel);
+  toolbar.appendChild(mixerBtn);
+  toolbar.appendChild(midiBtn);
+  toolbar.appendChild(presetLabel);
 
-  const editor = document.createElement('textarea');
-  editor.id = 'editor';
-  editor.value = localStorage.getItem(STORAGE_KEY) || TETRIS;
-  editor.addEventListener('input', () => {
-    updateLoop();
-    saveDraft();
+  editorApi = createEditor(initialText, {
+    resolveVar: resolveVarTooltip,
+    onInput: () => {
+      const presetSelect = document.getElementById('preset-select');
+      if (presetSelect) presetSelect.value = '';
+      setQueryLoad(null);
+      markDirty();
+      updateLoop();
+      saveDraft();
+    },
   });
 
-  editor.addEventListener('keydown', (e) => {
-    if ((e.code === 'Space' || (e.metaKey && e.code === 'Enter'))) {
+  editorApi.on('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.code === 'Enter') {
       e.preventDefault();
       if (playing) stop();
       else play();
@@ -277,10 +391,11 @@ function createDOM() {
 
   const statusbar = document.createElement('div');
   statusbar.id = 'statusbar';
+  statusbar.dataset.state = 'ready';
 
   const beatDots = document.createElement('div');
   beatDots.id = 'beat-dots';
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 16; i += 1) {
     const dot = document.createElement('span');
     dot.className = 'beat-dot';
     beatDots.appendChild(dot);
@@ -293,37 +408,87 @@ function createDOM() {
   statusbar.appendChild(beatDots);
   statusbar.appendChild(statusMessage);
 
+  const workspace = document.createElement('div');
+  workspace.id = 'workspace';
+  mixerApi = createMixer(p, {
+    tempo,
+    bars,
+    transpose,
+    onChange(next) {
+      if (typeof next.tempo === 'number') tempo = next.tempo;
+      if (typeof next.bars === 'number') bars = next.bars;
+      if (typeof next.transpose === 'number') transpose = next.transpose;
+      updateLoop();
+    },
+  });
+  mixerApi.toggle(false);
+  mixerBtn.addEventListener('click', () => {
+    const open = mixerApi.toggle();
+    workspace.classList.toggle('mixer-open', open);
+  });
+  p.onBeat = (key, when) => {
+    const wait = Math.max(0, (when - p.audioContext.currentTime) * 1000);
+    setTimeout(() => mixerApi.flashVU(key), wait);
+  };
+
   document.body.appendChild(toolbar);
-  document.body.appendChild(editor);
+  workspace.appendChild(editorApi.el);
+  workspace.appendChild(mixerApi.el);
+  document.body.appendChild(workspace);
   document.body.appendChild(statusbar);
 
-  return editor;
+  return editorApi;
+}
+
+async function loadExample(name) {
+  if (PRESETS[name]) return PRESETS[name];
+  try {
+    const response = await fetch(`examples/${name}.dub`);
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch (e) {
+    // ignore and use fallback
+  }
+  return null;
+}
+
+async function resolveInitialDraft() {
+  const params = new URLSearchParams(window.location.search);
+  const load = params.get('load');
+
+  if (load) {
+    const draft = await loadExample(load);
+    if (draft) return draft.trim();
+  }
+
+  return localStorage.getItem(STORAGE_KEY) || TETRIS;
 }
 
 function saveDraft() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    const editor = document.getElementById('editor');
-    if (editor) {
-      localStorage.setItem(STORAGE_KEY, editor.value);
+    if (editorApi) {
+      localStorage.setItem(STORAGE_KEY, editorApi.getValue());
+      saveSuccess();
     }
   }, 300);
 }
 
 function play() {
   stop();
-  const editor = document.getElementById('editor');
-  if (!editor) return;
+  if (!editorApi) return;
 
   if (p.audioContext.state === 'suspended') {
     p.audioContext.resume();
   }
   playing = true;
-  p.setLoopMachine(getData(editor.value), tempo, bars, transpose);
+  const data = getData(editorApi.getValue());
+  p.setLoopMachine(data, tempo, bars, transpose);
+  syncMixer(data);
   p.playLoopMachine();
-
-  const playBtn = document.getElementById('play-btn');
-  if (playBtn) playBtn.textContent = '▶ Playing...';
+  updatePlayButton();
+  showStatus('Playing', 'playing');
 }
 
 function stop() {
@@ -331,15 +496,16 @@ function stop() {
     playing = false;
     p.stopLoopMachine();
   }
-  const playBtn = document.getElementById('play-btn');
-  if (playBtn) playBtn.textContent = '▶ Play';
+  updatePlayButton();
+  setReadyStatus();
 }
 
 function updateLoop() {
-  const editor = document.getElementById('editor');
-  if (!editor || !p) return;
+  if (!editorApi || !p) return;
 
-  const changed = p.setLoopMachine(getData(editor.value), tempo, bars, transpose);
+  const data = getData(editorApi.getValue());
+  const changed = p.setLoopMachine(data, tempo, bars, transpose);
+  syncMixer(data);
   if (changed && playing) {
     p.playLoopMachine(p.beatIndex);
   }
@@ -347,24 +513,24 @@ function updateLoop() {
 
 function beatIndicator() {
   const dots = document.querySelectorAll('.beat-dot');
-  if (!dots.length || !p.loopStarted) {
-    dots.forEach(d => d.classList.remove('active'));
-    return;
-  }
-
-  dots.forEach((dot, i) => {
-    if (i === p.beatIndex) {
-      dot.classList.add('active');
-    } else {
-      dot.classList.remove('active');
-    }
-  });
-
+  const activeIndex = p.loopStarted ? p.beatIndex : -1;
+  dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
   requestAnimationFrame(beatIndicator);
 }
 
-const editor = createDOM();
-p.setLoopMachine(getData(editor.value), tempo, bars, transpose);
-requestAnimationFrame(beatIndicator);
+async function bootstrap() {
+  const params = new URLSearchParams(window.location.search);
+  const initialPreset = params.get('load');
+  const initialDraft = await resolveInitialDraft();
+  const editor = createDOM(initialDraft, initialPreset);
+  bindGlobalShortcuts();
+  const data = getData(editor.getValue());
+  p.setLoopMachine(data, tempo, bars, transpose);
+  syncMixer(data);
+  setReadyStatus();
+  requestAnimationFrame(beatIndicator);
+}
+
+bootstrap();
 
 export default {};

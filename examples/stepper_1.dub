@@ -1,46 +1,23 @@
-@tempo: 140
-@level: 90
-@bundle
+; Stepper 1
+; tempo: 140
 
-#hat
-@channel: 9
-@level: 127
+%Em e4|g4|b4
+%Am e4|a4|c5
 
-notes: g#2
-pattern: xxxxxxx[xx] *16
+# drums
+  @A
+    #0 127 xxxxxxx[xx] xxxxxxx[xx] g#2
+    #0 100 [xx]x_----- [xx]x_----- a#5 % a4
+    #0 60  [xx]---[xx]--- [xx]---[xx]--- d#1
+    #0 115 --x- --x- --x- --x- d5|a5
+    #0 100 ----------------x--------------- c#3
 
-#cabasa
-notes: a#5 % a4
-pattern: [xx]x_----- *16
+## skank
+  @A
+    #1 90 [----][x---][----][x---] [----][x---][----][x---] %Em % %Am %
 
-#snare
-@level: 60
-notes: d#1
-pattern: [xx]---[xx]--- *16
+## brass
+  @A
+    #61 112 [[x_][x_]][[x______]-]x_ [[x_][x_]][[x______]-]x_ e4 % % %
 
-#stick
-@level: 115
-notes: d5|a5
-pattern: --x- *32
-
-#crash
-notes: c#3
-pattern: ----------------x--------------- *4
-
-#skank
-@instrument: 1
-@channel: 0
-@level: 90
-
-%Em: e4|g4|b4
-%Am: e4|a4|c5
-
-notes: %Em % %Am %
-pattern: [----][x---][----][x---] *16
-
-#brass
-@instrument: 61
-@channel: 1
-
-notes: e4 % % %
-pattern: [[x_][x_]][[x______]-]x_ *32
+> A *4

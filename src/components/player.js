@@ -7,6 +7,10 @@ export default class Player {
     this.bars = 8;
     this.bpm = 127;
     this.fraq = 1 / this.bars;
+    this.trackNodes = new Map();
+    this.trackState = new Map();
+    this.delayDivision = 3 / 8;
+    this.onBeat = null;
     this.initAudio();
   }
 
@@ -17,11 +21,29 @@ export default class Player {
     this.destination = this.audioContext.destination;
     this.player = new WebAudioFontPlayer();
     this.equalizer = this.player.createChannel(this.audioContext);
-    this.output = this.audioContext.createGain();
+    this.masterGain = this.audioContext.createGain();
     this.echo = this.player.createReverberator(this.audioContext);
-    this.echo.output.connect(this.output);
-    this.equalizer.output.connect(this.echo.input);
-    this.output.connect(this.destination);
+    this.delayInput = this.audioContext.createGain();
+    this.delay = this.audioContext.createDelay(4);
+    this.delayFeedback = this.audioContext.createGain();
+    this.delayWet = this.audioContext.createGain();
+
+    this.masterGain.gain.value = 1;
+    this.delayFeedback.gain.value = 0.35;
+    this.delayWet.gain.value = 1;
+    this.delayInput.gain.value = 1;
+
+    this.equalizer.output.connect(this.masterGain);
+    this.echo.output.connect(this.masterGain);
+
+    this.delayInput.connect(this.delay);
+    this.delay.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delay);
+    this.delay.connect(this.delayWet);
+    this.delayWet.connect(this.masterGain);
+
+    this.masterGain.connect(this.destination);
+    this.updateDelayTime();
   }
 
   pitch(value) {
@@ -43,27 +65,46 @@ export default class Player {
     });
 
     const duration = Utils.getTickDuration('32') / 256;
+    const nextKeys = new Set();
 
     for (let i = 0; i < count; i += 1) {
-      const drums = [];
-      const notes = [];
+      const beat = new Map();
 
       this.data.forEach(track => {
+        const key = `${track[0]}/${track[1]}`;
+        nextKeys.add(key);
+        if (!beat.has(key)) beat.set(key, { drums: [], notes: [] });
+        const slot = beat.get(key);
         const tick = track[2][i] || {};
 
         if (track[0] >= 2000) {
-          drums.push([track[0] - 2000, tick.v]);
+          slot.drums.push([track[0] - 2000, tick.v]);
         } else if (Array.isArray(tick.n)) {
           tick.n.forEach(tone => {
-            notes.push([track[0], this.pitch(tone), duration, tick.v]);
+            slot.notes.push([track[0], this.pitch(tone), duration, tick.v]);
           });
         } else if (tick.n) {
-          notes.push([track[0], this.pitch(tick.n), duration, tick.v]);
+          slot.notes.push([track[0], this.pitch(tick.n), duration, tick.v]);
         }
       });
 
-      this.beats[i] = [drums, notes];
+      this.beats[i] = beat;
     }
+
+    this.trackNodes.forEach((nodes, key) => {
+      if (!nextKeys.has(key)) {
+        try {
+          nodes.dry.disconnect();
+          nodes.reverbSend.disconnect();
+          nodes.delaySend.disconnect();
+        } catch (e) {
+          // ignore
+        }
+        this.trackNodes.delete(key);
+      }
+    });
+
+    nextKeys.forEach(key => this.getTrackNodes(key));
   }
 
   contextTime() {
@@ -89,6 +130,7 @@ export default class Player {
     this.bpm = tempo || 127;
     this.bars = length || 16;
     this.offset = transpose || 0;
+    this.updateDelayTime();
     this.preload(data);
     this.fraq = 1 / this.bars;
 
@@ -123,6 +165,98 @@ export default class Player {
     this.cancelQueue();
   }
 
+  getTrackState(key) {
+    if (!this.trackState.has(key)) {
+      this.trackState.set(key, {
+        muted: false,
+        solo: false,
+        volume: 1,
+        reverbSend: 0,
+        delaySend: 0,
+      });
+    }
+    return this.trackState.get(key);
+  }
+
+  applyTrackState(key) {
+    const nodes = this.getTrackNodes(key);
+    const state = this.getTrackState(key);
+    nodes.state = state;
+    nodes.dry.gain.value = state.muted ? 0 : state.volume;
+    nodes.reverbSend.gain.value = state.reverbSend;
+    nodes.delaySend.gain.value = state.delaySend;
+  }
+
+  getTrackNodes(key) {
+    if (this.trackNodes.has(key)) {
+      return this.trackNodes.get(key);
+    }
+
+    const dry = this.audioContext.createGain();
+    const reverbSend = this.audioContext.createGain();
+    const delaySend = this.audioContext.createGain();
+
+    dry.gain.value = 1;
+    reverbSend.gain.value = 0;
+    delaySend.gain.value = 0;
+
+    dry.connect(this.equalizer.input);
+    reverbSend.connect(this.echo.input);
+    delaySend.connect(this.delayInput);
+
+    const nodes = { dry, reverbSend, delaySend };
+    this.trackNodes.set(key, nodes);
+    this.applyTrackState(key);
+    return nodes;
+  }
+
+  setMute(key, value) {
+    const state = this.getTrackState(key);
+    state.muted = Boolean(value);
+    this.applyTrackState(key);
+  }
+
+  setSolo(key, value) {
+    const state = this.getTrackState(key);
+    state.solo = Boolean(value);
+  }
+
+  setVolume(key, value) {
+    const state = this.getTrackState(key);
+    state.volume = Math.max(0, Math.min(1, value));
+    this.applyTrackState(key);
+  }
+
+  setReverbSend(key, value) {
+    const state = this.getTrackState(key);
+    state.reverbSend = Math.max(0, Math.min(1, value));
+    this.applyTrackState(key);
+  }
+
+  setDelaySend(key, value) {
+    const state = this.getTrackState(key);
+    state.delaySend = Math.max(0, Math.min(1, value));
+    this.applyTrackState(key);
+  }
+
+  setDelayFeedback(value) {
+    this.delayFeedback.gain.value = Math.max(0, Math.min(0.75, value));
+  }
+
+  setDelayTime(value) {
+    this.delayDivision = Math.max(0.125, Math.min(0.75, value));
+    this.updateDelayTime();
+  }
+
+  updateDelayTime() {
+    const whole = (4 * 60) / (this.bpm || 127);
+    this.delay.delayTime.value = whole * this.delayDivision;
+  }
+
+  getTrackKeys() {
+    return [...this.trackNodes.keys()];
+  }
+
   cancelQueue() {
     this.player.cancelQueue(this.audioContext);
   }
@@ -139,37 +273,60 @@ export default class Player {
     }
   }
 
-  playDrum(when, drum) {
+  playDrum(when, drum, nodes) {
     const [instrument, level] = drum;
     const info = this.player.loader.drumInfo(instrument);
 
     if (window[info.variable]) {
       const pitch = window[info.variable].zones[0].keyRangeLow;
-
-      if (level > 0) {
-        this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitch, 1 / 64, (1 / 127) * level);
-      }
+      const gain = (1 / 127) * level;
+      if (level > 0) this.queueToTrackNodes(window[info.variable], when, pitch, 1 / 64, gain, nodes);
     } else {
       this.cacheInstrument(info);
+    }
+  }
+
+  queueToTrackNodes(font, when, pitch, duration, gain, nodes) {
+    this.player.queueWaveTable(this.audioContext, nodes.dry, font, when, pitch, duration, gain);
+    if (nodes.reverbSend.gain.value > 0) {
+      this.player.queueWaveTable(this.audioContext, nodes.reverbSend, font, when, pitch, duration, gain);
+    }
+    if (nodes.delaySend.gain.value > 0) {
+      this.player.queueWaveTable(this.audioContext, nodes.delaySend, font, when, pitch, duration, gain);
     }
   }
 
   playBeatAt(when, beat, bpm) {
     if (!beat) return;
     const N = (4 * 60) / bpm;
+    const hasSolo = [...this.trackState.values()].some(item => item.solo);
 
-    for (let i = 0; i < beat[0].length; i += 1) {
-      this.playDrum(when, beat[0][i]);
-    }
+    beat.forEach((slot, key) => {
+      const state = this.getTrackState(key);
+      if (state.muted) return;
+      if (hasSolo && !state.solo) return;
 
-    beat[1].forEach(note => {
-      const [instrument, pitches, duration, level] = note;
-      const info = this.player.loader.instrumentInfo(instrument);
+      const nodes = this.getTrackNodes(key);
+      let touched = false;
 
-      if (window[info.variable]) {
-        this.player.queueWaveTable(this.audioContext, this.equalizer.input, window[info.variable], when, pitches, duration * N, (1 / 127) * level);
-      } else {
-        this.cacheInstrument(info);
+      for (let i = 0; i < slot.drums.length; i += 1) {
+        this.playDrum(when, slot.drums[i], nodes);
+        touched = true;
+      }
+
+      slot.notes.forEach(note => {
+        const [instrument, pitches, duration, level] = note;
+        const info = this.player.loader.instrumentInfo(instrument);
+        if (window[info.variable]) {
+          this.queueToTrackNodes(window[info.variable], when, pitches, duration * N, (1 / 127) * level, nodes);
+          touched = true;
+        } else {
+          this.cacheInstrument(info);
+        }
+      });
+
+      if (touched && typeof this.onBeat === 'function') {
+        this.onBeat(key, when);
       }
     });
   }

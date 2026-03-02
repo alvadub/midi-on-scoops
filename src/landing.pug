@@ -1,0 +1,251 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1')
+    title MIDI on SCOOPS
+    link(rel='preconnect' href='https://fonts.googleapis.com')
+    link(rel='preconnect' href='https://fonts.gstatic.com' crossorigin='')
+    link(href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap' rel='stylesheet')
+    style.
+      :root {
+        --bg: #0d1b2a;
+        --surface: #10263f;
+        --accent: #1f5a8a;
+        --highlight: #ff4f3f;
+        --text: #f5f7ff;
+        --muted: #88a2bb;
+        --line: #294560;
+        --font-head: "Space Grotesk", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--font-head);
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 0%, rgba(31, 90, 138, .35), transparent 45%),
+          radial-gradient(circle at 90% 10%, rgba(255, 79, 63, .2), transparent 35%),
+          linear-gradient(180deg, #08111d 0%, var(--bg) 60%);
+      }
+      a { color: inherit; text-decoration: none; }
+      .container { width: min(1100px, 92vw); margin: 0 auto; }
+      .nav {
+        position: sticky; top: 0; z-index: 10;
+        backdrop-filter: blur(8px);
+        background: rgba(8, 17, 29, .72);
+        border-bottom: 1px solid rgba(136, 162, 187, .25);
+      }
+      .nav .container {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 0;
+      }
+      .brand { font-weight: 700; letter-spacing: .06em; }
+      .cta {
+        background: var(--highlight); color: #fff;
+        border-radius: 999px; padding: .6rem 1rem; font-weight: 700;
+      }
+      .hero { padding: 5rem 0 3.5rem; }
+      h1 { margin: 0 0 1rem; font-size: clamp(2rem, 6vw, 4rem); line-height: 1; }
+      .lead { margin: 0 0 1.5rem; max-width: 56ch; color: var(--muted); }
+      .actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+      .ghost {
+        border: 1px solid var(--line);
+        padding: .6rem 1rem;
+        border-radius: 999px;
+      }
+      .section { padding: 2rem 0; }
+      .grid3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+      }
+      .card, pre, iframe {
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(16,38,63,.95), rgba(12,29,48,.95));
+        border-radius: 16px;
+      }
+      .card { padding: 1rem; }
+      .card h3 { margin-top: 0; }
+      .split {
+        display: grid;
+        grid-template-columns: 1.15fr .85fr;
+        gap: 1rem;
+      }
+      pre {
+        margin: 0;
+        padding: 1rem;
+        overflow: auto;
+        font-family: var(--font-mono);
+        font-size: .9rem;
+        color: #d8e8ff;
+      }
+      .explain {
+        margin: 0;
+        padding: 1rem;
+        color: var(--muted);
+      }
+      iframe {
+        width: 100%;
+        min-height: 420px;
+        background: #111;
+      }
+      .examples {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: .75rem;
+      }
+      .example a {
+        display: block;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(16, 38, 63, .85);
+        padding: .8rem;
+        font-family: var(--font-mono);
+      }
+      .footer {
+        padding: 2.5rem 0 3rem;
+        color: var(--muted);
+        text-align: center;
+      }
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity .45s ease, transform .45s ease;
+      }
+      [data-reveal].on { opacity: 1; transform: translateY(0); }
+      @media (max-width: 900px) {
+        .grid3 { grid-template-columns: 1fr; }
+        .split { grid-template-columns: 1fr; }
+        .examples { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    script.
+      window.addEventListener('DOMContentLoaded', () => {
+        const io = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) entry.target.classList.add('on');
+          });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('[data-reveal]').forEach(node => io.observe(node));
+      });
+  body
+    nav.nav
+      .container
+        a.brand(href='landing.html') MIDI ON SCOOPS
+        a.cta(href='index.html?load=playground') ▶ Try Live
+
+    main.container
+      section.hero(data-reveal)
+        h1 Fast DUB Prototyping, Plain Text
+        p.lead Write sections, clips, and arrangements as readable text. Preview in the browser, export with CLI, and iterate without opening a DAW.
+        .actions
+          a.cta(href='index.html?load=billy_jean') ▶ Open Playground
+          a.ghost(href='https://github.com/alvadub/midi-on-scoops' target='_blank' rel='noreferrer') GitHub ↗
+
+      section.section(data-reveal)
+        h2 What Is It?
+        .grid3
+          .card
+            h3 Text DAW
+            p Define tracks, sections, rhythms, and note sequences with compact DUB syntax.
+          .card
+            h3 Browser Playback
+            p Type, press play, hear updates instantly with WebAudioFont.
+          .card
+            h3 CLI to MIDI
+            p Use `dub your-track.dub` to produce standard `.mid` files for any DAW.
+
+      section.section(data-reveal)
+        h2 Syntax Showcase
+        .split
+          pre
+            code
+              span.tok-var-def %bass
+              |  
+              span.tok-note f#2
+              |  
+              span.tok-note c#2
+              |  
+              span.tok-note e2
+              |  
+              span.tok-note f#2
+              br
+              br
+              span.tok-track # synth
+              br
+              |   
+              span.tok-section @INTRO
+              br
+              |     
+              span.tok-channel #94
+              |  
+              span.tok-number 45
+              |  
+              span.tok-pattern ----
+              |  
+              span.tok-pattern ----
+              |  
+              span.tok-pattern ----
+              |  
+              span.tok-pattern ----
+              br
+              |   
+              span.tok-section @A
+              br
+              |     
+              span.tok-channel #94
+              |  
+              span.tok-number 75
+              |  
+              span.tok-pattern x---
+              |  
+              span.tok-pattern --x-
+              |  
+              span.tok-pattern ----
+              |  
+              span.tok-pattern ----
+              |  
+              span.tok-var-ref %bass
+              br
+              br
+              span.tok-arrangement >
+              |  
+              span.tok-section INTRO
+              |  
+              span.tok-repeat *2
+              |  
+              span.tok-section A
+              |  
+              span.tok-repeat *8
+          p.explain
+            | `%var` declares reusable values.
+            br
+            | `# track` starts a lane.
+            br
+            | `@SECTION` structures song parts.
+            br
+            | `#N` clip lines define instrument, level, pattern, and notes.
+            br
+            | `>` sets the arrangement order.
+
+      section.section#try(data-reveal)
+        h2 Mini Playground
+        iframe(src='index.html?load=playground' title='MIDI on SCOOPS Playground')
+
+      section.section(data-reveal)
+        h2 Example Starters
+        .examples
+          .example
+            a(href='index.html?load=billy_jean') billy_jean ▶
+          .example
+            a(href='index.html?load=tetris') tetris ▶
+          .example
+            a(href='index.html?load=playground') playground ▶
+          .example
+            a(href='index.html?load=locks') locks ▶
+
+    footer.footer
+      .container
+        p MIT License · alvadub ·
+          a(href='https://github.com/alvadub/midi-on-scoops' target='_blank' rel='noreferrer') GitHub

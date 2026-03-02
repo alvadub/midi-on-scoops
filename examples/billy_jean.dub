@@ -1,48 +1,28 @@
 ; Billy Jean - Michael Jackson
-@tempo: 117
-@level: 90
-;@bundle
+; tempo: 117
 
-#bassline
+%F a3|c#4|f#4
+%G b3|d#4|g#4
+%A c#4|e4|a4
+%bass f#2 c#2 e2 f#2 e2 c#2 b1 c#2
 
-@instrument: 35
-@level: 127
+# synth
+  @INTRO
+    #94 45 ---- ---- ---- ---- ---- ---- ---- ----
+  @A
+    #94 75 x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
 
-notes: f#2 c#2 e2 f#2 e2 c#2 b1 c#2
-pattern: -------- [xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx] *16
+## bass
+  @INTRO
+    #35 112 ---- ---- ---- ---- ---- ---- ---- ----
+  @A
+    #35 112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %bass %
 
-#synths
+## drums
+  @INTRO
+    #0 50 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- g#2
+    #0 90 ---- x--- ---- x--- ---- x--- ---- x--- d2
+    #0 127 x--- ---- x--- ---- x--- ---- x--- ---- b1
+  @A < INTRO
 
-@instrument: 94
-@channel: 0
-@level: 45
-
-%F: a3|c#4|f#4
-%G: b3|d#4|g#4
-%A: c#4|e4|a4
-%G: b3|d#4|g#4
-
-notes: %F %G %A %G
-pattern: ---------------- -------- [x---][--x-]--[x---][--x-]-- *16
-
-#drums - hat intro
-
-@channel: 9
-@level: 50
-
-notes: g#2
-pattern: [xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx][xx] *2
-
-#drums - kick intro
-@level: 127
-notes: b1
-pattern: x-x-x-x-x-x-x-x- *4
-
-#drums - hat song
-notes: a#4
-pattern: -------- [xx][xx][xx][xx][xx][xx][xx][xx] *16
-
-#drums - snare
-@level: 80
-notes: d2
-pattern: -x-x-x-x-x-x-x-x -x-x-x-x -x-x-x-x-x-x-x-x *16
+> INTRO *2 A *8

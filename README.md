@@ -1,80 +1,87 @@
 # MIDI on SCOOPS
 
-Translate DAW (from GUI-world) to ASCII (to text-world) as "Fast DUB Prototyping" approach.
+Fast DUB prototyping in plain text.
 
-> I spent lots of time using DAWs just for settings up pet projects, sandboxes, laboratories, etc.
->
-> Just having fun and brainstorming is difficult because I don't have enough instruments for playing music.
->
-> Since technology is a good solution because it's already cheap, I would like to have a "tool" for writing DUB in text format.
+Try it live: [m0s.soypache.co](https://m0s.soypache.co)
 
-> TODO: About `FIXME` in [builder.js](bin/builder.js).
+## What It Is
 
-## Libraries
-
-- [scribbletune](https://github.com/walmik/scribbletune) for the rhythm-box, since it's pattern-based and use pure array-values it can be abstracted easily
-- [jsmidgen](https://github.com/dingram/jsmidgen) for creating the MIDI data on NodeJS, support for browsers is [already done by scribbletune](https://scribbletune.com/documentation/browser/browser-clip)
+MIDI on SCOOPS lets you describe tracks, sections, rhythms, and arrangements as readable ASCII.
+You can use the browser playground for instant playback or the CLI to generate `.mid` files.
 
 ## Syntax
 
-Each expression would generate a value or an array of values, sub-expressions are resolved and would produce one or more values, etc.
+```dub
+%bass f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+%chord a3|c#4|f#4
 
-Once declared, all expressions are concatenated into a single array where possible.
+# synth
+  @INTRO
+    #94 45 ---- ---- ---- ----
+  @A
+    #94 75 x--- --x- ---- ---- %chord
 
-    # track 1
+## drums
+  @INTRO
+    #0 50 x-x- x-x- x-x- x-x- f#2
+  @A < INTRO
 
-    @instrument: 1
+> INTRO *2 A *8
+```
 
-    %sequence: x--- *16
-    %range: 10..120 /11
+| Token | Meaning |
+|---|---|
+| `# name` | Start a track |
+| `## name` | Additional track lane/group |
+| `@SEC` | Section label |
+| `@B < A` | Section inheritance |
+| `#N [level] pattern notes` | Clip line: instrument/program + optional velocity + rhythm + notes |
+| `#0 ...` | Drum lane |
+| `%var value` | Variable declaration |
+| `> ...` | Top-level arrangement |
+| `*N` | Repeat N times |
+| `[xx]` | Pattern grouping |
 
-    notes: c3 d3
-    pattern: %sequence
-    accentMap: 5 %range 127x3
+## Chords & Scales
 
-The code above would produce the next scribbletune's settings:
-
-```js
-{
-  notes: ['c3', 'd3'],
-  pattern: 'x---'.repeat(16),
-  accentMap: [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 127, 127, 127],
-}
+```dub
+%bass C2 phrygian..
+%chords C4 major ++ I IV V
 ```
 
 ## Using the CLI
 
-When calling `dub` it will use `timidity` as default for MIDI playback.
+When calling `dub`, it uses `timidity` by default for playback.
 
-- If you specify a file, it will be loaded an played. e.g. `dub sample` (`.dub` will be appended if missing)
-- Opening a directory will watch and play on any changes. e.g. `dub music/src/`
+```sh
+$ dub examples/billy_jean.dub
+$ dub examples/locks.dub
+$ dub examples/x.dub
+```
 
-Use a different player by appending the arguments:
+Use a different player by appending arguments:
 
-    $ dub music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
-    # under the hood it will be called as `fluidsynth music/sf2/PC51f.sf2 path/to/generated_midi_file.mid`
+```sh
+$ dub music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
+```
 
-Try the included examples:
+## Browser Playground
 
-    $ dub examples/billy_jean.dub
-    $ dub examples/locks.dub
-    $ dub examples/x.dub
+Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real time.
 
-### MIDI Drums
+- `Space` or `Cmd/Ctrl+Enter`: play/stop
+- BPM, Bars, and Key controls update the loop
+- Drafts are auto-saved in `localStorage`
 
-To enable the Drumkit you must use the channel 9, e.g.
+## MIDI Drums
 
-    @tempo: 90
+Use drum notes on the drum lane (`#0`):
 
-    # hat
-    @channel: 9
-
-    notes: f#2
-    pattern: xxxx *16
-
-    # snare
-    notes: e2
-    pattern: [---x][-x] *32
+```dub
+# drums
+  @A
+    #0 120 xxxx xxxx f#2
+```
 
 <details>
 <summary>Note/Sound Mappings</summary>
@@ -136,18 +143,9 @@ To enable the Drumkit you must use the channel 9, e.g.
 
 </details>
 
-### MIDI Instruments
+## MIDI Instruments
 
-Those are enabled through the `@instrument` annotation, e.g.
-
-    @tempo: 127
-
-    # skank
-
-    @instrument: 1
-
-    notes: c4|d#4|g4 % % c4|f4|g#4
-    pattern: -x-x *16
+Program numbers map to General MIDI families:
 
 <details>
 <summary>Number/Sound</summary>

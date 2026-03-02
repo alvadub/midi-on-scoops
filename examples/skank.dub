@@ -1,12 +1,7 @@
-@tempo: 127
+; tempo: 127
 
 # skank
+  @A
+    #0 120 -x-x -x-x -x-x -x-x f#3
 
-;@instrument: 1
-@channel: 9
-
-notes: f#3
-pattern: -x-x *16
-
-;notes: c4|d#4|g4 % % c4|f4|g#4
-;pattern: -x-x *16
+> A *8

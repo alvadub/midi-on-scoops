@@ -1,24 +1,15 @@
-@tempo: 90
+; tempo: 90
 
-# hat
-@channel: 9
-;@level: 127
+# drums
+  @A
+    #0 127 [xx][xx]xx[-x] f#2
+    #0 115 [---x][-x] e2
 
-notes: f#2
-pattern: [[xx][xx]]xx[-x] *16
+## skank
+  %Em e4|g4|b4
+  %Eb d#4|g4|a#4
+  @A
+    #1 120 --x- --x- --x- --x- %Em % % %
+    #1 120 --x- --x- --x- --x- %Eb % % %
 
-# snare
-;@level: 115
-notes: e2
-pattern: [---x][-x] *32
-
-# skank
-@instrument: 1
-@channel: 0
-;@level: 120
-
-%Em: e4|g4|b4
-%Eb: d#4|g4|a#4
-
-notes: %Em % % %
-pattern: [--x-][--x-] *32
+> A *8

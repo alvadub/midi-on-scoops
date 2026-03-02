@@ -240,11 +240,8 @@ export function createEditor(initialText, options = {}) {
     activeTokens = [];
   }
 
-  function getScrubTarget(elements) {
-    return elements.find(el => (
-      el.dataset
-      && (typeof el.dataset.number !== 'undefined' || typeof el.dataset.velocity !== 'undefined')
-    ));
+  function getScrubTarget(_elements) {
+    return undefined; // scrub disabled — offset calculation needs rework
   }
 
   function parseScrubRaw(raw) {
@@ -340,17 +337,8 @@ export function createEditor(initialText, options = {}) {
         || token.classList.contains('tok-progression'));
   }
 
-  function flashActiveTokens(lineNumbers, beatIndex) {
-    clearActiveTokenHighlight();
-    lineNumbers.forEach(lineNumber => {
-      const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
-      if (!lineEl) return;
-      const tokenSpans = getPlayableTokenSpans(lineEl);
-      if (!tokenSpans.length) return;
-      const target = tokenSpans[Math.abs(beatIndex) % tokenSpans.length];
-      target.classList.add('tok-active');
-      activeTokens.push(target);
-    });
+  function flashActiveTokens(_lineNumbers, _beatIndex) {
+    // disabled — interacts badly with newline insertion
   }
 
   ta.addEventListener('scroll', () => {

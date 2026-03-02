@@ -33,6 +33,7 @@ function renderToken(token) {
   const cls = classify(token);
   if (!cls) return esc(token);
   if (cls === 'tok-var-ref' && token !== '%') return span(cls, token, { var: token });
+  if (cls === 'tok-var-ref' && token === '%') return span(cls, token, { repeatLast: '1' });
   if (cls === 'tok-channel') return span(cls, token, { instrument: token.slice(1) });
   if (cls === 'tok-mode') return span(cls, token, { mode: token.toLowerCase() });
   if (cls === 'tok-pattern') return span(cls, token, { pattern: '1' });

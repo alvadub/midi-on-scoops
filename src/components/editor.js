@@ -166,6 +166,11 @@ export function createEditor(initialText, options = {}) {
       resolve: options.resolveVar,
       title: value => value,
     },
+    {
+      attr: 'repeatLast',
+      resolve: () => 'Repeats the preceding expression once more',
+      title: () => '%',
+    },
     options.resolveVelocity && {
       attr: 'velocity',
       resolve: options.resolveVelocity,

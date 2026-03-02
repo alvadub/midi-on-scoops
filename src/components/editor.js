@@ -240,8 +240,11 @@ export function createEditor(initialText, options = {}) {
     activeTokens = [];
   }
 
-  function getScrubTarget(_elements) {
-    return undefined; // scrub disabled — offset calculation needs rework
+  function getScrubTarget(elements) {
+    return elements.find(el => (
+      el.dataset
+      && (typeof el.dataset.number !== 'undefined' || typeof el.dataset.velocity !== 'undefined')
+    ));
   }
 
   function parseScrubRaw(raw) {

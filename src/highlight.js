@@ -111,5 +111,5 @@ export function highlight(input) {
       const content = !comment ? rendered : `${rendered}${span('tok-comment', comment)}`;
       return `<span class="hl-line" data-line="${lineNumber}">${content}</span>`;
     })
-    .join('');
+    .join('\n');
 }

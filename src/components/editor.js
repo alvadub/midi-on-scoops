@@ -112,7 +112,10 @@ function charOffsetOfElement(root, target) {
   const range = document.createRange();
   range.selectNodeContents(root);
   range.setEndBefore(target);
-  return range.toString().length;
+  const domOffset = range.toString().length;
+  const lineEl = target.closest('[data-line]');
+  const lineNumber = lineEl ? parseInt(lineEl.dataset.line, 10) : 0;
+  return domOffset + (Number.isNaN(lineNumber) ? 0 : lineNumber);
 }
 
 export function createEditor(initialText, options = {}) {

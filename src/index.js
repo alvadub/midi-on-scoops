@@ -551,6 +551,7 @@ function labelCursorToken(token) {
     'tok-section': 'Section',
     'tok-progression': 'Progression',
     'tok-operator': 'Operator',
+    'tok-comment': 'Comment',
     'tok-unknown': 'Token',
   };
   const kind = map[token.type] || 'Token';

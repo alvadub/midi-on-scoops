@@ -150,6 +150,14 @@ function charOffsetOfElement(root, target, sourceText = '') {
 function tokenAtCursor(text, cursorPos) {
   const src = String(text || '');
   const pos = Math.max(0, Math.min(src.length, cursorPos || 0));
+  const lineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1;
+  let lineEnd = src.indexOf('\n', pos);
+  if (lineEnd < 0) lineEnd = src.length;
+  const commentPos = src.indexOf(';', lineStart);
+  if (commentPos >= 0 && commentPos < lineEnd && pos >= commentPos) {
+    const value = src.slice(commentPos, lineEnd);
+    return { type: 'tok-comment', value, start: commentPos, end: lineEnd };
+  }
   let start = pos;
   let end = pos;
   while (start > 0 && !/\s/.test(src[start - 1])) start -= 1;

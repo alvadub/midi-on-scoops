@@ -40,7 +40,13 @@ function renderToken(token) {
   if (cls === 'tok-var-ref' && token === '%') return span(cls, token, { repeatLast: '1' });
   if (cls === 'tok-channel') return span(cls, token, { instrument: token.slice(1) });
   if (cls === 'tok-mode') return span(cls, token, { mode: token.toLowerCase() });
-  if (cls === 'tok-pattern') return span(cls, token, { pattern: token });
+  if (cls === 'tok-pattern') {
+    const chars = token
+      .split('')
+      .map((ch, idx) => `<span class="tok-pattern-step" data-pattern-step="${idx}" data-pattern-char="${esc(ch)}">${esc(ch)}</span>`)
+      .join('');
+    return `<span class="${cls}" data-pattern="${esc(token)}">${chars}</span>`;
+  }
   if (cls === 'tok-note') return span(cls, token, { note: token });
   if (cls === 'tok-chord') return span(cls, token, { chord: token });
   if (cls === 'tok-number') return span(cls, token, { number: token });
@@ -79,9 +85,9 @@ function renderBase(base) {
         inherit: '1',
         inheritSource: sourceName,
         inheritTarget: targetToken,
-      })}${esc(rightGap)}${esc(targetToken)}${renderTokens(rest.replace(/</g, ' < '))}`;
+      })}${esc(rightGap)}${esc(targetToken)}${renderTokens(rest)}`;
     }
-    return renderTokens(base.replace(/</g, ' < '));
+    return renderTokens(base);
   }
   if (/^\s*>/.test(base)) {
     const indent = esc(base.match(/^\s*/)[0]);
@@ -125,5 +131,5 @@ export function highlight(input) {
       const content = !comment ? rendered : `${rendered}${span('tok-comment', comment)}`;
       return `<span class="hl-line" data-line="${lineNumber}">${content}</span>`;
     })
-    .join('\n');
+    .join('');
 }

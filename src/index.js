@@ -16,6 +16,7 @@ let editorApi = null;
 let mixerApi = null;
 let lastContext = null;
 let trackLineMap = new Map();
+let lastFlashedBeatIndex = -1;
 
 const FEATURE_FLAGS = {
   blockEval: true,
@@ -632,6 +633,10 @@ function createDOM(initialText, initialPreset) {
     setTimeout(() => {
       mixerApi.flashVU(key);
       if (!FEATURE_FLAGS.activeTokenFlash || !editorApi) return;
+      if (lastFlashedBeatIndex !== beatIndex) {
+        editorApi.clearActiveTokenHighlight();
+        lastFlashedBeatIndex = beatIndex;
+      }
       const lines = trackLineMap.get(key);
       if (!lines || !lines.length) return;
       editorApi.flashActiveTokens(lines, beatIndex);
@@ -709,6 +714,7 @@ function stop() {
   if (editorApi) {
     editorApi.clearActiveTokenHighlight();
   }
+  lastFlashedBeatIndex = -1;
   updatePlayButton();
   setReadyStatus();
 }

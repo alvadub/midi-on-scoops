@@ -280,7 +280,7 @@ export function createEditor(initialText, options = {}) {
   ].filter(Boolean);
 
   function sync() {
-    pre.innerHTML = `${highlight(ta.value)}\n`;
+    pre.innerHTML = highlight(ta.value);
     const lineCount = String(ta.value).split(/\r?\n/).length;
     gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
       `<span class="editor-ln">${index + 1}</span>`
@@ -295,6 +295,7 @@ export function createEditor(initialText, options = {}) {
 
   function clearScrubCursor() {
     wrap.classList.remove('scrub-hover');
+    wrap.classList.remove('scrub-active');
   }
 
   function clearActiveTokenHighlight() {
@@ -515,27 +516,58 @@ export function createEditor(initialText, options = {}) {
     }
   }
 
-  function getPlayableTokenSpans(lineEl) {
+  function getNoteLikeTokenSpans(lineEl) {
     return [...lineEl.querySelectorAll('span')]
-      .filter(token => token.classList.contains('tok-pattern')
-        || token.classList.contains('tok-note')
-        || token.classList.contains('tok-chord')
-        || token.classList.contains('tok-var-ref')
-        || token.classList.contains('tok-mode')
-        || token.classList.contains('tok-progression'));
+      .filter(token => {
+        const ds = token.dataset || {};
+        return token.classList.contains('tok-note')
+          || token.classList.contains('tok-chord')
+          || token.classList.contains('tok-var-ref')
+          || token.classList.contains('tok-mode')
+          || token.classList.contains('tok-progression')
+          || typeof ds.repeatLast !== 'undefined'
+          || typeof ds.var !== 'undefined';
+      });
   }
 
   function flashActiveTokens(lineNumbers, beatIndex) {
-    clearActiveTokenHighlight();
     if (!Array.isArray(lineNumbers) || !lineNumbers.length) return;
-
     const tokenIndex = Number.isInteger(beatIndex) ? Math.max(0, beatIndex) : 0;
+
     lineNumbers.forEach(lineNumber => {
       const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
       if (!lineEl) return;
-      const playable = getPlayableTokenSpans(lineEl);
-      if (!playable.length) return;
-      const token = playable[tokenIndex % playable.length];
+      const patternSteps = [...lineEl.querySelectorAll('.tok-pattern-step')];
+      if (patternSteps.length) {
+        const stepIndex = tokenIndex % patternSteps.length;
+        const step = patternSteps[stepIndex];
+        if (step) {
+          step.classList.add('tok-active');
+          activeTokens.push(step);
+        }
+
+        const ch = (step && step.dataset ? step.dataset.patternChar : '').toLowerCase();
+        if (ch === 'x') {
+          const noteTokens = getNoteLikeTokenSpans(lineEl);
+          if (noteTokens.length) {
+            let pulseCount = 0;
+            for (let i = 0; i <= stepIndex; i += 1) {
+              const ci = (patternSteps[i]?.dataset?.patternChar || '').toLowerCase();
+              if (ci === 'x') pulseCount += 1;
+            }
+            const noteToken = noteTokens[(pulseCount - 1) % noteTokens.length];
+            if (noteToken) {
+              noteToken.classList.add('tok-active');
+              activeTokens.push(noteToken);
+            }
+          }
+        }
+        return;
+      }
+
+      const noteTokens = getNoteLikeTokenSpans(lineEl);
+      if (!noteTokens.length) return;
+      const token = noteTokens[tokenIndex % noteTokens.length];
       if (!token) return;
       token.classList.add('tok-active');
       activeTokens.push(token);
@@ -579,10 +611,9 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('mousemove', e => {
-    if (scrubState) return;
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
     const scrubTarget = getScrubTarget(elements);
-    wrap.classList.toggle('scrub-hover', Boolean(scrubTarget));
+    wrap.classList.toggle('scrub-hover', Boolean(scrubTarget) && !scrubState);
     const found = tooltipHandlers
       .map(handler => {
         const hit = elements.find(el => el.dataset && el.dataset[handler.attr]);

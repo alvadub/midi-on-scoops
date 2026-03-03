@@ -156,8 +156,13 @@ select {
 }
 
 .hl-line {
-  display: inline-block;
+  display: block;
   width: 100%;
+}
+
+.hl-line:empty::before {
+  content: '\00a0';
+  visibility: hidden;
 }
 
 #statusbar {
@@ -372,6 +377,9 @@ select {
 .tok-var-def { color: #ffd166; }
 .tok-var-ref { color: #ffbf5a; }
 .tok-pattern { color: #c9a2ff; }
+.tok-pattern-step {
+  display: inline-block;
+}
 .tok-repeat { color: #d8b7ff; }
 .tok-note { color: #8ee7b0; }
 .tok-chord { color: #b7f2cd; }

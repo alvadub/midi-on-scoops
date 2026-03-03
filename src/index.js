@@ -368,7 +368,7 @@ function syncCurrentSectionUI() {
 }
 
 function setCurrentSectionIndicator(name) {
-  const el = document.getElementById('section-indicator');
+  const el = document.getElementById('section-indicator-label');
   if (!el) return;
   el.textContent = name ? `Section: ${name}` : 'Section: —';
 }
@@ -547,15 +547,19 @@ function labelCursorToken(token) {
     'tok-mode': 'Mode',
     'tok-channel': 'Channel',
     'tok-number': 'Number',
+    'tok-level': 'Level',
     'tok-inherit': 'Inherit',
     'tok-section': 'Section',
     'tok-progression': 'Progression',
     'tok-operator': 'Operator',
     'tok-comment': 'Comment',
+    'tok-track': 'Track',
+    'tok-subtrack': 'Subtrack',
     'tok-unknown': 'Token',
   };
   const kind = map[token.type] || 'Token';
-  return `Cursor: ${kind} ${token.value}`;
+  if (token.type !== 'tok-unknown') return `Cursor: ${kind}`;
+  return `Cursor: ${token.value}`;
 }
 
 function setCursorTokenIndicator(token) {
@@ -668,6 +672,8 @@ function createDOM(initialText, initialPreset) {
 
   const toolbar = document.createElement('div');
   toolbar.id = 'toolbar';
+  const toolbarControls = document.createElement('div');
+  toolbarControls.id = 'toolbar-controls';
 
   const aboutLink = document.createElement('a');
   aboutLink.id = 'about-link';
@@ -718,12 +724,11 @@ function createDOM(initialText, initialPreset) {
   });
    presetLabel.appendChild(presetSelect);
 
-    toolbar.appendChild(aboutLink);
-    toolbar.appendChild(playBtn);
-    toolbar.appendChild(stopBtn);
-    toolbar.appendChild(mixerBtn);
-    toolbar.appendChild(midiBtn);
-    toolbar.appendChild(presetLabel);
+    toolbarControls.appendChild(aboutLink);
+    toolbarControls.appendChild(playBtn);
+    toolbarControls.appendChild(stopBtn);
+    toolbarControls.appendChild(mixerBtn);
+    toolbarControls.appendChild(midiBtn);
 
   const beatIndicatorBar = document.createElement('div');
   beatIndicatorBar.id = 'beat-indicator-bar';
@@ -741,9 +746,15 @@ function createDOM(initialText, initialPreset) {
     resolveVelocity: resolveVelocityTooltip,
     resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
-    resolveInstrument: resolveInstrumentTooltip,
+   resolveInstrument: resolveInstrumentTooltip,
     suggestions: FEATURE_FLAGS.autocomplete,
     onCursorToken: setCursorTokenIndicator,
+    getSuggestDockEl: () => document.getElementById('context-tool'),
+    onSuggestVisibilityChange: isOpen => {
+      const el = document.getElementById('context-tool');
+      if (!el) return;
+      el.classList.toggle('context-open', Boolean(isOpen));
+    },
     onArrangementSectionClick: queueSectionLaunch,
     onInput: () => {
       const presetSelect = document.getElementById('preset-select');
@@ -782,16 +793,31 @@ function createDOM(initialText, initialPreset) {
   statusMessage.id = 'status-message';
   statusMessage.textContent = 'Ready';
 
+  const contextTool = document.createElement('div');
+  contextTool.id = 'context-tool';
+  const topBadges = document.createElement('div');
+  topBadges.id = 'top-badges';
+
   const sectionIndicator = document.createElement('span');
   sectionIndicator.id = 'section-indicator';
-  sectionIndicator.textContent = 'Section: —';
+  const sectionIndicatorLabel = document.createElement('span');
+  sectionIndicatorLabel.id = 'section-indicator-label';
+  sectionIndicatorLabel.textContent = 'Section: —';
+  sectionIndicator.appendChild(sectionIndicatorLabel);
   const cursorTokenIndicator = document.createElement('span');
   cursorTokenIndicator.id = 'cursor-token-indicator';
   cursorTokenIndicator.textContent = 'Cursor: —';
+  const tokenBadges = document.createElement('div');
+  tokenBadges.id = 'token-badges';
+  tokenBadges.appendChild(cursorTokenIndicator);
+  tokenBadges.appendChild(sectionIndicator);
+  topBadges.appendChild(contextTool);
+  topBadges.appendChild(tokenBadges);
+  toolbar.appendChild(topBadges);
+  toolbar.appendChild(toolbarControls);
 
+  statusbar.appendChild(presetLabel);
   statusbar.appendChild(beatDots);
-  statusbar.appendChild(sectionIndicator);
-  statusbar.appendChild(cursorTokenIndicator);
   statusbar.appendChild(statusMessage);
 
   const workspace = document.createElement('div');

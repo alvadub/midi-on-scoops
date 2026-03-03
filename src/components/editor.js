@@ -27,26 +27,37 @@ function buildStaffSVG(notes, mode = 'chord') {
   if (sorted.length === 0) return '';
 
   const W = 200;
-  const H = 90;
+  const H = 130;
+  const CENTER_Y = 66;
+  const clefByRange = (() => {
+    const avg = sorted.reduce((sum, n) => sum + n.pos, 0) / sorted.length;
+    if (avg <= -6) return { symbol: '𝄢', basePos: -8, size: 48, y: CENTER_Y + 16 }; // F-clef
+    if (avg >= 2) return { symbol: '𝄞', basePos: 4, size: 52, y: CENTER_Y + 10 }; // G-clef
+    return { symbol: '𝄡', basePos: -2, size: 46, y: CENTER_Y + 14 }; // C-clef
+  })();
+  const toY = absPos => CENTER_Y - (absPos - clefByRange.basePos) * 5;
   let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
 
   svg += '<style>.staff-line,.ledger{stroke:#fff;stroke-width:1}</style>';
   for (let i = 0; i < 5; i += 1) {
-    const y = 20 + i * 10;
+    const y = CENTER_Y - 20 + i * 10;
     svg += `<line class="staff-line" x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
   }
-  svg += '<text x="8" y="50" fill="#fff" font-size="52" font-family="serif">𝄞</text>';
+  svg += `<text x="8" y="${clefByRange.y}" fill="#fff" font-size="${clefByRange.size}" font-family="serif">${clefByRange.symbol}</text>`;
 
   const isScale = mode === 'scale';
+  const isSingle = mode === 'single';
   const noteCount = sorted.length;
   let noteX;
   if (isScale) {
-    const step = noteCount > 1 ? 154 / (noteCount - 1) : 0;
+    const step = noteCount > 1 ? 148 / (noteCount - 1) : 0;
     sorted.forEach((n, i) => {
-      n.x = 36 + i * step;
+      n.x = 42 + i * step;
     });
+  } else if (isSingle) {
+    sorted[0].x = 100;
   } else {
-    noteX = 90;
+    noteX = 95;
     for (let i = 0; i < sorted.length; i += 1) {
       const curr = sorted[i];
       const prev = i > 0 ? sorted[i - 1] : null;
@@ -58,19 +69,22 @@ function buildStaffSVG(notes, mode = 'chord') {
   }
 
   sorted.forEach(n => {
-    const y = posToY(n.pos);
+    const y = toY(n.pos);
+    const localPos = n.pos - clefByRange.basePos;
     const m = n.note.match(/^([a-gA-G])([#b]?)(\d+)$/);
     const accidental = m ? m[2] : '';
-    for (let p = -2; p >= n.pos; p -= 2) {
-      const ly = posToY(p);
+    for (let p = 6; p <= localPos; p += 2) {
+      const ly = CENTER_Y - p * 5;
       svg += `<line class="ledger" x1="${n.x - 9}" y1="${ly}" x2="${n.x + 9}" y2="${ly}"/>`;
     }
-    for (let p = 10; p <= n.pos; p += 2) {
-      const ly = posToY(p);
+    for (let p = -6; p >= localPos; p -= 2) {
+      const ly = CENTER_Y - p * 5;
       svg += `<line class="ledger" x1="${n.x - 9}" y1="${ly}" x2="${n.x + 9}" y2="${ly}"/>`;
     }
     if (isScale) {
       svg += `<ellipse cx="${n.x}" cy="${y}" rx="5" ry="4" fill="none" stroke="#fff" stroke-width="1.2" transform="rotate(-15 ${n.x} ${y})"/>`;
+    } else if (isSingle) {
+      svg += `<ellipse cx="${n.x}" cy="${y}" rx="5" ry="4" fill="#fff" transform="rotate(-15 ${n.x} ${y})"/>`;
     } else {
       svg += `<ellipse cx="${n.x}" cy="${y}" rx="5" ry="4" fill="#fff" transform="rotate(-15 ${n.x} ${y})"/>`;
     }
@@ -81,16 +95,16 @@ function buildStaffSVG(notes, mode = 'chord') {
     }
   });
 
-  if (!isScale && sorted.length > 0) {
-    const lowestPos = sorted[0].pos;
-    const highestPos = sorted[sorted.length - 1].pos;
-    let stemDir = lowestPos <= 3 ? 'up' : 'down';
+  if (!isScale && !isSingle && sorted.length > 0) {
+    const lowestPos = sorted[0].pos - clefByRange.basePos;
+    const highestPos = sorted[sorted.length - 1].pos - clefByRange.basePos;
+    let stemDir = lowestPos <= 0 ? 'up' : 'down';
     if (stemDir === 'up') {
-      const highY = posToY(highestPos);
+      const highY = CENTER_Y - highestPos * 5;
       const highX = sorted[sorted.length - 1].x;
       svg += `<line x1="${highX + 5}" y1="${highY}" x2="${highX + 5}" y2="${highY - 28}" stroke="#fff" stroke-width="1.2"/>`;
     } else {
-      const lowY = posToY(lowestPos);
+      const lowY = CENTER_Y - lowestPos * 5;
       const lowX = sorted[0].x;
       svg += `<line x1="${lowX - 5}" y1="${lowY}" x2="${lowX - 5}" y2="${lowY + 28}" stroke="#fff" stroke-width="1.2"/>`;
     }
@@ -117,11 +131,57 @@ function buildPatternPreviewMarkup(pattern) {
   return `<div class="pattern-preview" aria-label="Pattern preview"><div class="pp-grid">${cells}</div></div>`;
 }
 
-function clampTooltip(x, y, width = 320) {
-  const maxX = Math.max(8, window.innerWidth - width - 8);
-  const left = Math.min(x + 12, maxX);
-  const top = Math.min(y + 12, window.innerHeight - 170);
-  return { left, top };
+function describePattern(pattern) {
+  const symbols = String(pattern || '').split('');
+  if (!symbols.length) return 'Empty pattern';
+  const pulseIdx = [];
+  let holds = 0;
+  let rests = 0;
+  symbols.forEach((ch, i) => {
+    const low = ch.toLowerCase();
+    if (low === 'x') pulseIdx.push(i);
+    else if (ch === '-') holds += 1;
+    else if (ch === '_') rests += 1;
+  });
+
+  if (pulseIdx.length === 0) {
+    if (rests === symbols.length || holds === 0) return `All silence (${symbols.length} steps)`;
+    return `No pulses (${holds} holds, ${rests} rests)`;
+  }
+
+  const parts = [`${pulseIdx.length} pulse${pulseIdx.length !== 1 ? 's' : ''} in ${symbols.length} steps`];
+  if (pulseIdx.length > 1) {
+    const gaps = pulseIdx.slice(1).map((idx, i) => idx - pulseIdx[i]);
+    const even = gaps.every(g => g === gaps[0]);
+    if (even) {
+      const n = gaps[0];
+      if (n === 2) parts.push('in 2nds');
+      else if (n === 3) parts.push('in 3rds');
+      else if (n === 4) parts.push('in 4ths');
+      else parts.push(`every ${n} steps`);
+    }
+  }
+  if (rests > 0) parts.push(`${rests} rests`);
+  return parts.join(' · ');
+}
+
+function placeTooltip(tipEl, x, y) {
+  const margin = 8;
+  const offset = 12;
+  tipEl.hidden = false;
+  tipEl.style.left = '-9999px';
+  tipEl.style.top = '-9999px';
+  const rect = tipEl.getBoundingClientRect();
+  const width = Math.min(rect.width || 320, Math.max(0, window.innerWidth - margin * 2));
+  const height = Math.min(rect.height || 180, Math.max(0, window.innerHeight - margin * 2));
+  let left = x + offset;
+  let top = y + offset;
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - margin - width;
+  if (top + height > window.innerHeight - margin) top = window.innerHeight - margin - height;
+  left = Math.max(margin, left);
+  top = Math.max(margin, top);
+  tipEl.style.left = `${left}px`;
+  tipEl.style.top = `${top}px`;
 }
 
 function charOffsetOfElement(root, target, sourceText = '') {
@@ -153,10 +213,27 @@ function tokenAtCursor(text, cursorPos) {
   const lineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1;
   let lineEnd = src.indexOf('\n', pos);
   if (lineEnd < 0) lineEnd = src.length;
+  const lineText = src.slice(lineStart, lineEnd);
   const commentPos = src.indexOf(';', lineStart);
   if (commentPos >= 0 && commentPos < lineEnd && pos >= commentPos) {
     const value = src.slice(commentPos, lineEnd);
     return { type: 'tok-comment', value, start: commentPos, end: lineEnd };
+  }
+  const headerMatch = lineText.match(/^(\s*)(#{1,2})\s+(.+)$/);
+  if (headerMatch) {
+    const hash = headerMatch[2];
+    const body = headerMatch[3];
+    const hashStart = lineStart + headerMatch[1].length;
+    const bodyStart = lineStart + headerMatch[1].length + hash.length + 1;
+    const bodyEnd = bodyStart + body.length;
+    if (pos >= hashStart && pos <= bodyEnd) {
+      return {
+        type: hash === '##' ? 'tok-subtrack' : 'tok-track',
+        value: body,
+        start: hashStart,
+        end: bodyEnd,
+      };
+    }
   }
   let start = pos;
   let end = pos;
@@ -193,11 +270,18 @@ export function createEditor(initialText, options = {}) {
   tip.id = 'var-tooltip';
   tip.hidden = true;
   tip.innerHTML = '<strong></strong><span class="tooltip-resolved"></span><div class="tooltip-staff"></div>';
-  const suggestList = document.createElement('ul');
-  suggestList.id = 'suggest-list';
-  suggestList.hidden = true;
-  suggestList.setAttribute('role', 'listbox');
-  suggestList.setAttribute('aria-label', 'Completions');
+  const suggestInput = document.createElement('input');
+  suggestInput.id = 'suggest-input';
+  suggestInput.hidden = true;
+  suggestInput.type = 'text';
+  suggestInput.autocomplete = 'off';
+  suggestInput.spellcheck = false;
+  suggestInput.setAttribute('aria-label', 'Completions');
+  const suggestMenu = document.createElement('ul');
+  suggestMenu.id = 'suggest-menu';
+  suggestMenu.hidden = true;
+  suggestMenu.setAttribute('role', 'listbox');
+  suggestMenu.setAttribute('aria-label', 'Completions');
   const tipTitle = tip.querySelector('strong');
   const tipBody = tip.querySelector('.tooltip-resolved');
   const tipStaff = tip.querySelector('.tooltip-staff');
@@ -207,9 +291,11 @@ export function createEditor(initialText, options = {}) {
   let queuedArrangementOrder = null;
   let suggestState = {
     open: false,
+    allItems: [],
     items: [],
     activeIndex: 0,
     token: null,
+    dismissedToken: null,
   };
   const SUGGESTIONS_ENABLED = options.suggestions !== false;
   const MODE_CANDIDATES = ['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'];
@@ -218,6 +304,18 @@ export function createEditor(initialText, options = {}) {
       [3, 4, 5].map(octave => `${note}${accidental}${octave}`)
     ))
   ));
+  const INSTRUMENT_CANDIDATES = [
+    ...Array.from({ length: 128 }, (_, i) => `#${i}`),
+    ...Array.from({ length: 128 }, (_, i) => `#${2000 + i}`),
+  ];
+  const INSTRUMENT_OPTIONS = INSTRUMENT_CANDIDATES.map(value => {
+    const raw = value.slice(1);
+    const title = options.resolveInstrument ? options.resolveInstrument(raw) : null;
+    return {
+      value,
+      label: title ? `${title} (${value})` : value,
+    };
+  });
   const ALL_CANDIDATES = [...NOTE_CANDIDATES, ...MODE_CANDIDATES];
 
   const tooltipHandlers = [
@@ -298,7 +396,7 @@ export function createEditor(initialText, options = {}) {
     },
     {
       attr: 'pattern',
-      resolve: () => 'x = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide',
+      resolve: value => `${describePattern(value)}\nx = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide`,
       title: () => 'Rhythm pattern',
       visual: value => buildPatternPreviewMarkup(value),
     },
@@ -333,6 +431,11 @@ export function createEditor(initialText, options = {}) {
     if (!options.onCursorToken) return;
     const token = tokenAtCursor(ta.value, ta.selectionStart);
     options.onCursorToken(token);
+  }
+
+  function emitScrubToken(value) {
+    if (!options.onCursorToken) return;
+    options.onCursorToken({ type: 'tok-level', value: String(value) });
   }
 
   function setActiveSection(sectionName, occurrence = null) {
@@ -374,23 +477,54 @@ export function createEditor(initialText, options = {}) {
 
   function getPartialToken() {
     const pos = ta.selectionStart;
-    const before = ta.value.slice(0, pos);
-    const match = before.match(/(\S+)$/);
-    if (!match) return null;
+    const src = ta.value;
+    const lineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1;
+    const lineEndRaw = src.indexOf('\n', pos);
+    const lineEnd = lineEndRaw < 0 ? src.length : lineEndRaw;
+    const commentPos = src.indexOf(';', lineStart);
+    if (commentPos >= 0 && commentPos < lineEnd && pos >= commentPos) return null;
+    let tokenStart = pos;
+    let tokenEnd = pos;
+
+    while (tokenStart > 0 && !/\s/.test(src[tokenStart - 1])) tokenStart -= 1;
+    while (tokenEnd < src.length && !/\s/.test(src[tokenEnd])) tokenEnd += 1;
+    if (tokenStart === tokenEnd) return null;
+
+    const tokenText = src.slice(tokenStart, tokenEnd);
+    const relPos = Math.max(0, pos - tokenStart);
+    const relLeft = tokenText.lastIndexOf('|', Math.max(0, relPos - 1));
+    const relRightRaw = tokenText.indexOf('|', relPos);
+    const relRight = relRightRaw < 0 ? tokenText.length : relRightRaw;
+    const partStart = relLeft + 1;
+    const partEnd = relRight;
+
+    if (partStart >= partEnd) return null;
+    const partText = tokenText.slice(partStart, partEnd);
+    if (!partText) return null;
+
     return {
-      text: match[1],
-      start: pos - match[1].length,
-      end: pos,
+      text: partText,
+      start: tokenStart + partStart,
+      end: tokenStart + partEnd,
     };
   }
 
   function getSuggestions(partial) {
     if (!partial || !partial.text || partial.text.length < 1) return [];
-    if (classify(partial.text)) return [];
-    const low = partial.text.toLowerCase();
-    return ALL_CANDIDATES
-      .filter(candidate => candidate.toLowerCase().startsWith(low))
-      .slice(0, 8);
+    const lineStart = ta.value.lastIndexOf('\n', Math.max(0, partial.start - 1)) + 1;
+    const lineEndRaw = ta.value.indexOf('\n', partial.start);
+    const lineEnd = lineEndRaw < 0 ? ta.value.length : lineEndRaw;
+    const line = ta.value.slice(lineStart, lineEnd).trimStart();
+    if (/^#{1,2}\s+/.test(line)) return [];
+    if (partial.text.startsWith('@')) return [];
+    const before = ta.value.slice(0, partial.start).trimEnd();
+    if (before.endsWith('<')) return [];
+    const cls = classify(partial.text);
+    if (cls === 'tok-channel' || partial.text.startsWith('#')) {
+      return INSTRUMENT_OPTIONS;
+    }
+    if (cls && cls !== 'tok-note' && cls !== 'tok-mode') return [];
+    return ALL_CANDIDATES.map(value => ({ value, label: value }));
   }
 
   function getCaretCoords() {
@@ -428,21 +562,74 @@ export function createEditor(initialText, options = {}) {
     return { top, left };
   }
 
+  function resizeSuggestInput() {
+    const text = (suggestInput.value || suggestInput.placeholder || '').trim();
+    const widthCh = Math.max(6, Math.min(28, text.length + 2));
+    suggestInput.style.width = `${widthCh}ch`;
+  }
+
+  function getDockEl() {
+    return options.getSuggestDockEl ? options.getSuggestDockEl() : null;
+  }
+
+  function setContextOpen(open) {
+    if (options.onSuggestVisibilityChange) options.onSuggestVisibilityChange(open);
+  }
+
   function hideSuggest() {
     suggestState.open = false;
+    suggestState.allItems = [];
     suggestState.items = [];
     suggestState.activeIndex = 0;
     suggestState.token = null;
-    suggestList.hidden = true;
-    suggestList.innerHTML = '';
+    suggestInput.hidden = true;
+    suggestInput.value = '';
+    suggestInput.placeholder = '';
+    suggestInput.style.width = '';
+    suggestMenu.hidden = true;
+    suggestMenu.innerHTML = '';
+    setContextOpen(false);
+  }
+
+  function setSuggestMenuOpen(open) {
+    suggestMenu.hidden = !open;
+  }
+
+  function isSameSuggestToken(a, b) {
+    return Boolean(
+      a && b
+      && a.start === b.start
+      && a.end === b.end
+      && a.text === b.text
+    );
   }
 
   function renderSuggestItems() {
-    suggestList.innerHTML = suggestState.items
-      .map((item, index) => (
-        `<li role="option" data-value="${item}" data-active="${index === suggestState.activeIndex ? '1' : '0'}">${item}</li>`
+    if (!suggestState.items.length) {
+      suggestMenu.innerHTML = '<li class="suggest-empty" aria-disabled="true">No matches. Keep typing or press Esc.</li>';
+      return;
+    }
+    suggestMenu.innerHTML = suggestState.items
+      .map((item, idx) => (
+        `<li role="option" data-value="${item.value}" data-active="${idx === suggestState.activeIndex ? '1' : '0'}">${item.label || item.value}</li>`
       ))
       .join('');
+  }
+
+  function applySuggestFilter(rawQuery) {
+    const query = String(rawQuery || '').trim().toLowerCase();
+    if (!query) {
+      suggestState.items = suggestState.allItems.slice();
+      suggestState.activeIndex = 0;
+      renderSuggestItems();
+      return;
+    }
+    suggestState.items = suggestState.allItems.filter(item => (
+      item.value.toLowerCase().includes(query)
+      || String(item.label || '').toLowerCase().includes(query)
+    ));
+    suggestState.activeIndex = 0;
+    renderSuggestItems();
   }
 
   function showSuggest(items, token) {
@@ -450,22 +637,41 @@ export function createEditor(initialText, options = {}) {
       hideSuggest();
       return;
     }
-    const coords = getCaretCoords();
-    const lineHeight = parseFloat(window.getComputedStyle(ta).lineHeight) || 20;
+    const dockEl = options.getSuggestDockEl ? options.getSuggestDockEl() : null;
+    if (!dockEl) {
+      hideSuggest();
+      return;
+    }
+    if (suggestInput.parentElement !== dockEl) dockEl.appendChild(suggestInput);
+    if (suggestMenu.parentElement !== dockEl) dockEl.appendChild(suggestMenu);
     suggestState.open = true;
-    suggestState.items = items;
+    suggestState.allItems = items;
+    suggestState.items = items.slice();
     suggestState.activeIndex = 0;
     suggestState.token = token;
-    renderSuggestItems();
-    suggestList.style.left = `${Math.max(0, coords.left)}px`;
-    suggestList.style.top = `${Math.max(0, coords.top + lineHeight)}px`;
-    suggestList.hidden = false;
+    const initialQuery = '';
+    suggestInput.value = initialQuery;
+    suggestInput.placeholder = token.text || '';
+    applySuggestFilter(initialQuery);
+    resizeSuggestInput();
+    suggestInput.hidden = false;
+    setSuggestMenuOpen(document.activeElement === suggestInput);
+    setContextOpen(true);
   }
 
   function updateSuggestions() {
     if (!SUGGESTIONS_ENABLED) return;
+    if (scrubState) {
+      hideSuggest();
+      return;
+    }
     const partial = getPartialToken();
     if (!partial) {
+      suggestState.dismissedToken = null;
+      hideSuggest();
+      return;
+    }
+    if (isSameSuggestToken(partial, suggestState.dismissedToken)) {
       hideSuggest();
       return;
     }
@@ -477,13 +683,6 @@ export function createEditor(initialText, options = {}) {
     showSuggest(items, partial);
   }
 
-  function moveSuggest(delta) {
-    if (!suggestState.open || !suggestState.items.length) return;
-    const size = suggestState.items.length;
-    suggestState.activeIndex = (suggestState.activeIndex + delta + size) % size;
-    renderSuggestItems();
-  }
-
   function acceptSuggestion(value) {
     if (!suggestState.token) return;
     const { start, end } = suggestState.token;
@@ -491,8 +690,39 @@ export function createEditor(initialText, options = {}) {
     const nextPos = start + value.length;
     ta.selectionStart = nextPos;
     ta.selectionEnd = nextPos;
+    suggestState.dismissedToken = null;
     ta.dispatchEvent(new Event('input', { bubbles: true }));
     hideSuggest();
+  }
+
+  function moveSuggest(delta) {
+    if (!suggestState.open || !suggestState.items.length) return;
+    const size = suggestState.items.length;
+    suggestState.activeIndex = (suggestState.activeIndex + delta + size) % size;
+    renderSuggestItems();
+  }
+
+  function currentSuggestValue() {
+    if (!suggestState.items.length) return '';
+    const active = suggestState.items[suggestState.activeIndex];
+    return active ? active.value : '';
+  }
+
+  function focusEditor() {
+    ta.focus({ preventScroll: true });
+    setTimeout(() => ta.focus({ preventScroll: true }), 0);
+  }
+
+  function resolveValidSuggestion(raw) {
+    const text = String(raw || '').trim();
+    if (!text || !suggestState.allItems.length) return '';
+    const exact = suggestState.allItems.find(item => item.value === text);
+    if (exact) return exact.value;
+    const exactCI = suggestState.allItems.find(item => item.value.toLowerCase() === text.toLowerCase());
+    if (exactCI) return exactCI.value;
+    const labelExact = suggestState.allItems.find(item => String(item.label || '') === text);
+    if (labelExact) return labelExact.value;
+    return '';
   }
 
   function getScrubTarget(elements) {
@@ -531,9 +761,15 @@ export function createEditor(initialText, options = {}) {
       startOffset,
       currentLength: span.textContent.length,
       currentText: raw,
+      moved: false,
     };
+    ta.selectionStart = startOffset;
+    ta.selectionEnd = startOffset + span.textContent.length;
+    ta.focus({ preventScroll: true });
     wrap.classList.add('scrub-active');
     hideTooltip();
+    hideSuggest();
+    emitScrubToken(raw);
     e.preventDefault();
   }
 
@@ -559,6 +795,8 @@ export function createEditor(initialText, options = {}) {
     ta.value = ta.value.slice(0, start) + nextText + ta.value.slice(end);
     scrubState.currentLength = nextText.length;
     scrubState.currentText = nextText;
+    scrubState.moved = true;
+    emitScrubToken(nextText);
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -566,8 +804,11 @@ export function createEditor(initialText, options = {}) {
     if (!scrubState) return;
     scrubState = null;
     wrap.classList.remove('scrub-active');
+    clearScrubCursor();
     document.removeEventListener('mousemove', applyScrub);
     document.removeEventListener('mouseup', endScrub);
+    emitCursorToken();
+    updateSuggestions();
   }
 
   function flashLines(startLine, endLine) {
@@ -667,12 +908,13 @@ export function createEditor(initialText, options = {}) {
     sync();
     hideTooltip();
     updateSuggestions();
-    emitCursorToken();
+    if (!scrubState) emitCursorToken();
     if (options.onInput) options.onInput(ta.value);
   });
 
   ta.addEventListener('keydown', e => {
     if (!suggestState.open) return;
+    if (document.activeElement !== suggestInput) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       moveSuggest(1);
@@ -685,12 +927,15 @@ export function createEditor(initialText, options = {}) {
     }
     if (e.key === 'Tab' || e.key === 'Enter') {
       e.preventDefault();
-      const next = suggestState.items[suggestState.activeIndex];
+      const typed = suggestInput.value && suggestInput.value.trim();
+      const next = currentSuggestValue() || resolveValidSuggestion(typed);
       if (next) acceptSuggestion(next);
       return;
     }
     if (e.key === 'Escape') {
+      suggestState.dismissedToken = suggestState.token || getPartialToken();
       hideSuggest();
+      focusEditor();
     }
   });
 
@@ -698,6 +943,10 @@ export function createEditor(initialText, options = {}) {
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
     const scrubTarget = getScrubTarget(elements);
     wrap.classList.toggle('scrub-hover', Boolean(scrubTarget) && !scrubState);
+    if (scrubState) {
+      hideTooltip();
+      return;
+    }
     const found = tooltipHandlers
       .map(handler => {
         const hit = elements.find(el => el.dataset && el.dataset[handler.attr]);
@@ -713,7 +962,6 @@ export function createEditor(initialText, options = {}) {
       hideTooltip();
       return;
     }
-    const pos = clampTooltip(e.clientX, e.clientY);
     tipTitle.textContent = found.handler.title(found.value, found.element);
     tipBody.textContent = text;
     if (found.handler.visual) {
@@ -738,9 +986,7 @@ export function createEditor(initialText, options = {}) {
       tipStaff.innerHTML = '';
       tipStaff.hidden = true;
     }
-    tip.style.left = `${pos.left}px`;
-    tip.style.top = `${pos.top}px`;
-    tip.hidden = false;
+    placeTooltip(tip, e.clientX, e.clientY);
   });
 
   ta.addEventListener('mousedown', e => {
@@ -766,12 +1012,87 @@ export function createEditor(initialText, options = {}) {
     document.addEventListener('mouseup', endScrub);
   });
 
-  suggestList.addEventListener('mousedown', e => {
-    const item = e.target.closest('li[data-value]');
-    if (!item) return;
-    e.preventDefault();
-    acceptSuggestion(item.dataset.value);
+  suggestInput.addEventListener('input', () => {
+    if (!suggestState.open) return;
+    const value = suggestInput.value;
+    const token = suggestState.token;
+    if (!token) return;
+    suggestState.token = { ...token, text: value || token.text };
+    applySuggestFilter(value);
+    resizeSuggestInput();
+    if (!value) return;
+    const idx = suggestState.items.findIndex(item => item.value.toLowerCase() === value.toLowerCase());
+    if (idx >= 0) {
+      suggestState.activeIndex = idx;
+      renderSuggestItems();
+      return;
+    }
+    const prefix = suggestState.items.findIndex(item => item.value.toLowerCase().startsWith(value.toLowerCase()));
+    if (prefix >= 0) {
+      suggestState.activeIndex = prefix;
+      renderSuggestItems();
+    }
+  });
+
+  suggestInput.addEventListener('change', () => {
+    const value = resolveValidSuggestion(suggestInput.value);
+    if (!value) return;
+    acceptSuggestion(value);
     ta.focus();
+  });
+
+  suggestInput.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveSuggest(1);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveSuggest(-1);
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const typed = suggestInput.value && suggestInput.value.trim();
+      const value = currentSuggestValue() || resolveValidSuggestion(typed);
+      if (!value) return;
+      acceptSuggestion(value);
+      ta.focus();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const hasQuery = Boolean((suggestInput.value || '').trim());
+      if (!hasQuery) {
+        suggestState.dismissedToken = suggestState.token || getPartialToken();
+        hideSuggest();
+        focusEditor();
+        return;
+      }
+      suggestState.dismissedToken = null;
+      suggestInput.value = '';
+      applySuggestFilter('');
+      resizeSuggestInput();
+      setSuggestMenuOpen(true);
+      suggestInput.focus({ preventScroll: true });
+    }
+  });
+
+  suggestInput.addEventListener('focus', () => {
+    if (!suggestState.open || !suggestState.items.length) return;
+    setSuggestMenuOpen(true);
+  });
+
+  suggestInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      const active = document.activeElement;
+      setSuggestMenuOpen(false);
+      if (active === ta) return;
+      if (active === suggestInput) return;
+      if (suggestMenu.contains(active)) return;
+      hideSuggest();
+    }, 80);
   });
 
   ta.addEventListener('mouseleave', () => {
@@ -780,12 +1101,34 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('blur', () => {
-    setTimeout(() => hideSuggest(), 80);
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (active === suggestInput) return;
+      if (suggestMenu.contains(active)) return;
+      hideSuggest();
+    }, 80);
   });
 
-  ta.addEventListener('click', emitCursorToken);
-  ta.addEventListener('keyup', emitCursorToken);
-  ta.addEventListener('focus', emitCursorToken);
+  suggestMenu.addEventListener('mousedown', e => {
+    const item = e.target.closest('li[data-value]');
+    if (!item) return;
+    e.preventDefault();
+    acceptSuggestion(item.dataset.value);
+    ta.focus();
+  });
+
+  ta.addEventListener('click', () => {
+    emitCursorToken();
+    updateSuggestions();
+  });
+  ta.addEventListener('keyup', () => {
+    emitCursorToken();
+    updateSuggestions();
+  });
+  ta.addEventListener('focus', () => {
+    emitCursorToken();
+    updateSuggestions();
+  });
 
   sync();
   emitCursorToken();
@@ -793,7 +1136,6 @@ export function createEditor(initialText, options = {}) {
   wrap.appendChild(pre);
   wrap.appendChild(ta);
   wrap.appendChild(tip);
-  wrap.appendChild(suggestList);
 
   return {
     el: wrap,

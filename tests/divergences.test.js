@@ -9,11 +9,11 @@ describe('spec divergences (verified)', () => {
     expect(transform('0..10')).to.deep.equal([{ type: 'slice', value: ['0', '10'] }]);
   });
 
-  it('does not support legacy scale operator syntax (**)', () => {
+  it('does not support scale operator syntax (**)', () => {
     expect(() => transform('C2 phrygian.. ** /2')).to.throw();
   });
 
-  it('parses legacy progression sample as generic tokens in current tokenizer', () => {
+  it('parses progression sample as generic tokens in current tokenizer', () => {
     expect(transform('D4 minor... ++ I IV V ii 0..2')).to.deep.equal([
       { type: 'note', value: 'D4' },
       { type: 'mode', value: 'minor...' },
@@ -26,4 +26,3 @@ describe('spec divergences (verified)', () => {
     expect(inlineChord('CM')).to.deep.equal(['C4', 'E4', 'G4']);
   });
 });
-

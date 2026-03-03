@@ -8,7 +8,7 @@ function tok(type, value, extra = {}) {
   return { type, value, ...extra };
 }
 
-describe('tokenizer (spec migration)', () => {
+describe('tokenizer', () => {
   it('can handle syntax errors', () => {
     expect(() => transform()).to.throw();
     expect(() => transform('')).to.throw();

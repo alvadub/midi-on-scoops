@@ -763,9 +763,6 @@ export function createEditor(initialText, options = {}) {
       currentText: raw,
       moved: false,
     };
-    ta.selectionStart = startOffset;
-    ta.selectionEnd = startOffset + span.textContent.length;
-    ta.focus({ preventScroll: true });
     wrap.classList.add('scrub-active');
     hideTooltip();
     hideSuggest();
@@ -807,8 +804,6 @@ export function createEditor(initialText, options = {}) {
     clearScrubCursor();
     document.removeEventListener('mousemove', applyScrub);
     document.removeEventListener('mouseup', endScrub);
-    emitCursorToken();
-    updateSuggestions();
   }
 
   function flashLines(startLine, endLine) {

@@ -3,7 +3,7 @@
 const { expect } = require('chai');
 const { reduce } = require('../build/main.cjs');
 
-describe('reduce (spec migration)', () => {
+describe('reduce', () => {
   const context = {
     '%a': 'a2',
     '%x': ['%a', ['a2', 'b2']],
@@ -72,8 +72,4 @@ describe('reduce (spec migration)', () => {
     ])).to.deep.equal(['c3', 'c3', 'c3']);
   });
 
-  it.skip('legacy range expansion semantics from CoffeeScript reducer', () => {});
-  it.skip('legacy scale handling from CoffeeScript reducer', () => {});
-  it.skip('legacy progression handling from CoffeeScript reducer', () => {});
 });
-

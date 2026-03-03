@@ -22,13 +22,6 @@ const FORCE_SECTION_BEATS = 32;
 let pendingSectionLaunch = null;
 let lastSectionTimelineIndex = -1;
 
-const FEATURE_FLAGS = {
-  blockEval: true,
-  activeTokenFlash: true,
-  autocomplete: true,
-  beatGroupingAccents: true,
-};
-
 const p = window.p || new Player();
 window.p = p;
 
@@ -619,7 +612,6 @@ function updateToolbarBeats() {
 
   [...beatIndicatorContainer.children].forEach((segment, idx) => {
     segment.classList.remove('beat-bar4', 'beat-bar8', 'beat-bar16');
-    if (!FEATURE_FLAGS.beatGroupingAccents) return;
     if (idx % 16 === 0) {
       segment.classList.add('beat-bar16');
     } else if (idx % 8 === 0) {
@@ -747,7 +739,7 @@ function createDOM(initialText, initialPreset) {
     resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
    resolveInstrument: resolveInstrumentTooltip,
-    suggestions: FEATURE_FLAGS.autocomplete,
+    suggestions: true,
     onCursorToken: setCursorTokenIndicator,
     getSuggestDockEl: () => document.getElementById('context-tool'),
     onSuggestVisibilityChange: isOpen => {
@@ -767,7 +759,7 @@ function createDOM(initialText, initialPreset) {
   });
 
   editorApi.on('keydown', e => {
-    if (FEATURE_FLAGS.blockEval && (e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Enter') {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Enter') {
       e.preventDefault();
       evalBlock();
       return;
@@ -842,7 +834,7 @@ function createDOM(initialText, initialPreset) {
     const wait = Math.max(0, (when - p.audioContext.currentTime) * 1000);
     setTimeout(() => {
       mixerApi.flashVU(key);
-      if (!FEATURE_FLAGS.activeTokenFlash || !editorApi) return;
+      if (!editorApi) return;
       if (lastFlashedBeatIndex !== beatIndex) {
         editorApi.clearActiveTokenHighlight();
         lastFlashedBeatIndex = beatIndex;

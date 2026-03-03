@@ -378,8 +378,8 @@ function queueSectionLaunch(name, order) {
   const targetIndex = findTimelineIndex(order, name);
   if (targetIndex < 0) return;
   if (!playing) {
-    jumpToSectionTimelineIndex(targetIndex);
-    showStatus(`Ready · section ${name}`, 'ready');
+    const target = sectionTimeline[targetIndex];
+    play(target ? target.start : undefined);
     return;
   }
   pendingSectionLaunch = { name, order, index: targetIndex };
@@ -872,7 +872,7 @@ function saveDraft() {
   }, 300);
 }
 
-function play() {
+function play(startBeat = undefined) {
   stop();
   if (!editorApi) return;
 
@@ -885,7 +885,7 @@ function play() {
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);
-  p.playLoopMachine();
+  p.playLoopMachine(typeof startBeat === 'number' ? startBeat : undefined);
   syncCurrentSectionUI();
   lastSectionTimelineIndex = -1;
   pendingSectionLaunch = null;

@@ -100,7 +100,10 @@ select {
   overflow: hidden;
 }
 
-#editor-wrap.scrub-hover #editor,
+#editor-wrap.scrub-hover #editor {
+  cursor: edit;
+}
+
 #editor-wrap.scrub-active #editor {
   cursor: ew-resize;
 }
@@ -389,6 +392,10 @@ select {
   color: #c3e88d;
 }
 
+.tok-section:hover {
+  cursor: pointer;
+}
+
 .tok-arr-token.is-active-section {
   position: relative;
   color: #fff;
@@ -434,8 +441,6 @@ select {
 .tok-channel { color: #f59866; }
 .tok-number { color: #f7ba67; }
 .tok-error { text-decoration: underline wavy var(--highlight); }
-.tok-velocity { cursor: ew-resize; }
-.tok-number { cursor: ew-resize; }
 
 .hl-line.block-flash {
   background: rgba(108, 246, 174, 0.2);

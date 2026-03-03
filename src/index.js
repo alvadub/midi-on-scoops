@@ -20,6 +20,7 @@ let lastFlashedBeatIndex = -1;
 let sectionTimeline = [];
 let pendingSectionLaunch = null;
 let lastSectionTimelineIndex = -1;
+let visualizerData = null;
 
 const p = window.p || new Player();
 window.p = p;
@@ -699,6 +700,64 @@ function bindGlobalShortcuts() {
   });
 }
 
+function bindTopVisualizer(canvas) {
+  if (!canvas || !p || !p.visualizer) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const analyser = p.visualizer;
+  const bins = analyser.frequencyBinCount;
+  visualizerData = visualizerData && visualizerData.length === bins
+    ? visualizerData
+    : new Uint8Array(bins);
+  let lastCssW = 0;
+  let lastCssH = 0;
+
+  function resize(force = false) {
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, Math.floor(rect.width));
+    const cssH = Math.max(1, Math.floor(rect.height));
+    if (!force && cssW === lastCssW && cssH === lastCssH) return;
+    lastCssW = cssW;
+    lastCssH = cssH;
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.max(1, Math.floor(cssW * dpr));
+    canvas.height = Math.max(1, Math.floor(cssH * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize(true);
+  window.addEventListener('resize', () => resize(true));
+
+  function draw() {
+    resize();
+    const w = canvas.clientWidth || 1;
+    const h = canvas.clientHeight || 1;
+    ctx.clearRect(0, 0, w, h);
+    analyser.getByteFrequencyData(visualizerData);
+    const bars = 32;
+    const gap = 1;
+    const usableWidth = Math.max(1, w - ((bars - 1) * gap));
+    const bw = Math.max(1, usableWidth / bars);
+    const band = Math.max(1, Math.floor(visualizerData.length / bars));
+    for (let i = 0; i < bars; i += 1) {
+      const start = i * band;
+      const end = Math.min(visualizerData.length, start + band);
+      let peak = 0;
+      for (let j = start; j < end; j += 1) {
+        if (visualizerData[j] > peak) peak = visualizerData[j];
+      }
+      const mag = Math.min(1, Math.pow(peak / 255, 0.9) * 1.7);
+      const bh = Math.max(1, mag * h);
+      const x = i * (bw + gap);
+      const y = h - bh;
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.92)';
+      ctx.fillRect(x, y, bw, bh);
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
 function createDOM(initialText, initialPreset) {
   document.body.innerHTML = '';
 
@@ -706,6 +765,11 @@ function createDOM(initialText, initialPreset) {
   toolbar.id = 'toolbar';
   const toolbarControls = document.createElement('div');
   toolbarControls.id = 'toolbar-controls';
+  const topVisualizer = document.createElement('div');
+  topVisualizer.id = 'top-visualizer';
+  const topVisualizerCanvas = document.createElement('canvas');
+  topVisualizerCanvas.id = 'top-visualizer-canvas';
+  topVisualizer.appendChild(topVisualizerCanvas);
 
   // const aboutLink = document.createElement('a');
   // aboutLink.id = 'about-link';
@@ -847,7 +911,9 @@ function createDOM(initialText, initialPreset) {
   topBadges.appendChild(contextTool);
   topBadges.appendChild(tokenBadges);
   toolbar.appendChild(topBadges);
+  toolbar.appendChild(topVisualizer);
   toolbar.appendChild(toolbarControls);
+  bindTopVisualizer(topVisualizerCanvas);
 
   statusbar.appendChild(presetLabel);
   statusbar.appendChild(beatDots);

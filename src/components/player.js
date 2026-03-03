@@ -29,11 +29,14 @@ export default class Player {
     this.delay = this.audioContext.createDelay(4);
     this.delayFeedback = this.audioContext.createGain();
     this.delayWet = this.audioContext.createGain();
+    this.visualizer = this.audioContext.createAnalyser();
 
     this.masterGain.gain.value = 1;
     this.delayFeedback.gain.value = 0.35;
     this.delayWet.gain.value = 1;
     this.delayInput.gain.value = 1;
+    this.visualizer.fftSize = 256;
+    this.visualizer.smoothingTimeConstant = 0.82;
 
     this.equalizer.output.connect(this.masterGain);
     this.echo.output.connect(this.masterGain);
@@ -45,6 +48,7 @@ export default class Player {
     this.delayWet.connect(this.masterGain);
 
     this.masterGain.connect(this.destination);
+    this.masterGain.connect(this.visualizer);
     this.updateDelayTime();
   }
 

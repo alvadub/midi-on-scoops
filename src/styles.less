@@ -92,6 +92,21 @@ select {
   flex-direction: row-reverse;
 }
 
+#top-visualizer {
+  flex: 0 1 560px;
+  display: flex;
+  justify-content: center;
+  min-width: 360px;
+}
+
+#top-visualizer-canvas {
+  width: min(100%, 560px);
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(7, 17, 28, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 #workspace {
   flex: 1;
   min-height: 0;
@@ -689,6 +704,12 @@ select {
   #toolbar {
     gap: 0.6em;
     padding: 0.7em;
+  }
+
+  #top-visualizer {
+    order: 3;
+    min-width: 0;
+    flex-basis: 100%;
   }
 
   .field-group {

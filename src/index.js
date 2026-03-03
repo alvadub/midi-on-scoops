@@ -17,6 +17,8 @@ let mixerApi = null;
 let lastContext = null;
 let trackLineMap = new Map();
 let lastFlashedBeatIndex = -1;
+let sectionTimeline = [];
+const FORCE_SECTION_BEATS = 32;
 
 const FEATURE_FLAGS = {
   blockEval: true,
@@ -238,13 +240,110 @@ function getData(input) {
   trackLineMap = buildTrackLineMap(input);
   try {
     lastContext = parse(input);
-    return build(merge(lastContext));
+    const merged = merge(lastContext);
+    sectionTimeline = buildSectionTimeline(lastContext, merged);
+    return build(merged);
   } catch (e) {
     lastContext = null;
+    sectionTimeline = [];
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
     return [];
   }
+}
+
+function buildSectionTimeline(context, merged) {
+  if (!context || !Array.isArray(merged) || merged.length === 0) return [];
+  if (!context.main || !context.main.length) return [];
+
+  const sectionRefs = {};
+  Object.values(context.tracks || {}).forEach(channels => {
+    Object.keys(channels || {}).forEach(ch => {
+      const [tag] = String(ch).split('#');
+      if (tag && !sectionRefs[tag]) sectionRefs[tag] = tag;
+    });
+  });
+
+  const expanded = buildArrangementDisplayExpansion(editorApi ? editorApi.getValue() : '');
+  const flattenedSections = [];
+  merged.forEach(group => {
+    (group || []).forEach(parts => {
+      flattenedSections.push(parts);
+    });
+  });
+
+  const timeline = [];
+  let cursor = 0;
+  flattenedSections.forEach((parts, idx) => {
+    const mergedBeats = (parts || []).reduce((max, t) => {
+      const len = Array.isArray(t[2]) ? t[2].length : 0;
+      return Math.max(max, len);
+    }, 0);
+    const token = expanded[idx] || expanded[expanded.length - 1] || null;
+    const name = token ? token.name : null;
+    const displayOrder = token ? token.displayOrder : null;
+    const beats = FORCE_SECTION_BEATS || mergedBeats;
+    const start = cursor;
+    const end = Math.max(start, start + beats - 1);
+    cursor = end + 1;
+    timeline.push({ name, displayOrder, start, end });
+  });
+  return timeline;
+}
+
+function buildArrangementDisplayExpansion(sourceText) {
+  const lines = String(sourceText || '').split(/\r?\n/);
+  const expanded = [];
+  let displayOrder = 0;
+
+  lines.forEach(rawLine => {
+    const noComment = rawLine.replace(/;.*$/, '');
+    const trimmed = noComment.trim();
+    if (!trimmed.startsWith('>')) return;
+    const body = trimmed.slice(1).trim();
+    if (!body) return;
+    const parts = body.split(/\s+/);
+    let last = null;
+    parts.forEach(part => {
+      if (/^[A-Z][A-Z0-9]*$/.test(part)) {
+        last = { name: part, displayOrder };
+        displayOrder += 1;
+        expanded.push(last);
+        return;
+      }
+      if (/^\*(\d+)$/.test(part) && last) {
+        const count = Math.max(1, parseInt(part.slice(1), 10));
+        for (let i = 1; i < count; i += 1) expanded.push(last);
+        return;
+      }
+      if (part === '%' && last) {
+        expanded.push(last);
+      }
+    });
+  });
+
+  return expanded;
+}
+
+function getSectionAtBeat(beatIndex) {
+  const item = sectionTimeline.find(section => (
+    section.name && beatIndex >= section.start && beatIndex <= section.end
+  ));
+  return item || null;
+}
+
+function syncCurrentSectionUI() {
+  const activeSection = p.loopStarted ? getSectionAtBeat(p.beatIndex) : null;
+  setCurrentSectionIndicator(activeSection ? activeSection.name : null);
+  if (editorApi) {
+    editorApi.setActiveSectionByOrder(activeSection ? activeSection.displayOrder : null);
+  }
+}
+
+function setCurrentSectionIndicator(name) {
+  const el = document.getElementById('section-indicator');
+  if (!el) return;
+  el.textContent = name ? `Section: ${name}` : 'Section: —';
 }
 
 function getMaxPatternSlots() {
@@ -350,9 +449,11 @@ function resolveVelocityTooltip(v) {
 function resolveSectionTooltip(name) {
   if (!editorApi) return null;
   const lines = editorApi.getValue().split('\n');
-  const sectionHeader = `@${name}`;
-  const start = lines.findIndex(line => line.trim() === sectionHeader);
+  const sectionPattern = new RegExp(`^@${name}(?:\\s+<\\s+\\S+)?$`);
+  const start = lines.findIndex(line => sectionPattern.test(line.trim()));
   if (start < 0) return null;
+  const headerLine = lines[start].trim();
+  const inheritMatch = headerLine.match(/^@\S+\s+<\s+(\S+)$/);
 
   const preview = [];
   for (let i = start + 1; i < lines.length && preview.length < 4; i += 1) {
@@ -360,7 +461,9 @@ function resolveSectionTooltip(name) {
     if (/^\s*@/.test(line)) break;
     if (line.trim()) preview.push(line.trim());
   }
-  return preview.length ? preview.join(' | ') : null;
+  if (preview.length) return preview.join(' | ');
+  if (inheritMatch) return `Inherits from @${inheritMatch[1]}`;
+  return 'Section marker';
 }
 
 function showError(msg) {
@@ -607,7 +710,12 @@ function createDOM(initialText, initialPreset) {
   statusMessage.id = 'status-message';
   statusMessage.textContent = 'Ready';
 
+  const sectionIndicator = document.createElement('span');
+  sectionIndicator.id = 'section-indicator';
+  sectionIndicator.textContent = 'Section: —';
+
   statusbar.appendChild(beatDots);
+  statusbar.appendChild(sectionIndicator);
   statusbar.appendChild(statusMessage);
 
   const workspace = document.createElement('div');
@@ -702,6 +810,7 @@ function play() {
   updateToolbarBeats();
   syncMixer(data);
   p.playLoopMachine();
+  syncCurrentSectionUI();
   updatePlayButton();
   showStatus('Playing', 'playing');
 }
@@ -713,7 +822,9 @@ function stop() {
   }
   if (editorApi) {
     editorApi.clearActiveTokenHighlight();
+    editorApi.setActiveSection(null);
   }
+  setCurrentSectionIndicator(null);
   lastFlashedBeatIndex = -1;
   updatePlayButton();
   setReadyStatus();
@@ -750,6 +861,7 @@ function beatIndicator() {
     ? activeIndex % beatSegments.length
     : -1;
   beatSegments.forEach((segment, i) => segment.classList.toggle('active', i === segmentActiveIndex));
+  syncCurrentSectionUI();
 
   requestAnimationFrame(beatIndicator);
 }
@@ -765,6 +877,7 @@ async function bootstrap() {
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);
+  syncCurrentSectionUI();
   setReadyStatus();
   requestAnimationFrame(beatIndicator);
 }

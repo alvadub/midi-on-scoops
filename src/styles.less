@@ -236,6 +236,15 @@ select {
   opacity: 0.9;
 }
 
+#section-indicator {
+  font-size: 12px;
+  color: #ffe7a7;
+  border: 1px solid rgba(255, 231, 167, 0.35);
+  border-radius: 999px;
+  padding: 0.15em 0.55em;
+  background: rgba(255, 231, 167, 0.08);
+}
+
 #mixer-panel {
   border-left: 1px solid var(--muted);
   background: rgba(6, 16, 28, 0.88);
@@ -370,6 +379,16 @@ select {
 .tok-section {
   color: #c3e88d;
   text-decoration: underline dotted rgba(195, 232, 141, 0.45);
+}
+
+.tok-section.is-active-section {
+  color: #fff3ba;
+  background: rgba(255, 207, 92, 0.28);
+  border-radius: 3px;
+}
+
+.tok-section-head {
+  color: #c3e88d;
 }
 
 .tok-inherit { color: #94afc8; }

@@ -21,7 +21,7 @@ export function classify(token) {
   if (token === '%') return 'tok-var-ref';
   if (token.charAt(0) === '%') return 'tok-var-ref';
   if (/^\*\d+$/.test(token)) return 'tok-repeat';
-  if (/^[x_\-\[\]]+$/.test(token)) return 'tok-pattern';
+  if (/^[x_\-[\]]+$/.test(token)) return 'tok-pattern';
   if (/^[a-gA-G][#b]?\d+$/.test(token)) return 'tok-note';
   if (token.includes('|')) return 'tok-chord';
   if (/^(major|minor|phrygian|dorian|mixolydian|locrian|lydian)$/i.test(token)) return 'tok-mode';
@@ -81,11 +81,17 @@ function renderBase(base) {
     if (inheritMatch) {
       const [, indent, sourceToken, leftGap, rightGap, targetToken, rest] = inheritMatch;
       const sourceName = sourceToken.slice(1);
-      return `${esc(indent)}${esc(sourceToken)}${esc(leftGap)}${span('tok-inherit', '<', {
+      return `${esc(indent)}${span('tok-section-head', sourceToken, { sectionHead: sourceName })}${esc(leftGap)}${span('tok-inherit', '<', {
         inherit: '1',
         inheritSource: sourceName,
         inheritTarget: targetToken,
       })}${esc(rightGap)}${esc(targetToken)}${renderTokens(rest)}`;
+    }
+    const headerMatch = base.match(/^(\s*)(@[^\s]+)(.*)$/);
+    if (headerMatch) {
+      const [, indent, sourceToken, rest] = headerMatch;
+      const sourceName = sourceToken.slice(1);
+      return `${esc(indent)}${span('tok-section-head', sourceToken, { sectionHead: sourceName })}${renderTokens(rest)}`;
     }
     return renderTokens(base);
   }

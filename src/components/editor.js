@@ -303,6 +303,29 @@ export function createEditor(initialText, options = {}) {
     activeTokens = [];
   }
 
+  function setActiveSection(sectionName, occurrence = null) {
+    pre.querySelectorAll('.tok-section.is-active-section')
+      .forEach(el => el.classList.remove('is-active-section'));
+    if (!sectionName) return;
+    const matches = [...pre.querySelectorAll(`.tok-section[data-section="${sectionName}"]`)];
+    if (!matches.length) return;
+    if (typeof occurrence === 'number' && occurrence >= 0) {
+      const target = matches[occurrence];
+      if (target) target.classList.add('is-active-section');
+      return;
+    }
+    matches.forEach(el => el.classList.add('is-active-section'));
+  }
+
+  function setActiveSectionByOrder(order) {
+    pre.querySelectorAll('.tok-section.is-active-section')
+      .forEach(el => el.classList.remove('is-active-section'));
+    if (typeof order !== 'number' || order < 0) return;
+    const tokens = pre.querySelectorAll('.tok-section');
+    const target = tokens[order];
+    if (target) target.classList.add('is-active-section');
+  }
+
   function getPartialToken() {
     const pos = ta.selectionStart;
     const before = ta.value.slice(0, pos);
@@ -543,7 +566,7 @@ export function createEditor(initialText, options = {}) {
       .filter(steps => steps.length > 0)
       .sort((a, b) => {
         const pulses = steps => steps.reduce((sum, s) => (
-          (s?.dataset?.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
+          (s.dataset.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
         ), 0);
         return pulses(b) - pulses(a);
       })[0] || [];
@@ -555,11 +578,11 @@ export function createEditor(initialText, options = {}) {
       const ch = (step && step.dataset ? step.dataset.patternChar : '').toLowerCase();
       let pulseCount = 0;
       for (let i = 0; i <= stepIndex; i += 1) {
-        const ci = (steps[i]?.dataset?.patternChar || '').toLowerCase();
+        const ci = (steps[i].dataset.patternChar || '').toLowerCase();
         if (ci === 'x') pulseCount += 1;
       }
       const pulsesPerPattern = steps.reduce((sum, s) => (
-        (s?.dataset?.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
+        (s.dataset.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
       ), 0);
       const cycleIndex = Math.floor(tokenIndex / steps.length);
       const absolutePulseIndex = pulsesPerPattern > 0
@@ -716,6 +739,8 @@ export function createEditor(initialText, options = {}) {
     flashLines,
     flashActiveTokens,
     clearActiveTokenHighlight,
+    setActiveSection,
+    setActiveSectionByOrder,
     setValue: value => {
       ta.value = value;
       sync();

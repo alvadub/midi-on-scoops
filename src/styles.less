@@ -421,6 +421,31 @@ select {
   color: #b8c9da;
 }
 
+.m-extras {
+  margin-top: 0.3em;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.3em;
+}
+
+.m-extras select {
+  width: 100%;
+  padding: 0.2em;
+  border-radius: 6px;
+}
+
+.m-learn {
+  margin-left: 0.3em;
+  font-size: 10px;
+  padding: 0.08em 0.38em;
+  border-radius: 999px;
+}
+
+.m-learn.learning {
+  background: #f9cb6b;
+  color: #10263f;
+}
+
 #mixer-fx {
   margin-top: 0.75em;
   border-top: 1px solid #34516b;
@@ -434,6 +459,125 @@ select {
   color: #b8c9da;
   display: grid;
   gap: 0.2em;
+}
+
+.m-mini-row {
+  display: grid;
+  gap: 0.15em;
+  font-size: 11px;
+}
+
+.m-mini-btn {
+  font-size: 11px;
+  padding: 0.32em 0.55em;
+}
+
+.m-mini-btn.danger {
+  border-color: rgba(255, 79, 63, 0.6);
+}
+
+.m-readout {
+  font-size: 11px;
+  color: #d8e7f7;
+}
+
+#mixer-live {
+  margin-top: 0.65em;
+  border-top: 1px solid #34516b;
+  padding-top: 0.65em;
+  display: grid;
+  gap: 0.5em;
+}
+
+.m-live-block {
+  border: 1px solid #34516b;
+  border-radius: 8px;
+  padding: 0.45em;
+  background: rgba(16, 38, 63, 0.42);
+  display: grid;
+  gap: 0.35em;
+}
+
+.m-live-block h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.m-pad-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35em;
+}
+
+.m-pad {
+  display: grid;
+  gap: 0.1em;
+  justify-items: start;
+  text-align: left;
+  min-height: 2.6em;
+}
+
+.m-pad .m-pad-label {
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.m-pad .m-pad-sub {
+  font-size: 10px;
+  color: #8bd9ae;
+}
+
+.m-pad.looping {
+  border-color: #8bd9ae;
+}
+
+.m-pad.playing {
+  background: color-mix(in srgb, var(--highlight) 26%, transparent);
+}
+
+.m-pad.drag {
+  border-style: dashed;
+}
+
+#snapshot-panel {
+  margin-top: 0.65em;
+  border-top: 1px solid #34516b;
+  padding-top: 0.65em;
+  display: grid;
+  gap: 0.4em;
+}
+
+#snapshot-panel h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.snapshot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+}
+
+.snapshot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25em;
+}
+
+.snapshot-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25em;
+}
+
+.snapshot-item.active .m-mini-btn:first-child {
+  border-color: rgba(108, 246, 174, 0.9);
 }
 
 .tok-comment { color: #8ea0b2; font-style: italic; }

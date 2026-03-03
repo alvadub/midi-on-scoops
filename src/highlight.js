@@ -22,6 +22,7 @@ export function classify(token) {
   if (token.charAt(0) === '%') return 'tok-var-ref';
   if (/^\*\d+$/.test(token)) return 'tok-repeat';
   if (/^[x_\-[\]]+$/.test(token)) return 'tok-pattern';
+  if (/^(?:[a-zA-Z_]\w*)?\(\d+\s*,\s*\d+(?:\s*,\s*-?\d+)?\)$/.test(token)) return 'tok-pattern';
   if (/^[a-gA-G][#b]?\d+$/.test(token)) return 'tok-note';
   if (token.includes('|')) return 'tok-chord';
   if (/^(major|minor|phrygian|dorian|mixolydian|locrian|lydian)$/i.test(token)) return 'tok-mode';

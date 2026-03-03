@@ -306,5 +306,12 @@ export function parse(buffer) {
   if (track) {
     tracks[track] = info;
   }
-  return { main, data, tracks, trackPatternSlots };
+  const result = { main, data, tracks };
+  Object.defineProperty(result, 'trackPatternSlots', {
+    value: trackPatternSlots,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  return result;
 }

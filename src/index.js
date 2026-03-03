@@ -5,6 +5,9 @@ import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
 import { createMixer } from './components/mixer.js';
+import { MidiAccess, msgNorm, msgType, msgValue, pitchbendNorm } from './lib/midi.js';
+import { MidiLearn } from './components/midi-learn.js';
+import { SnapshotManager } from './lib/snapshots.js';
 
 let tempo = 146;
 let bars = 8;
@@ -21,6 +24,9 @@ let sectionTimeline = [];
 let pendingSectionLaunch = null;
 let lastSectionTimelineIndex = -1;
 let visualizerData = null;
+let midiAccess = null;
+let midiLearn = null;
+let snapshotManager = null;
 
 const p = window.p || new Player();
 window.p = p;
@@ -678,6 +684,197 @@ function loadPresetByName(name) {
 function syncMixer(data) {
   if (!mixerApi) return;
   mixerApi.update(data);
+  syncSnapshotsPanel();
+  if (midiLearn) midiLearn.setActions(buildMidiActions());
+}
+
+function syncSnapshotsPanel() {
+  if (!mixerApi || !snapshotManager) return;
+  mixerApi.setSnapshots(snapshotManager.snapshots, snapshotManager.selectedId);
+}
+
+function buildMidiActions() {
+  const actions = {
+    'transport:play': () => {
+      if (playing) stop();
+      else play();
+    },
+    'transport:bpm': data => {
+      tempo = 60 + Math.round(msgNorm(data) * 140);
+      updateLoop();
+      if (mixerApi) mixerApi.syncTransport({ tempo });
+    },
+    'transport:transpose': data => {
+      transpose = Math.round((msgNorm(data) * 24) - 12);
+      updateLoop();
+      if (mixerApi) mixerApi.syncTransport({ transpose });
+    },
+    'delay:tap': () => {
+      if (mixerApi && mixerApi.dom && mixerApi.dom.tapBtn) {
+        mixerApi.dom.tapBtn.click();
+      } else {
+        p.tapTapeTempo();
+      }
+    },
+    'thunder:hit': data => {
+      const intensity = Math.max(0.1, msgNorm(data));
+      p.thunder(intensity);
+    },
+    'siren:hold': data => {
+      const type = msgType(data);
+      if (type === 'noteoff') p.sirenHold(false);
+      else p.sirenHold(msgValue(data) > 0);
+    },
+  };
+
+  p.getTrackKeys().forEach(key => {
+    actions[`track:${key}:vol`] = data => p.setVolume(key, msgNorm(data));
+    actions[`track:${key}:rev`] = data => p.setReverbSend(key, msgNorm(data));
+    actions[`track:${key}:dly`] = data => p.setDelaySend(key, msgNorm(data));
+    actions[`track:${key}:lpf`] = data => p.setLPF(key, 20 * Math.pow(1000, msgNorm(data)));
+    actions[`track:${key}:hpf`] = data => p.setHPF(key, 20 * Math.pow(1000, msgNorm(data)));
+    actions[`track:${key}:lpf-q`] = data => p.setLPFQ(key, 0.7 + (msgNorm(data) * 17.3));
+    actions[`track:${key}:mute`] = data => {
+      if (msgType(data) === 'noteoff') return;
+      const cur = p.getTrackState(key);
+      p.setMute(key, !cur.muted);
+    };
+    actions[`track:${key}:solo`] = data => {
+      if (msgType(data) === 'noteoff') return;
+      const cur = p.getTrackState(key);
+      p.setSolo(key, !cur.solo);
+    };
+    actions[`track:${key}:epi`] = data => {
+      if (msgType(data) === 'noteoff') return;
+      const cur = p.getTrackState(key);
+      p.setEpicenterEnabled(key, !cur.epicenterOn);
+    };
+    actions[`track:${key}:bands`] = data => {
+      if (msgType(data) === 'noteoff') return;
+      const cur = p.getTrackState(key);
+      p.setMultibandEnabled(key, !cur.multibandOn);
+    };
+  });
+
+  for (let i = 0; i < 4; i += 1) {
+    actions[`pad:${i}:trig`] = data => {
+      const type = msgType(data);
+      const velocity = msgValue(data) || 127;
+      if (type === 'noteoff') {
+        if (p.pads[i] && p.pads[i].looping) p.stopPad(i);
+        return;
+      }
+      p.triggerPad(i, p.pads[i] && p.pads[i].looping, velocity);
+    };
+  }
+
+  actions['global:lpf'] = data => p.setMasterLPF(20 * Math.pow(1000, msgNorm(data)));
+  actions['siren:vol'] = data => p.setSirenVolume(msgNorm(data));
+  actions['siren:rate'] = data => p.setSirenRate(0.1 + (msgNorm(data) * 5));
+  actions['siren:freq-hi'] = data => {
+    const hi = 100 + (msgNorm(data) * 2500);
+    p.setSirenFreqRange(p.sirenRange.lo, hi);
+  };
+  actions['siren:freq-lo'] = data => {
+    const lo = 40 + (msgNorm(data) * 1000);
+    p.setSirenFreqRange(lo, p.sirenRange.hi);
+  };
+  actions['siren:pitchbend'] = data => {
+    const bend = pitchbendNorm(data);
+    const lo = p.sirenRange.lo + (bend * 120);
+    const hi = p.sirenRange.hi + (bend * 180);
+    p.setSirenFreqRange(Math.max(40, lo), Math.max(60, hi));
+  };
+
+  return actions;
+}
+
+function saveSnapshotInteractive() {
+  if (!snapshotManager || !mixerApi) return;
+  const name = window.prompt('Snapshot name', `Snapshot ${snapshotManager.snapshots.length + 1}`);
+  if (!name) return;
+  snapshotManager.saveSnapshot(mixerApi.captureState(), name);
+  syncSnapshotsPanel();
+  showStatus(`Saved snapshot: ${name}`, 'ready');
+}
+
+function recallSnapshot(id) {
+  if (!snapshotManager || !mixerApi) return;
+  const item = snapshotManager.getSnapshot(id);
+  if (!item) return;
+  snapshotManager.selectedId = id;
+  mixerApi.applyState(item.state);
+  syncSnapshotsPanel();
+  updateLoop();
+  showStatus(`Recalled snapshot: ${item.name}`, playing ? 'playing' : 'ready');
+}
+
+function exportSnapshots() {
+  if (!snapshotManager) return;
+  const data = snapshotManager.exportJSON();
+  const blob = new Blob([data], { type: 'application/json' });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = 'scoops-snapshots.json';
+  a.click();
+  URL.revokeObjectURL(href);
+}
+
+function importSnapshots() {
+  if (!snapshotManager) return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.addEventListener('change', async () => {
+    const [file] = input.files || [];
+    if (!file) return;
+    const text = await file.text();
+    try {
+      snapshotManager.importJSON(text);
+      syncSnapshotsPanel();
+      showStatus('Snapshots imported', 'ready');
+    } catch (e) {
+      showError(e.message || 'Invalid snapshot file');
+    }
+  });
+  input.click();
+}
+
+async function initMidi() {
+  const midiBtn = document.getElementById('midi-btn');
+  if (!midiBtn) return;
+  if (!navigator.requestMIDIAccess) {
+    midiBtn.disabled = true;
+    midiBtn.textContent = 'MIDI: unsupported';
+    return;
+  }
+  midiBtn.disabled = false;
+  midiBtn.textContent = 'MIDI: connect';
+  midiAccess = new MidiAccess();
+  midiLearn = new MidiLearn(midiAccess);
+  midiLearn.setActions(buildMidiActions());
+
+  midiAccess.on(data => {
+    if (midiLearn) midiLearn.dispatch(data);
+  });
+  midiAccess.onState(names => {
+    midiBtn.textContent = names.length ? `MIDI: ${names[0]}` : 'MIDI: no input';
+  });
+  midiLearn.onBound = controlId => {
+    showStatus(`Bound MIDI to ${controlId}`, 'ready');
+  };
+
+  midiBtn.addEventListener('click', async () => {
+    try {
+      const names = await midiAccess.connect();
+      midiBtn.textContent = names.length ? `MIDI: ${names[0]}` : 'MIDI: no input';
+      showStatus('MIDI connected', 'ready');
+    } catch (e) {
+      midiBtn.textContent = 'MIDI: blocked';
+      showError('MIDI access denied');
+    }
+  });
 }
 
 function bindGlobalShortcuts() {
@@ -693,6 +890,22 @@ function bindGlobalShortcuts() {
       e.preventDefault();
       if (playing) stop();
       else play();
+    }
+    if ((e.metaKey || e.ctrlKey) && e.code === 'KeyS') {
+      e.preventDefault();
+      if (snapshotManager && mixerApi) saveSnapshotInteractive();
+    }
+    if (!editingField && e.code === 'KeyT' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      if (mixerApi && mixerApi.dom && mixerApi.dom.tapBtn) mixerApi.dom.tapBtn.click();
+      else p.tapTapeTempo();
+    }
+    if (!editingField && /^Digit[0-9]$/.test(e.code)) {
+      const n = parseInt(e.code.replace('Digit', ''), 10);
+      if (snapshotManager && n > 0 && n <= snapshotManager.snapshots.length) {
+        const item = snapshotManager.snapshots[n - 1];
+        if (item) recallSnapshot(item.id);
+      }
     }
     if (e.code === 'Escape') {
       stop();
@@ -791,9 +1004,7 @@ function createDOM(initialText, initialPreset) {
   mixerBtn.textContent = '⊞ Mixer';
   const midiBtn = document.createElement('button');
   midiBtn.id = 'midi-btn';
-  midiBtn.textContent = '🎛 MIDI';
-  midiBtn.disabled = true;
-  midiBtn.title = 'MIDI support comes next';
+  midiBtn.textContent = 'MIDI: init';
 
   const presetLabel = document.createElement('label');
   presetLabel.className = 'field-group';
@@ -931,6 +1142,38 @@ function createDOM(initialText, initialPreset) {
       if (typeof next.transpose === 'number') transpose = next.transpose;
       updateLoop();
     },
+    onMidiLearnRequest(controlId, buttonEl) {
+      if (!midiLearn) return;
+      midiLearn.startLearn(controlId);
+      buttonEl.classList.add('learning');
+      showStatus(`Move a MIDI control for ${controlId}`, 'warning');
+      const clear = () => {
+        buttonEl.classList.remove('learning');
+      };
+      const oldBound = midiLearn.onBound;
+      midiLearn.onBound = (...args) => {
+        clear();
+        if (typeof oldBound === 'function') oldBound(...args);
+        midiLearn.onBound = oldBound;
+      };
+      setTimeout(() => {
+        if (midiLearn && midiLearn.learning === controlId) {
+          midiLearn.cancelLearn();
+          clear();
+          showStatus('MIDI learn cancelled', 'ready');
+          midiLearn.onBound = oldBound;
+        }
+      }, 8000);
+    },
+    onSnapshotSave: saveSnapshotInteractive,
+    onSnapshotRecall: recallSnapshot,
+    onSnapshotDelete(id) {
+      if (!snapshotManager) return;
+      snapshotManager.deleteSnapshot(id);
+      syncSnapshotsPanel();
+    },
+    onSnapshotExport: exportSnapshots,
+    onSnapshotImport: importSnapshots,
   });
   mixerApi.toggle(false);
   mixerBtn.addEventListener('click', () => {
@@ -1087,6 +1330,7 @@ function beatIndicator() {
 }
 
 async function bootstrap() {
+  snapshotManager = new SnapshotManager();
   const params = new URLSearchParams(window.location.search);
   const initialPreset = params.get('load');
   const initialDraft = await resolveInitialDraft();
@@ -1097,8 +1341,10 @@ async function bootstrap() {
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);
+  syncSnapshotsPanel();
   syncCurrentSectionUI();
   setReadyStatus();
+  initMidi();
   requestAnimationFrame(beatIndicator);
 }
 

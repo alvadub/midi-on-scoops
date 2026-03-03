@@ -1,4 +1,5 @@
 import { inlineChord } from 'harmonics';
+import { euclidean, parseEuclideanToken } from './euclidean';
 
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^(?:[x_-]|\[.+?\])+$/;
@@ -176,6 +177,12 @@ export function transform(expression) {
 
     if (cur.charAt() === '#') {
       add('channel', cur);
+      return prev;
+    }
+
+    const euclid = parseEuclideanToken(cur);
+    if (euclid) {
+      add('pattern', euclidean(euclid.onsets, euclid.steps, euclid.rotation));
       return prev;
     }
 

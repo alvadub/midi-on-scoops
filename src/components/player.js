@@ -2,10 +2,6 @@ import { Utils } from 'midi-writer-js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-function sliderToFreq(v) {
-  return 20 * Math.pow(1000, clamp(v, 0, 1));
-}
-
 function makeExciterCurve(drive = 4, samples = 512) {
   const curve = new Float32Array(samples);
   const norm = Math.tanh(drive) || 1;
@@ -16,33 +12,12 @@ function makeExciterCurve(drive = 4, samples = 512) {
   return curve;
 }
 
-function makeNoiseBuffer(ctx, duration) {
-  const len = Math.max(1, Math.floor(ctx.sampleRate * duration));
-  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-  const out = buf.getChannelData(0);
-  for (let i = 0; i < len; i += 1) {
-    const env = Math.exp(-i / (ctx.sampleRate * 0.015));
-    out[i] = ((Math.random() * 2) - 1) * env;
-  }
-  return buf;
-}
-
-function makeDiracBuffer(ctx) {
-  const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
-  buf.getChannelData(0)[0] = 1;
-  return buf;
-}
-
-function sectionFromTrackKey(key) {
-  const m = String(key).match(/^([^#]+)#/);
-  return m ? m[1] : '';
-}
 
 export default class Player {
   constructor() {
     this.data = [];
     this.beats = [];
-    this.bars = 8;
+    this.bars = 16;
     this.bpm = 127;
     this.fraq = 1 / this.bars;
     this.trackNodes = new Map();
@@ -51,12 +26,36 @@ export default class Player {
     this.onBeat = null;
     this.beatIndex = 0;
     this.loopStarted = false;
-    this.sirenActive = false;
-    this.sirenVol = 0.5;
-    this.sirenRange = { lo: 220, hi: 900 };
-    this.pads = Array.from({ length: 4 }, () => ({ buffer: null, label: 'empty', looping: false }));
-    this.padSources = [null, null, null, null];
-    this.padNames = ['vinyl noise', 'bass thud', 'gong hit', 'stab'];
+    this.defaultPadFiles = [
+      'coin_1.wav',
+      'coin_2.wav',
+      'explosion_1.wav',
+      'jump_1.wav',
+      'jump_2.wav',
+      'jump_3.wav',
+      'powerup_1.wav',
+      'powerup_2.wav',
+      'powerup_3.wav',
+      'powerup_4.wav',
+    ];
+    this.pads = Array.from({ length: this.defaultPadFiles.length }, (_, i) => ({
+      buffer: null,
+      label: this.defaultPadFiles[i].replace(/\.[^.]+$/, ''),
+      looping: false,
+    }));
+    this.padSources = Array.from({ length: this.pads.length }, () => null);
+    this.padNames = [
+      'vinyl noise',
+      'bass thud',
+      'gong hit',
+      'stab',
+      'snare noise',
+      'wood click',
+      'riser',
+      'sub drop',
+      'clap burst',
+      'noise sweep',
+    ];
     this.pendingMidiPulse = null;
     this.initAudio();
   }
@@ -68,6 +67,7 @@ export default class Player {
     this.player = new WebAudioFontPlayer();
     this.equalizer = this.player.createChannel(this.audioContext);
     this.masterGain = this.audioContext.createGain();
+    this.masterPreampBypass = this.audioContext.createGain();
     this.masterLPF = this.audioContext.createBiquadFilter();
     this.echo = this.player.createReverberator(this.audioContext);
     this.delayInput = this.audioContext.createGain();
@@ -83,116 +83,83 @@ export default class Player {
     this.equalizer.output.connect(this.masterGain);
     this.echo.output.connect(this.masterGain);
 
-    this.masterGain.connect(this.masterLPF);
+    this.initMasterPreamp();
+    this.masterGain.connect(this.masterPreampBypass);
+    this.masterPreampBypass.connect(this.masterLPF);
     this.masterLPF.connect(this.destination);
     this.masterGain.connect(this.visualizer);
 
-    this.initTapeEcho();
-    this.initSiren();
+    this.initDelayBus();
     this.initPads();
-    this.initThunder();
     this.updateDelayTime();
   }
 
-  initTapeEcho() {
+  initMasterPreamp() {
     const ctx = this.audioContext;
-    this.tapeInput = ctx.createGain();
-    this.delayHead1 = ctx.createDelay(4);
-    this.delayHead2 = ctx.createDelay(4);
-    this.delayHead3 = ctx.createDelay(4);
-    this.h1Gain = ctx.createGain();
-    this.h2Gain = ctx.createGain();
-    this.h3Gain = ctx.createGain();
-    this.delayWet = ctx.createGain();
-    this.feedHPF = ctx.createBiquadFilter();
-    this.feedLPF = ctx.createBiquadFilter();
-    this.feedDrive = ctx.createWaveShaper();
-    this.feedGain = ctx.createGain();
-    this.wowOsc = ctx.createOscillator();
-    this.flutterOsc = ctx.createOscillator();
-    this.wowDepth = ctx.createGain();
-    this.flutterDepth = ctx.createGain();
-    this.tapTimes = [];
-    this.tapeWarp = 0.04;
-    this.tapeMode = 4;
-    this.delayFeedback = this.feedGain;
-
-    this.delayWet.gain.value = 1;
-    this.feedGain.gain.value = 0.35;
-    this.feedHPF.type = 'highpass';
-    this.feedHPF.frequency.value = 120;
-    this.feedLPF.type = 'lowpass';
-    this.feedLPF.frequency.value = 4500;
-    this.feedDrive.curve = makeExciterCurve(1.6);
-    this.feedDrive.oversample = '4x';
-
-    this.wowOsc.type = 'sine';
-    this.wowOsc.frequency.value = 1.2;
-    this.flutterOsc.type = 'sine';
-    this.flutterOsc.frequency.value = 11;
-    this.wowDepth.gain.value = 0.0008;
-    this.flutterDepth.gain.value = 0.0002;
-
-    this.delayInput.connect(this.tapeInput);
-    this.tapeInput.connect(this.delayHead1);
-    this.tapeInput.connect(this.delayHead2);
-    this.tapeInput.connect(this.delayHead3);
-    this.delayHead1.connect(this.h1Gain);
-    this.delayHead2.connect(this.h2Gain);
-    this.delayHead3.connect(this.h3Gain);
-    this.h1Gain.connect(this.delayWet);
-    this.h2Gain.connect(this.delayWet);
-    this.h3Gain.connect(this.delayWet);
-    this.delayWet.connect(this.masterGain);
-
-    this.delayHead1.connect(this.feedHPF);
-    this.feedHPF.connect(this.feedLPF);
-    this.feedLPF.connect(this.feedDrive);
-    this.feedDrive.connect(this.feedGain);
-    this.feedGain.connect(this.delayHead1);
-
-    this.wowOsc.connect(this.wowDepth);
-    this.flutterOsc.connect(this.flutterDepth);
-    [this.delayHead1, this.delayHead2, this.delayHead3].forEach(head => {
-      this.wowDepth.connect(head.delayTime);
-      this.flutterDepth.connect(head.delayTime);
+    this.masterPreampState = {
+      enabled: false,
+      bandCount: 3,
+      cutoffs: [200, 2000],
+      hpf: 20,
+      lpf: 20000,
+      q: 0.707,
+      reverbSend: 0.35,
+      delaySend: 0.25,
+    };
+    this.masterPreampBypass.gain.value = 1;
+    this.masterPreampInput = ctx.createGain();
+    this.masterPreampOut = ctx.createGain();
+    this.masterPreampHPF = ctx.createBiquadFilter();
+    this.masterPreampLPF = ctx.createBiquadFilter();
+    this.masterPreampReverbSend = ctx.createGain();
+    this.masterPreampDelaySend = ctx.createGain();
+    this.masterPreampInput.gain.value = 0;
+    this.masterPreampOut.gain.value = 1;
+    this.masterPreampHPF.type = 'highpass';
+    this.masterPreampLPF.type = 'lowpass';
+    this.masterPreampInput.connect(this.masterPreampHPF);
+    this.masterPreampHPF.connect(this.masterPreampLPF);
+    this.masterPreampBands = Array.from({ length: 5 }, () => {
+      const hpf = ctx.createBiquadFilter();
+      const lpf = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+      hpf.type = 'highpass';
+      lpf.type = 'lowpass';
+      hpf.Q.value = 0.707;
+      lpf.Q.value = 0.707;
+      gain.gain.value = 1;
+      this.masterPreampLPF.connect(hpf);
+      hpf.connect(lpf);
+      lpf.connect(gain);
+      gain.connect(this.masterPreampOut);
+      return { hpf, lpf, gain };
     });
-
-    this.wowOsc.start();
-    this.flutterOsc.start();
-    this.setTapeMode(4);
+    this.masterPreampOut.connect(this.masterLPF);
+    this.masterPreampOut.connect(this.masterPreampReverbSend);
+    this.masterPreampOut.connect(this.masterPreampDelaySend);
+    this.masterPreampReverbSend.connect(this.echo.input);
+    this.masterPreampDelaySend.connect(this.delayInput);
+    this.applyMasterPreampState();
   }
 
-  initSiren() {
+  initDelayBus() {
     const ctx = this.audioContext;
-    this.sirenOsc = ctx.createOscillator();
-    this.sirenLFO = ctx.createOscillator();
-    this.sirenLFODepth = ctx.createGain();
-    this.sirenGain = ctx.createGain();
-    this.sirenLPF = ctx.createBiquadFilter();
-    this.sirenReverbSend = ctx.createGain();
-    this.sirenDelaySend = ctx.createGain();
-    this.sirenOsc.type = 'sine';
-    this.sirenLFO.type = 'sine';
-    this.sirenLFO.frequency.value = 0.5;
-    this.sirenGain.gain.value = 0;
-    this.sirenLPF.type = 'lowpass';
-    this.sirenLPF.frequency.value = 20000;
-    this.sirenReverbSend.gain.value = 0.35;
-    this.sirenDelaySend.gain.value = 0.25;
+    this.delayNode = ctx.createDelay(4);
+    this.delayFeedback = ctx.createGain();
+    this.delayTone = ctx.createBiquadFilter();
+    this.delayWet = ctx.createGain();
+    this.delayFeedback.gain.value = 0.35;
+    this.delayTone.type = 'lowpass';
+    this.delayTone.frequency.value = 5000;
+    this.delayTone.Q.value = 0.7;
+    this.delayWet.gain.value = 1;
 
-    this.sirenLFO.connect(this.sirenLFODepth);
-    this.sirenLFODepth.connect(this.sirenOsc.frequency);
-    this.sirenOsc.connect(this.sirenGain);
-    this.sirenGain.connect(this.sirenLPF);
-    this.sirenLPF.connect(this.masterGain);
-    this.sirenGain.connect(this.sirenReverbSend);
-    this.sirenGain.connect(this.sirenDelaySend);
-    this.sirenReverbSend.connect(this.echo.input);
-    this.sirenDelaySend.connect(this.delayInput);
-    this.setSirenFreqRange(this.sirenRange.lo, this.sirenRange.hi);
-    this.sirenOsc.start();
-    this.sirenLFO.start();
+    this.delayInput.connect(this.delayNode);
+    this.delayNode.connect(this.delayTone);
+    this.delayTone.connect(this.delayWet);
+    this.delayWet.connect(this.masterGain);
+    this.delayTone.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
   }
 
   initPads() {
@@ -222,43 +189,53 @@ export default class Player {
   }
 
   loadDefaultPads() {
-    const ctx = this.audioContext;
-    this.loadPad(0, this.makeVinylNoiseBuffer(), this.padNames[0]);
-    this.loadPad(1, this.makeBassThudBuffer(), this.padNames[1]);
-    this.loadPad(2, this.makeGongBuffer(), this.padNames[2]);
-    this.loadPad(3, this.makeStabBuffer(), this.padNames[3]);
-    if (!ctx) return;
+    this.defaultPadFiles.forEach((filename, index) => {
+      this.loadPadFromURL(index, filename).catch(err => {
+        console.warn(`Pad ${index + 1} sample load failed (${filename}), using synth fallback.`, err);
+        const fallback = this.makeFallbackPadBuffer(index);
+        if (!fallback) return;
+        this.loadPad(index, fallback, this.padNames[index] || `pad ${index + 1}`);
+      });
+    });
   }
 
-  initThunder() {
-    const ctx = this.audioContext;
-    this.thunderGain = ctx.createGain();
-    this.thunderReverbSend = ctx.createGain();
-    this.thunderDelaySend = ctx.createGain();
-    this.thunderConvolver = ctx.createConvolver();
-    this.thunderIRLoaded = false;
-    this.thunderGain.gain.value = 1.5;
-    this.thunderReverbSend.gain.value = 0.8;
-    this.thunderDelaySend.gain.value = 0.6;
-    this.thunderConvolver.normalize = true;
-    this.thunderConvolver.connect(this.thunderGain);
-    this.thunderGain.connect(this.masterGain);
-    this.thunderGain.connect(this.thunderReverbSend);
-    this.thunderGain.connect(this.thunderDelaySend);
-    this.thunderReverbSend.connect(this.echo.input);
-    this.thunderDelaySend.connect(this.delayInput);
-    this.loadThunderIR();
+  async loadPadFromURL(index, filename) {
+    const candidates = [
+      `samples/${filename}`,
+      `/samples/${filename}`,
+      `../samples/${filename}`,
+    ];
+    let lastErr = null;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const url = candidates[i];
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.arrayBuffer();
+        const decoded = await this.audioContext.decodeAudioData(data);
+        const label = String(filename).replace(/\.[^.]+$/, '');
+        this.loadPad(index, decoded, label);
+        return;
+      } catch (e) {
+        lastErr = new Error(`Failed ${url}: ${e.message || e}`);
+      }
+    }
+    throw lastErr || new Error(`Failed to load sample: ${filename}`);
   }
 
-  async loadThunderIR() {
-    try {
-      const res = await fetch('spring-crash.wav');
-      if (!res.ok) return;
-      const ab = await res.arrayBuffer();
-      this.thunderConvolver.buffer = await this.audioContext.decodeAudioData(ab);
-      this.thunderIRLoaded = Boolean(this.thunderConvolver.buffer);
-    } catch (e) {
-      this.thunderIRLoaded = false;
+  makeFallbackPadBuffer(index) {
+    switch (index) {
+      case 0: return this.makeVinylNoiseBuffer();
+      case 1: return this.makeBassThudBuffer();
+      case 2: return this.makeGongBuffer();
+      case 3: return this.makeStabBuffer();
+      case 4: return this.makeSnareNoiseBuffer();
+      case 5: return this.makeWoodClickBuffer();
+      case 6: return this.makeRiserBuffer();
+      case 7: return this.makeSubDropBuffer();
+      case 8: return this.makeClapBurstBuffer();
+      case 9: return this.makeNoiseSweepBuffer();
+      default: return null;
     }
   }
 
@@ -316,6 +293,99 @@ export default class Player {
       const saw = 2 * ((t * 220) % 1) - 1;
       const env = Math.min(1, t * 140) * Math.exp(-t * 28);
       data[i] = saw * env * 0.7;
+    }
+    return buf;
+  }
+
+  makeSnareNoiseBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.22;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const env = Math.exp(-t * 20);
+      const tone = Math.sin(2 * Math.PI * 220 * t) * 0.2;
+      data[i] = (((Math.random() * 2) - 1) * 0.8 + tone) * env;
+    }
+    return buf;
+  }
+
+  makeWoodClickBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.08;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const env = Math.exp(-t * 60);
+      const pulse = Math.sin(2 * Math.PI * 1400 * t) * 0.7;
+      data[i] = pulse * env;
+    }
+    return buf;
+  }
+
+  makeRiserBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.8;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const p = i / len;
+      const f = 180 + (p * 1200);
+      const env = Math.min(1, p * 1.2) * Math.exp(-(1 - p) * 0.15);
+      data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.45;
+    }
+    return buf;
+  }
+
+  makeSubDropBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.9;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const p = i / len;
+      const f = 110 - (p * 80);
+      const env = Math.exp(-t * 4.2);
+      data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.9;
+    }
+    return buf;
+  }
+
+  makeClapBurstBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.18;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const env = Math.exp(-t * 24);
+      const burst = ((Math.random() * 2) - 1) * (1 - ((i / len) * 0.35));
+      data[i] = burst * env * 0.85;
+    }
+    return buf;
+  }
+
+  makeNoiseSweepBuffer() {
+    const ctx = this.audioContext;
+    const dur = 0.65;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      const t = i / ctx.sampleRate;
+      const p = i / len;
+      const env = Math.exp(-t * 4.6);
+      const wobble = Math.sin(2 * Math.PI * (180 + (p * 900)) * t) * 0.18;
+      data[i] = ((((Math.random() * 2) - 1) * 0.65) + wobble) * env;
     }
     return buf;
   }
@@ -386,10 +456,11 @@ export default class Player {
   }
 
   setLoopMachine(data, tempo, length, transpose) {
-    const changed = tempo !== this.bpm || length !== this.bars || transpose !== this.offset;
+    const appliedTempo = tempo || 127;
+    const changed = appliedTempo !== this.bpm || length !== this.bars || transpose !== this.offset;
     if (changed) this.stopPlayLoop();
     this.beats.length = 0;
-    this.bpm = tempo || 127;
+    this.bpm = appliedTempo;
     this.bars = length || 16;
     this.offset = transpose || 0;
     this.updateDelayTime();
@@ -444,9 +515,6 @@ export default class Player {
         epicenterFreq: 90,
         epicenterDrive: 4,
         epicenterBlend: 0.3,
-        multibandOn: false,
-        multibandCount: 3,
-        multibandCutoffs: [200, 2000],
       });
     }
     return this.trackState.get(key);
@@ -467,62 +535,6 @@ export default class Player {
     nodes.subInput.frequency.setTargetAtTime(state.epicenterFreq, now, 0.02);
     nodes.subShaper.curve = makeExciterCurve(state.epicenterDrive);
     nodes.subBlend.gain.setTargetAtTime(state.epicenterOn ? state.epicenterBlend : 0, now, 0.02);
-    this.applyMultibandState(nodes, state);
-  }
-
-  buildMultibandNodes() {
-    const ctx = this.audioContext;
-    const input = ctx.createGain();
-    const dry = ctx.createGain();
-    const rev = ctx.createGain();
-    const dly = ctx.createGain();
-    const bands = Array.from({ length: 5 }, () => {
-      const hpf = ctx.createBiquadFilter();
-      const lpf = ctx.createBiquadFilter();
-      const gain = ctx.createGain();
-      const revSend = ctx.createGain();
-      const dlySend = ctx.createGain();
-      hpf.type = 'highpass';
-      lpf.type = 'lowpass';
-      hpf.Q.value = 0.707;
-      lpf.Q.value = 0.707;
-      gain.gain.value = 1;
-      revSend.gain.value = 0;
-      dlySend.gain.value = 0;
-      input.connect(hpf);
-      hpf.connect(lpf);
-      lpf.connect(gain);
-      gain.connect(dry);
-      gain.connect(revSend);
-      gain.connect(dlySend);
-      revSend.connect(this.echo.input);
-      dlySend.connect(this.delayInput);
-      return { hpf, lpf, gain, revSend, dlySend };
-    });
-    return { input, dry, rev, dly, bands };
-  }
-
-  applyMultibandState(nodes, state) {
-    const now = this.audioContext.currentTime;
-    const configs = {
-      3: [200, 2000],
-      4: [150, 800, 3000],
-      5: [100, 400, 1500, 6000],
-    };
-    const count = clamp(state.multibandCount || 3, 3, 5);
-    const cutoffs = Array.isArray(state.multibandCutoffs) && state.multibandCutoffs.length
-      ? state.multibandCutoffs
-      : configs[count];
-    nodes.directPath.gain.setTargetAtTime(state.multibandOn ? 0 : 1, now, 0.01);
-    nodes.multiband.input.gain.setTargetAtTime(state.multibandOn ? 1 : 0, now, 0.01);
-    nodes.multiband.dry.gain.setTargetAtTime(state.multibandOn ? 1 : 0, now, 0.01);
-    nodes.multiband.bands.forEach((band, i) => {
-      const low = i === 0 ? 20 : cutoffs[Math.min(i - 1, cutoffs.length - 1)];
-      const high = i >= count - 1 ? 20000 : cutoffs[Math.min(i, cutoffs.length - 1)];
-      band.hpf.frequency.setTargetAtTime(low, now, 0.02);
-      band.lpf.frequency.setTargetAtTime(high, now, 0.02);
-      band.gain.gain.setTargetAtTime(i < count ? 1 : 0, now, 0.02);
-    });
   }
 
   getTrackNodes(key) {
@@ -531,7 +543,6 @@ export default class Player {
     const input = ctx.createGain();
     const hpf = ctx.createBiquadFilter();
     const lpf = ctx.createBiquadFilter();
-    const directPath = ctx.createGain();
     const dry = ctx.createGain();
     const reverbSend = ctx.createGain();
     const delaySend = ctx.createGain();
@@ -547,7 +558,6 @@ export default class Player {
     lpf.frequency.value = 20000;
     hpf.Q.value = 0.7;
     lpf.Q.value = 1;
-    directPath.gain.value = 1;
     dry.gain.value = 1;
     reverbSend.gain.value = 0;
     delaySend.gain.value = 0;
@@ -563,10 +573,9 @@ export default class Player {
 
     input.connect(hpf);
     hpf.connect(lpf);
-    lpf.connect(directPath);
-    directPath.connect(dry);
-    directPath.connect(reverbSend);
-    directPath.connect(delaySend);
+    lpf.connect(dry);
+    lpf.connect(reverbSend);
+    lpf.connect(delaySend);
     dry.connect(this.equalizer.input);
     reverbSend.connect(this.echo.input);
     delaySend.connect(this.delayInput);
@@ -577,15 +586,10 @@ export default class Player {
     subCleanup.connect(subBlend);
     subBlend.connect(dry);
 
-    const multiband = this.buildMultibandNodes();
-    lpf.connect(multiband.input);
-    multiband.dry.connect(this.equalizer.input);
-
     const nodes = {
       input,
       hpf,
       lpf,
-      directPath,
       dry,
       reverbSend,
       delaySend,
@@ -593,7 +597,6 @@ export default class Player {
       subShaper,
       subCleanup,
       subBlend,
-      multiband,
     };
     this.trackNodes.set(key, nodes);
     this.applyTrackState(key);
@@ -702,84 +705,84 @@ export default class Player {
     this.applyTrackState(key);
   }
 
-  setMultibandEnabled(key, enabled) {
-    const state = this.getTrackState(key);
-    state.multibandOn = Boolean(enabled);
-    this.applyTrackState(key);
+  applyMasterPreampState() {
+    const now = this.audioContext.currentTime;
+    const configs = {
+      3: [200, 2000],
+      4: [150, 800, 3000],
+      5: [100, 400, 1500, 6000],
+    };
+    const count = clamp(this.masterPreampState.bandCount || 3, 3, 5);
+    const cutoffs = Array.isArray(this.masterPreampState.cutoffs) && this.masterPreampState.cutoffs.length
+      ? this.masterPreampState.cutoffs
+      : configs[count];
+    this.masterPreampBypass.gain.setTargetAtTime(this.masterPreampState.enabled ? 0 : 1, now, 0.01);
+    this.masterPreampInput.gain.setTargetAtTime(this.masterPreampState.enabled ? 1 : 0, now, 0.01);
+    this.masterPreampHPF.frequency.setTargetAtTime(this.masterPreampState.hpf, now, 0.02);
+    this.masterPreampLPF.frequency.setTargetAtTime(this.masterPreampState.lpf, now, 0.02);
+    this.masterPreampHPF.Q.setTargetAtTime(this.masterPreampState.q, now, 0.02);
+    this.masterPreampLPF.Q.setTargetAtTime(this.masterPreampState.q, now, 0.02);
+    this.masterPreampReverbSend.gain.setTargetAtTime(this.masterPreampState.enabled ? this.masterPreampState.reverbSend : 0, now, 0.02);
+    this.masterPreampDelaySend.gain.setTargetAtTime(this.masterPreampState.enabled ? this.masterPreampState.delaySend : 0, now, 0.02);
+    this.masterPreampBands.forEach((band, i) => {
+      const low = i === 0 ? 20 : cutoffs[Math.min(i - 1, cutoffs.length - 1)];
+      const high = i >= count - 1 ? 20000 : cutoffs[Math.min(i, cutoffs.length - 1)];
+      band.hpf.frequency.setTargetAtTime(low, now, 0.02);
+      band.lpf.frequency.setTargetAtTime(high, now, 0.02);
+      band.gain.gain.setTargetAtTime(i < count ? 1 : 0, now, 0.02);
+    });
   }
 
-  setMultibandCount(key, count) {
-    const state = this.getTrackState(key);
-    state.multibandCount = clamp(parseInt(count, 10) || 3, 3, 5);
-    this.applyTrackState(key);
+  setMasterPreampEnabled(enabled) {
+    this.masterPreampState.enabled = Boolean(enabled);
+    this.applyMasterPreampState();
   }
 
-  setMultibandCutoffs(key, cutoffs) {
-    const state = this.getTrackState(key);
-    state.multibandCutoffs = (Array.isArray(cutoffs) ? cutoffs : [])
+  setMasterPreampCount(count) {
+    this.masterPreampState.bandCount = clamp(parseInt(count, 10) || 3, 3, 5);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampCutoffs(cutoffs) {
+    this.masterPreampState.cutoffs = (Array.isArray(cutoffs) ? cutoffs : [])
       .map(v => clamp(v, 20, 20000))
       .sort((a, b) => a - b);
-    this.applyTrackState(key);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampHPF(freqHz) {
+    this.masterPreampState.hpf = clamp(freqHz, 20, 20000);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampLPF(freqHz) {
+    this.masterPreampState.lpf = clamp(freqHz, 20, 20000);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampQ(q) {
+    this.masterPreampState.q = clamp(q, 0.1, 18);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampReverbSend(value) {
+    this.masterPreampState.reverbSend = clamp(value, 0, 1);
+    this.applyMasterPreampState();
+  }
+
+  setMasterPreampDelaySend(value) {
+    this.masterPreampState.delaySend = clamp(value, 0, 1);
+    this.applyMasterPreampState();
   }
 
   setDelayFeedback(value) {
-    this.feedGain.gain.value = clamp(value, 0, 1.1);
+    this.delayFeedback.gain.value = clamp(value, 0, 1.1);
   }
 
-  setDelayMode(mode) {
-    this.setTapeMode(mode);
-  }
-
-  setTapeMode(mode) {
-    this.tapeMode = clamp(parseInt(mode, 10) || 1, 1, 7);
-    const matrix = [
-      [1, 0, 0],
-      [0, 1, 0],
-      [0, 0, 1],
-      [1, 1, 0],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
-    ][this.tapeMode - 1];
-    this.h1Gain.gain.value = matrix[0];
-    this.h2Gain.gain.value = matrix[1];
-    this.h3Gain.gain.value = matrix[2];
-  }
-
-  setTapeWarp(value) {
-    this.tapeWarp = clamp(value, 0.001, 0.2);
-  }
-
-  setTapeWowFlutter(value) {
-    const n = clamp(value, 0, 1);
-    this.wowDepth.gain.value = 0.0008 * n;
-    this.flutterDepth.gain.value = 0.0002 * n;
-  }
-
-  setTapeSpeed(seconds, warpTC = this.tapeWarp || 0.04) {
+  setDelaySeconds(seconds) {
     const t = clamp(seconds, 0.05, 0.8);
     const now = this.audioContext.currentTime;
-    this.delayHead1.delayTime.setTargetAtTime(t, now, warpTC);
-    this.delayHead2.delayTime.setTargetAtTime(t * 1.5, now, warpTC);
-    this.delayHead3.delayTime.setTargetAtTime(t * 2, now, warpTC);
-    this._tapeSpeed = t;
-  }
-
-  tapTapeTempo() {
-    const now = performance.now();
-    if (this.tapTimes.length && now - this.tapTimes[this.tapTimes.length - 1] > 3000) {
-      this.tapTimes = [];
-    }
-    this.tapTimes.push(now);
-    if (this.tapTimes.length > 4) this.tapTimes.shift();
-    if (this.tapTimes.length < 2) return null;
-    let sum = 0;
-    for (let i = 1; i < this.tapTimes.length; i += 1) {
-      sum += this.tapTimes[i] - this.tapTimes[i - 1];
-    }
-    const seconds = (sum / (this.tapTimes.length - 1)) / 1000;
-    this.setTapeSpeed(seconds);
-    return seconds;
+    this.delayNode.delayTime.setTargetAtTime(t, now, 0.04);
   }
 
   setDelayTime(value) {
@@ -789,47 +792,7 @@ export default class Player {
 
   updateDelayTime() {
     const whole = (4 * 60) / (this.bpm || 127);
-    this.setTapeSpeed(whole * this.delayDivision);
-  }
-
-  setSirenVolume(value) {
-    this.sirenVol = clamp(value, 0, 1);
-    if (this.sirenActive) this.sirenGain.gain.value = this.sirenVol;
-  }
-
-  sirenHold(active) {
-    this.sirenActive = Boolean(active);
-    this.sirenGain.gain.setTargetAtTime(this.sirenActive ? this.sirenVol : 0, this.audioContext.currentTime, 0.01);
-  }
-
-  setSirenWave(type) {
-    this.sirenOsc.type = type;
-  }
-
-  setSirenRate(hz) {
-    this.sirenLFO.frequency.setTargetAtTime(clamp(hz, 0.1, 8), this.audioContext.currentTime, 0.01);
-  }
-
-  setSirenFreqRange(lo, hi) {
-    const l = clamp(Math.min(lo, hi), 30, 4000);
-    const h = clamp(Math.max(lo, hi), 30, 4000);
-    this.sirenRange = { lo: l, hi: h };
-    const center = (l + h) / 2;
-    const depth = (h - l) / 2;
-    this.sirenOsc.frequency.setTargetAtTime(center, this.audioContext.currentTime, 0.02);
-    this.sirenLFODepth.gain.setTargetAtTime(depth, this.audioContext.currentTime, 0.02);
-  }
-
-  setSirenReverb(value) {
-    this.sirenReverbSend.gain.value = clamp(value, 0, 1);
-  }
-
-  setSirenDelay(value) {
-    this.sirenDelaySend.gain.value = clamp(value, 0, 1);
-  }
-
-  setSirenLPF(freqHz) {
-    this.sirenLPF.frequency.setTargetAtTime(clamp(freqHz, 20, 20000), this.audioContext.currentTime, 0.02);
+    this.setDelaySeconds(whole * this.delayDivision);
   }
 
   loadPad(index, audioBuffer, label = 'sample') {
@@ -900,39 +863,6 @@ export default class Player {
     this.padDelaySends.forEach(node => { node.gain.value = this.padMasterDelay; });
   }
 
-  thunder(intensity = 1) {
-    const ctx = this.audioContext;
-    const power = clamp(intensity, 0.05, 1.2);
-    this.thunderGain.gain.setTargetAtTime(power * 2, ctx.currentTime, 0.002);
-    if (this.thunderIRLoaded && this.thunderConvolver.buffer) {
-      const src = ctx.createBufferSource();
-      src.buffer = makeDiracBuffer(ctx);
-      src.connect(this.thunderConvolver);
-      src.start(ctx.currentTime);
-      return;
-    }
-    const src = ctx.createBufferSource();
-    src.buffer = makeNoiseBuffer(ctx, 0.06);
-    const bpf = ctx.createBiquadFilter();
-    const lpf = ctx.createBiquadFilter();
-    const peak = ctx.createBiquadFilter();
-    bpf.type = 'bandpass';
-    bpf.frequency.value = 600;
-    bpf.Q.value = 0.8;
-    lpf.type = 'lowpass';
-    lpf.frequency.value = 900;
-    lpf.Q.value = 8 + (power * 8);
-    peak.type = 'peaking';
-    peak.frequency.value = 2400;
-    peak.Q.value = 4;
-    peak.gain.value = 8;
-    src.connect(bpf);
-    bpf.connect(lpf);
-    lpf.connect(peak);
-    peak.connect(this.thunderGain);
-    src.start(ctx.currentTime);
-  }
-
   getTrackKeys() {
     return [...this.trackNodes.keys()];
   }
@@ -998,5 +928,3 @@ export default class Player {
     });
   }
 }
-
-export { sectionFromTrackKey, sliderToFreq };

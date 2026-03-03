@@ -5,12 +5,12 @@ import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
 import { createMixer } from './components/mixer.js';
-import { MidiAccess, msgNorm, msgType, msgValue, pitchbendNorm } from './lib/midi.js';
+import { MidiAccess, msgNorm, msgType, msgValue } from './lib/midi.js';
 import { MidiLearn } from './components/midi-learn.js';
 import { SnapshotManager } from './lib/snapshots.js';
 
 let tempo = 146;
-let bars = 8;
+let bars = 16;
 let transpose = 0;
 let playing = false;
 let debounceTimer = null;
@@ -27,13 +27,17 @@ let visualizerData = null;
 let midiAccess = null;
 let midiLearn = null;
 let snapshotManager = null;
+let midiLearnKeyHeld = false;
 
 const p = window.p || new Player();
 window.p = p;
 
 const STORAGE_KEY = 'scoops:draft';
 
-const BILLY_JEAN = `
+const BILLY_JEAN = `; Billy Jean - Michael Jackson
+; tempo: 117
+; bars: 16
+
 %F a3|c#4|f#4
 %G b3|d#4|g#4
 %A c#4|e4|a4
@@ -186,6 +190,30 @@ const SCALE_INFO = {
   mixolydian: 'W W H W W H W  -  major with lowered 7th',
   locrian: 'H W W H W W W  -  diminished flavor',
 };
+
+function extractDraftTempo(input) {
+  const m = String(input || '').match(/^\s*;\s*tempo\s*:\s*(\d+(?:\.\d+)?)\s*$/im);
+  if (!m) return null;
+  const n = Math.round(parseFloat(m[1]));
+  if (!Number.isFinite(n)) return null;
+  return Math.max(60, Math.min(200, n));
+}
+
+function extractDraftBars(input) {
+  const m = String(input || '').match(/^\s*;\s*bars\s*:\s*(\d+)\s*$/im);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(4, Math.min(32, n));
+}
+
+function extractDraftKey(input) {
+  const m = String(input || '').match(/^\s*;\s*key\s*:\s*([+-]?\d+)\s*$/im);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(-12, Math.min(12, n));
+}
 
 function build(midi) {
   const mix = [];
@@ -674,6 +702,17 @@ function loadPresetByName(name) {
   if (!editorApi || !preset) return;
 
   editorApi.setValue(preset.trim());
+  const presetTempo = extractDraftTempo(preset);
+  const presetBars = extractDraftBars(preset);
+  const presetKey = extractDraftKey(preset);
+  if (typeof presetTempo === 'number') {
+    tempo = presetTempo;
+  }
+  if (typeof presetBars === 'number') bars = presetBars;
+  if (typeof presetKey === 'number') transpose = presetKey;
+  if (mixerApi && (typeof presetTempo === 'number' || typeof presetBars === 'number' || typeof presetKey === 'number')) {
+    mixerApi.syncTransport({ tempo, bars, transpose });
+  }
   localStorage.setItem(STORAGE_KEY, editorApi.getValue());
   setQueryLoad(name);
   showStatus(`Loaded preset: ${PRESET_LABELS[name] || name}`, 'ready');
@@ -709,31 +748,10 @@ function buildMidiActions() {
       updateLoop();
       if (mixerApi) mixerApi.syncTransport({ transpose });
     },
-    'delay:tap': () => {
-      if (mixerApi && mixerApi.dom && mixerApi.dom.tapBtn) {
-        mixerApi.dom.tapBtn.click();
-      } else {
-        p.tapTapeTempo();
-      }
-    },
-    'thunder:hit': data => {
-      const intensity = Math.max(0.1, msgNorm(data));
-      p.thunder(intensity);
-    },
-    'siren:hold': data => {
-      const type = msgType(data);
-      if (type === 'noteoff') p.sirenHold(false);
-      else p.sirenHold(msgValue(data) > 0);
-    },
   };
 
   p.getTrackKeys().forEach(key => {
     actions[`track:${key}:vol`] = data => p.setVolume(key, msgNorm(data));
-    actions[`track:${key}:rev`] = data => p.setReverbSend(key, msgNorm(data));
-    actions[`track:${key}:dly`] = data => p.setDelaySend(key, msgNorm(data));
-    actions[`track:${key}:lpf`] = data => p.setLPF(key, 20 * Math.pow(1000, msgNorm(data)));
-    actions[`track:${key}:hpf`] = data => p.setHPF(key, 20 * Math.pow(1000, msgNorm(data)));
-    actions[`track:${key}:lpf-q`] = data => p.setLPFQ(key, 0.7 + (msgNorm(data) * 17.3));
     actions[`track:${key}:mute`] = data => {
       if (msgType(data) === 'noteoff') return;
       const cur = p.getTrackState(key);
@@ -749,14 +767,9 @@ function buildMidiActions() {
       const cur = p.getTrackState(key);
       p.setEpicenterEnabled(key, !cur.epicenterOn);
     };
-    actions[`track:${key}:bands`] = data => {
-      if (msgType(data) === 'noteoff') return;
-      const cur = p.getTrackState(key);
-      p.setMultibandEnabled(key, !cur.multibandOn);
-    };
   });
 
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < p.pads.length; i += 1) {
     actions[`pad:${i}:trig`] = data => {
       const type = msgType(data);
       const velocity = msgValue(data) || 127;
@@ -769,23 +782,35 @@ function buildMidiActions() {
   }
 
   actions['global:lpf'] = data => p.setMasterLPF(20 * Math.pow(1000, msgNorm(data)));
-  actions['siren:vol'] = data => p.setSirenVolume(msgNorm(data));
-  actions['siren:rate'] = data => p.setSirenRate(0.1 + (msgNorm(data) * 5));
-  actions['siren:freq-hi'] = data => {
-    const hi = 100 + (msgNorm(data) * 2500);
-    p.setSirenFreqRange(p.sirenRange.lo, hi);
+  actions['master:preamp:toggle'] = data => {
+    if (msgType(data) === 'noteoff') return;
+    p.setMasterPreampEnabled(!p.masterPreampState.enabled);
   };
-  actions['siren:freq-lo'] = data => {
-    const lo = 40 + (msgNorm(data) * 1000);
-    p.setSirenFreqRange(lo, p.sirenRange.hi);
+  actions['master:preamp:cut1'] = data => {
+    const cutoffs = (p.masterPreampState.cutoffs || []).slice();
+    cutoffs[0] = 20 * Math.pow(1000, msgNorm(data));
+    p.setMasterPreampCutoffs(cutoffs);
   };
-  actions['siren:pitchbend'] = data => {
-    const bend = pitchbendNorm(data);
-    const lo = p.sirenRange.lo + (bend * 120);
-    const hi = p.sirenRange.hi + (bend * 180);
-    p.setSirenFreqRange(Math.max(40, lo), Math.max(60, hi));
+  actions['master:preamp:cut2'] = data => {
+    const cutoffs = (p.masterPreampState.cutoffs || []).slice();
+    cutoffs[1] = 20 * Math.pow(1000, msgNorm(data));
+    p.setMasterPreampCutoffs(cutoffs);
   };
-
+  actions['master:preamp:cut3'] = data => {
+    const cutoffs = (p.masterPreampState.cutoffs || []).slice();
+    cutoffs[2] = 20 * Math.pow(1000, msgNorm(data));
+    p.setMasterPreampCutoffs(cutoffs);
+  };
+  actions['master:preamp:cut4'] = data => {
+    const cutoffs = (p.masterPreampState.cutoffs || []).slice();
+    cutoffs[3] = 20 * Math.pow(1000, msgNorm(data));
+    p.setMasterPreampCutoffs(cutoffs);
+  };
+  actions['master:preamp:hpf'] = data => p.setMasterPreampHPF(20 * Math.pow(1000, msgNorm(data)));
+  actions['master:preamp:lpf'] = data => p.setMasterPreampLPF(20 * Math.pow(1000, msgNorm(data)));
+  actions['master:preamp:q'] = data => p.setMasterPreampQ(0.7 + (msgNorm(data) * 10));
+  actions['master:preamp:rev'] = data => p.setMasterPreampReverbSend(msgNorm(data));
+  actions['master:preamp:dly'] = data => p.setMasterPreampDelaySend(msgNorm(data));
   return actions;
 }
 
@@ -851,6 +876,7 @@ async function initMidi() {
   }
   midiBtn.disabled = false;
   midiBtn.textContent = 'MIDI: connect';
+  midiBtn.title = 'Hold L and click a control to MIDI-learn it';
   midiAccess = new MidiAccess();
   midiLearn = new MidiLearn(midiAccess);
   midiLearn.setActions(buildMidiActions());
@@ -864,6 +890,68 @@ async function initMidi() {
   midiLearn.onBound = controlId => {
     showStatus(`Bound MIDI to ${controlId}`, 'ready');
   };
+
+  function setLearnLabelMode(active) {
+    const mixerRoot = document.getElementById('mixer-panel');
+    if (!mixerRoot) return;
+    const controls = mixerRoot.querySelectorAll('[data-midi-id]');
+    controls.forEach(control => {
+      if (!control || control.tagName !== 'BUTTON') return;
+      if (!control.dataset.learnLabelOrig) {
+        control.dataset.learnLabelOrig = control.textContent || '';
+      }
+      if (active) {
+        control.textContent = 'Learn';
+      } else {
+        control.textContent = control.dataset.learnLabelOrig || control.textContent;
+      }
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'KeyL' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (midiLearnKeyHeld) return;
+      midiLearnKeyHeld = true;
+      setLearnLabelMode(true);
+    }
+  });
+  document.addEventListener('keyup', e => {
+    if (e.code === 'KeyL') {
+      midiLearnKeyHeld = false;
+      setLearnLabelMode(false);
+    }
+  });
+  window.addEventListener('blur', () => {
+    midiLearnKeyHeld = false;
+    setLearnLabelMode(false);
+  });
+  document.addEventListener('pointerdown', e => {
+    if (!midiLearn || !midiLearnKeyHeld) return;
+    const target = e.target && e.target.closest ? e.target.closest('[data-midi-id]') : null;
+    if (!target) return;
+    const mixerRoot = document.getElementById('mixer-panel');
+    if (!mixerRoot || !mixerRoot.contains(target)) return;
+    const controlId = target.dataset.midiId;
+    if (!controlId) return;
+    midiLearn.startLearn(controlId);
+    target.classList.add('midi-learning-target');
+    showStatus(`Learning ${controlId}... move hardware control`, 'warning');
+    const clearClass = () => target.classList.remove('midi-learning-target');
+    const oldBound = midiLearn.onBound;
+    midiLearn.onBound = (...args) => {
+      clearClass();
+      if (typeof oldBound === 'function') oldBound(...args);
+      midiLearn.onBound = oldBound;
+    };
+    setTimeout(() => {
+      if (midiLearn && midiLearn.learning === controlId) {
+        midiLearn.cancelLearn();
+        clearClass();
+        midiLearn.onBound = oldBound;
+        showStatus('MIDI learn cancelled', 'ready');
+      }
+    }, 8000);
+  });
 
   midiBtn.addEventListener('click', async () => {
     try {
@@ -894,11 +982,6 @@ function bindGlobalShortcuts() {
     if ((e.metaKey || e.ctrlKey) && e.code === 'KeyS') {
       e.preventDefault();
       if (snapshotManager && mixerApi) saveSnapshotInteractive();
-    }
-    if (!editingField && e.code === 'KeyT' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      e.preventDefault();
-      if (mixerApi && mixerApi.dom && mixerApi.dom.tapBtn) mixerApi.dom.tapBtn.click();
-      else p.tapTapeTempo();
     }
     if (!editingField && /^Digit[0-9]$/.test(e.code)) {
       const n = parseInt(e.code.replace('Digit', ''), 10);
@@ -1142,29 +1225,6 @@ function createDOM(initialText, initialPreset) {
       if (typeof next.transpose === 'number') transpose = next.transpose;
       updateLoop();
     },
-    onMidiLearnRequest(controlId, buttonEl) {
-      if (!midiLearn) return;
-      midiLearn.startLearn(controlId);
-      buttonEl.classList.add('learning');
-      showStatus(`Move a MIDI control for ${controlId}`, 'warning');
-      const clear = () => {
-        buttonEl.classList.remove('learning');
-      };
-      const oldBound = midiLearn.onBound;
-      midiLearn.onBound = (...args) => {
-        clear();
-        if (typeof oldBound === 'function') oldBound(...args);
-        midiLearn.onBound = oldBound;
-      };
-      setTimeout(() => {
-        if (midiLearn && midiLearn.learning === controlId) {
-          midiLearn.cancelLearn();
-          clear();
-          showStatus('MIDI learn cancelled', 'ready');
-          midiLearn.onBound = oldBound;
-        }
-      }, 8000);
-    },
     onSnapshotSave: saveSnapshotInteractive,
     onSnapshotRecall: recallSnapshot,
     onSnapshotDelete(id) {
@@ -1334,6 +1394,12 @@ async function bootstrap() {
   const params = new URLSearchParams(window.location.search);
   const initialPreset = params.get('load');
   const initialDraft = await resolveInitialDraft();
+  const initialTempo = extractDraftTempo(initialDraft);
+  const initialBars = extractDraftBars(initialDraft);
+  const initialKey = extractDraftKey(initialDraft);
+  if (typeof initialTempo === 'number') tempo = initialTempo;
+  if (typeof initialBars === 'number') bars = initialBars;
+  if (typeof initialKey === 'number') transpose = initialKey;
   const editor = createDOM(initialDraft, initialPreset);
   bindGlobalShortcuts();
   const data = getData(editor.getValue());

@@ -14,7 +14,7 @@
     "dev": "npm run build -- -w",
     "dist": "npm run build -- -q",
     "check": "eslint 'src/**/*.{js,pug,svelte}'",
-    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081",
+    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
     "mocha": "NODE_ENV=test _mocha -c  --exit --verbose --recursive",
     "test": "npm run test:unit --",
     "pretest": "npm run dist",

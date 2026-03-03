@@ -8,6 +8,21 @@ function shortName(name) {
   return parts.slice(0, 2).join(' ');
 }
 
+function instrumentNameForKey(player, keyId, fallback) {
+  const raw = String(keyId || '').split('/')[0];
+  const n = parseInt(raw, 10);
+  if (Number.isNaN(n) || !player || !player.player || !player.player.loader) return fallback;
+  try {
+    const info = n >= 2000
+      ? player.player.loader.drumInfo(n - 2000)
+      : player.player.loader.instrumentInfo(n);
+    if (info && info.title) return info.title;
+  } catch (e) {
+    // ignore and fallback
+  }
+  return fallback;
+}
+
 function freqToSlider(freq) {
   return Math.max(0, Math.min(1, Math.log(freq / 20) / Math.log(1000)));
 }
@@ -17,18 +32,11 @@ function sliderToFreq(v) {
 }
 
 function attachMidiLearn(control, midiId, options) {
-  if (!control || !midiId || !options || !options.onMidiLearnRequest) return null;
+  if (!control || !midiId) return null;
   control.dataset.midiId = midiId;
-  const learn = document.createElement('button');
-  learn.className = 'm-learn';
-  learn.textContent = 'L';
-  learn.title = `MIDI Learn: ${midiId}`;
-  learn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    options.onMidiLearnRequest(midiId, learn, control);
-  });
-  return learn;
+  const baseTitle = control.title ? `${control.title} · ` : '';
+  control.title = `${baseTitle}MIDI: hold L and click to learn (${midiId})`;
+  return control;
 }
 
 function makeRange(label, min, max, value, onInput, step = '1') {
@@ -134,16 +142,6 @@ export function createMixer(player, options = {}) {
   transport.appendChild(barsRow);
   transport.appendChild(keyRow);
 
-  const delayMode = document.createElement('select');
-  for (let i = 1; i <= 7; i += 1) {
-    const option = document.createElement('option');
-    option.value = String(i);
-    option.textContent = `Head Mode ${i}`;
-    if (i === 4) option.selected = true;
-    delayMode.appendChild(option);
-  }
-  delayMode.addEventListener('change', () => player.setDelayMode(parseInt(delayMode.value, 10)));
-
   const delayDivision = document.createElement('select');
   [['1/4', 1 / 4], ['3/8', 3 / 8], ['1/2', 1 / 2], ['3/4', 3 / 4]].forEach(([label, value]) => {
     const option = document.createElement('option');
@@ -154,35 +152,12 @@ export function createMixer(player, options = {}) {
   });
   delayDivision.addEventListener('change', () => player.setDelayTime(parseFloat(delayDivision.value)));
 
-  const tapBtn = document.createElement('button');
-  tapBtn.className = 'm-mini-btn';
-  tapBtn.textContent = 'Tap (T)';
-  tapBtn.dataset.midiId = 'delay:tap';
-  const tapReadout = document.createElement('span');
-  tapReadout.className = 'm-readout';
-  tapReadout.textContent = '--- ms';
-  tapBtn.addEventListener('click', () => {
-    const seconds = player.tapTapeTempo();
-    if (!seconds) return;
-    tapReadout.textContent = `${Math.round(seconds * 1000)} ms`;
-  });
-
   const delayLabel = document.createElement('label');
   delayLabel.textContent = 'Delay Division';
   delayLabel.appendChild(delayDivision);
-  const modeLabel = document.createElement('label');
-  modeLabel.textContent = 'Tape Heads';
-  modeLabel.appendChild(delayMode);
   const feedback = makeRange('Feedback', 0, 110, 35, value => player.setDelayFeedback(parseInt(value, 10) / 100));
-  const warp = makeRange('Warp', 1, 200, 40, value => player.setTapeWarp(parseInt(value, 10) / 1000));
-  const wow = makeRange('Wow', 0, 100, 25, value => player.setTapeWowFlutter(parseInt(value, 10) / 100));
   fx.appendChild(delayLabel);
-  fx.appendChild(modeLabel);
   fx.appendChild(feedback.wrap);
-  fx.appendChild(warp.wrap);
-  fx.appendChild(wow.wrap);
-  fx.appendChild(tapBtn);
-  fx.appendChild(tapReadout);
 
   const globalLpf = makeRange('Master LPF', 0, 100, 100, value => {
     const freq = sliderToFreq(parseInt(value, 10) / 100);
@@ -190,50 +165,89 @@ export function createMixer(player, options = {}) {
   });
   fx.appendChild(globalLpf.wrap);
 
-  const sirenWrap = document.createElement('div');
-  sirenWrap.className = 'm-live-block';
-  const sirenTitle = document.createElement('h4');
-  sirenTitle.textContent = 'Siren';
-  const holdBtn = document.createElement('button');
-  holdBtn.className = 'm-mini-btn';
-  holdBtn.dataset.midiId = 'siren:hold';
-  holdBtn.textContent = 'Hold';
-  const holdOn = () => {
-    holdBtn.classList.add('active');
-    player.sirenHold(true);
-  };
-  const holdOff = () => {
-    holdBtn.classList.remove('active');
-    player.sirenHold(false);
-  };
-  ['mousedown', 'touchstart'].forEach(evt => holdBtn.addEventListener(evt, holdOn));
-  ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => holdBtn.addEventListener(evt, holdOff));
-  const wave = document.createElement('select');
-  ['sine', 'square', 'sawtooth', 'triangle'].forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    wave.appendChild(opt);
+  const masterPreampToggle = document.createElement('button');
+  masterPreampToggle.className = 'm-mini-btn';
+  masterPreampToggle.textContent = 'Master Preamp';
+  masterPreampToggle.dataset.midiId = 'master:preamp:toggle';
+  masterPreampToggle.addEventListener('click', () => {
+    const next = !masterPreampToggle.classList.contains('active');
+    masterPreampToggle.classList.toggle('active', next);
+    player.setMasterPreampEnabled(next);
   });
-  wave.addEventListener('change', () => player.setSirenWave(wave.value));
-  const lo = makeRange('Lo', 40, 1200, 220, v => player.setSirenFreqRange(parseInt(v, 10), parseInt(hi.input.value, 10)));
-  const hi = makeRange('Hi', 80, 2400, 900, v => player.setSirenFreqRange(parseInt(lo.input.value, 10), parseInt(v, 10)));
-  const sirenRate = makeRange('Rate', 1, 400, 50, v => player.setSirenRate(parseInt(v, 10) / 100));
-  const sirenVol = makeRange('Vol', 0, 100, 50, v => player.setSirenVolume(parseInt(v, 10) / 100));
-  const sirenRev = makeRange('Rev', 0, 100, 35, v => player.setSirenReverb(parseInt(v, 10) / 100));
-  const sirenDly = makeRange('Dly', 0, 100, 25, v => player.setSirenDelay(parseInt(v, 10) / 100));
-  sirenWrap.appendChild(sirenTitle);
-  sirenWrap.appendChild(holdBtn);
-  sirenWrap.appendChild(wave);
-  sirenWrap.appendChild(lo.wrap);
-  sirenWrap.appendChild(hi.wrap);
-  sirenWrap.appendChild(sirenRate.wrap);
-  sirenWrap.appendChild(sirenVol.wrap);
-  sirenWrap.appendChild(sirenRev.wrap);
-  sirenWrap.appendChild(sirenDly.wrap);
+  const masterPreampCount = document.createElement('select');
+  [3, 4, 5].forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = String(v);
+    opt.textContent = `${v} bands`;
+    if (v === 3) opt.selected = true;
+    masterPreampCount.appendChild(opt);
+  });
+  masterPreampCount.addEventListener('change', () => {
+    player.setMasterPreampCount(parseInt(masterPreampCount.value, 10));
+  });
+  const preampCut1 = makeRange('Band Cut 1', 0, 100, 33, () => {
+    player.setMasterPreampCutoffs([
+      sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut3.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut4.input.value, 10) / 100),
+    ]);
+  });
+  const preampCut2 = makeRange('Band Cut 2', 0, 100, 67, () => {
+    player.setMasterPreampCutoffs([
+      sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut3.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut4.input.value, 10) / 100),
+    ]);
+  });
+  const preampCut3 = makeRange('Band Cut 3', 0, 100, 78, () => {
+    player.setMasterPreampCutoffs([
+      sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut3.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut4.input.value, 10) / 100),
+    ]);
+  });
+  const preampCut4 = makeRange('Band Cut 4', 0, 100, 90, () => {
+    player.setMasterPreampCutoffs([
+      sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut3.input.value, 10) / 100),
+      sliderToFreq(parseInt(preampCut4.input.value, 10) / 100),
+    ]);
+  });
+  const preampHPF = makeRange('Preamp HPF', 0, 100, 0, value => {
+    player.setMasterPreampHPF(sliderToFreq(parseInt(value, 10) / 100));
+  });
+  const preampLPF = makeRange('Preamp LPF', 0, 100, 100, value => {
+    player.setMasterPreampLPF(sliderToFreq(parseInt(value, 10) / 100));
+  });
+  const preampQ = makeRange('Preamp Q', 1, 180, 7, value => {
+    player.setMasterPreampQ(parseInt(value, 10) / 10);
+  });
+  const preampRev = makeRange('Preamp Rev', 0, 100, 35, value => {
+    player.setMasterPreampReverbSend(parseInt(value, 10) / 100);
+  });
+  const preampDly = makeRange('Preamp Dly', 0, 100, 25, value => {
+    player.setMasterPreampDelaySend(parseInt(value, 10) / 100);
+  });
+  fx.appendChild(masterPreampToggle);
+  fx.appendChild(masterPreampCount);
+  fx.appendChild(preampCut1.wrap);
+  fx.appendChild(preampCut2.wrap);
+  fx.appendChild(preampCut3.wrap);
+  fx.appendChild(preampCut4.wrap);
+  fx.appendChild(preampHPF.wrap);
+  fx.appendChild(preampLPF.wrap);
+  fx.appendChild(preampQ.wrap);
+  fx.appendChild(preampRev.wrap);
+  fx.appendChild(preampDly.wrap);
+  [[masterPreampToggle, 'master:preamp:toggle'], [preampCut1.input, 'master:preamp:cut1'], [preampCut2.input, 'master:preamp:cut2'], [preampCut3.input, 'master:preamp:cut3'], [preampCut4.input, 'master:preamp:cut4'], [preampHPF.input, 'master:preamp:hpf'], [preampLPF.input, 'master:preamp:lpf'], [preampQ.input, 'master:preamp:q'], [preampRev.input, 'master:preamp:rev'], [preampDly.input, 'master:preamp:dly']]
+    .forEach(([control, id]) => attachMidiLearn(control, id, options));
 
   const padsWrap = document.createElement('div');
-  padsWrap.className = 'm-live-block';
+  padsWrap.className = 'm-live-block m-live-block--pads';
   const padsTitle = document.createElement('h4');
   padsTitle.textContent = 'Pads';
   const padGrid = document.createElement('div');
@@ -251,7 +265,7 @@ export function createMixer(player, options = {}) {
     fileInput.value = '';
   });
   const padButtons = [];
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < player.pads.length; i += 1) {
     const pad = document.createElement('button');
     pad.className = 'm-pad';
     pad.dataset.midiId = `pad:${i}:trig`;
@@ -300,25 +314,7 @@ export function createMixer(player, options = {}) {
   padsWrap.appendChild(padsRev.wrap);
   padsWrap.appendChild(padsDly.wrap);
 
-  const thunderWrap = document.createElement('div');
-  thunderWrap.className = 'm-live-block';
-  const thunderBtn = document.createElement('button');
-  thunderBtn.className = 'm-mini-btn danger';
-  thunderBtn.textContent = 'Thunder';
-  thunderBtn.dataset.midiId = 'thunder:hit';
-  const thunderPower = makeRange('Power', 5, 120, 100, () => {});
-  thunderBtn.addEventListener('click', () => {
-    const intensity = parseInt(thunderPower.input.value, 10) / 100;
-    player.thunder(intensity);
-    thunderBtn.classList.add('active');
-    setTimeout(() => thunderBtn.classList.remove('active'), 120);
-  });
-  thunderWrap.appendChild(thunderBtn);
-  thunderWrap.appendChild(thunderPower.wrap);
-
-  live.appendChild(sirenWrap);
   live.appendChild(padsWrap);
-  live.appendChild(thunderWrap);
 
   const snapTitle = document.createElement('h4');
   snapTitle.textContent = 'Snapshots';
@@ -360,13 +356,14 @@ export function createMixer(player, options = {}) {
 
   function createStrip(keyId, label) {
     const state = player.getTrackState(keyId);
+    const displayName = instrumentNameForKey(player, keyId, label);
     const strip = document.createElement('div');
     strip.className = 'm-strip';
     strip.dataset.key = keyId;
     const name = document.createElement('div');
     name.className = 'm-name';
-    name.textContent = shortName(label);
-    name.title = label;
+    name.textContent = shortName(displayName);
+    name.title = `${displayName}${label && label !== displayName ? ` · ${label}` : ''}`;
     const vu = document.createElement('div');
     vu.className = 'm-vu';
     const row = document.createElement('div');
@@ -383,37 +380,6 @@ export function createMixer(player, options = {}) {
     volume.min = '0';
     volume.max = '100';
     volume.value = String(Math.round(state.volume * 100));
-    const reverb = document.createElement('input');
-    reverb.type = 'range';
-    reverb.className = 'm-send';
-    reverb.min = '0';
-    reverb.max = '100';
-    reverb.value = String(Math.round(state.reverbSend * 100));
-    const delay = document.createElement('input');
-    delay.type = 'range';
-    delay.className = 'm-send';
-    delay.min = '0';
-    delay.max = '100';
-    delay.value = String(Math.round(state.delaySend * 100));
-    const lpf = document.createElement('input');
-    lpf.type = 'range';
-    lpf.className = 'm-send';
-    lpf.min = '0';
-    lpf.max = '100';
-    lpf.value = String(Math.round(freqToSlider(state.lpf) * 100));
-    const hpf = document.createElement('input');
-    hpf.type = 'range';
-    hpf.className = 'm-send';
-    hpf.min = '0';
-    hpf.max = '100';
-    hpf.value = String(Math.round(freqToSlider(state.hpf) * 100));
-    const q = document.createElement('input');
-    q.type = 'range';
-    q.className = 'm-send';
-    q.min = '1';
-    q.max = '180';
-    q.value = String(Math.round(state.lpfQ * 10));
-
     const epi = document.createElement('button');
     epi.className = 'm-btn';
     epi.textContent = 'EPI';
@@ -424,49 +390,11 @@ export function createMixer(player, options = {}) {
       epi.classList.toggle('active', on);
     });
 
-    const bands = document.createElement('button');
-    bands.className = 'm-btn';
-    bands.textContent = 'BND';
-    bands.classList.toggle('active', state.multibandOn);
-    bands.addEventListener('click', () => {
-      const on = !player.getTrackState(keyId).multibandOn;
-      player.setMultibandEnabled(keyId, on);
-      bands.classList.toggle('active', on);
-    });
-
-    const bandCount = document.createElement('select');
-    [3, 4, 5].forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = String(v);
-      opt.textContent = `${v}B`;
-      if (state.multibandCount === v) opt.selected = true;
-      bandCount.appendChild(opt);
-    });
-    bandCount.addEventListener('change', () => {
-      player.setMultibandCount(keyId, parseInt(bandCount.value, 10));
-    });
-
-    const sends = document.createElement('div');
-    sends.className = 'm-sends';
-    [
-      ['Rev', reverb],
-      ['Dly', delay],
-      ['LPF', lpf],
-      ['HPF', hpf],
-      ['Q', q],
-    ].forEach(([labelText, input]) => {
-      const labelEl = document.createElement('label');
-      labelEl.textContent = labelText;
-      labelEl.appendChild(input);
-      sends.appendChild(labelEl);
-    });
-
     function syncButtons() {
       const cur = player.getTrackState(keyId);
       solo.classList.toggle('active', cur.solo);
       mute.classList.toggle('active', cur.muted);
       epi.classList.toggle('active', cur.epicenterOn);
-      bands.classList.toggle('active', cur.multibandOn);
     }
 
     solo.addEventListener('click', () => {
@@ -480,12 +408,6 @@ export function createMixer(player, options = {}) {
       syncButtons();
     });
     volume.addEventListener('input', () => player.setVolume(keyId, clamp01(parseInt(volume.value, 10) / 100)));
-    reverb.addEventListener('input', () => player.setReverbSend(keyId, clamp01(parseInt(reverb.value, 10) / 100)));
-    delay.addEventListener('input', () => player.setDelaySend(keyId, clamp01(parseInt(delay.value, 10) / 100)));
-    lpf.addEventListener('input', () => player.setLPF(keyId, sliderToFreq(parseInt(lpf.value, 10) / 100)));
-    hpf.addEventListener('input', () => player.setHPF(keyId, sliderToFreq(parseInt(hpf.value, 10) / 100)));
-    q.addEventListener('input', () => player.setLPFQ(keyId, parseInt(q.value, 10) / 10));
-
     row.appendChild(solo);
     row.appendChild(mute);
     row.appendChild(volume);
@@ -493,36 +415,19 @@ export function createMixer(player, options = {}) {
     const extras = document.createElement('div');
     extras.className = 'm-extras';
     extras.appendChild(epi);
-    extras.appendChild(bands);
-    extras.appendChild(bandCount);
 
     strip.appendChild(name);
     strip.appendChild(vu);
     strip.appendChild(row);
-    strip.appendChild(sends);
     strip.appendChild(extras);
     strips.appendChild(strip);
 
     [
       [volume, `track:${keyId}:vol`],
-      [reverb, `track:${keyId}:rev`],
-      [delay, `track:${keyId}:dly`],
       [mute, `track:${keyId}:mute`],
       [solo, `track:${keyId}:solo`],
-      [lpf, `track:${keyId}:lpf`],
-      [hpf, `track:${keyId}:hpf`],
-      [q, `track:${keyId}:lpf-q`],
       [epi, `track:${keyId}:epi`],
-      [bands, `track:${keyId}:bands`],
-    ].forEach(([control, id]) => {
-      const learn = attachMidiLearn(control, id, options);
-      if (learn) {
-        const host = control.parentElement && control.parentElement.tagName === 'LABEL'
-          ? control.parentElement
-          : control.parentElement;
-        if (host) host.appendChild(learn);
-      }
-    });
+    ].forEach(([control, id]) => attachMidiLearn(control, id, options));
 
     syncButtons();
     return {
@@ -531,15 +436,9 @@ export function createMixer(player, options = {}) {
       name,
       syncButtons,
       volume,
-      reverb,
-      delay,
       mute,
       solo,
-      lpf,
-      hpf,
-      q,
       epi,
-      bands,
     };
   }
 
@@ -559,8 +458,9 @@ export function createMixer(player, options = {}) {
         stripMap.set(item.key, createStrip(item.key, item.name));
       } else {
         const strip = stripMap.get(item.key);
-        strip.name.textContent = shortName(item.name);
-        strip.name.title = item.name;
+        const displayName = instrumentNameForKey(player, item.key, item.name);
+        strip.name.textContent = shortName(displayName);
+        strip.name.title = `${displayName}${item.name && item.name !== displayName ? ` · ${item.name}` : ''}`;
         strip.syncButtons();
       }
     });
@@ -599,13 +499,7 @@ export function createMixer(player, options = {}) {
         volume: state.volume,
         muted: state.muted,
         solo: state.solo,
-        reverbSend: state.reverbSend,
-        delaySend: state.delaySend,
-        lpf: state.lpf,
-        hpf: state.hpf,
-        lpfQ: state.lpfQ,
         epicenterOn: state.epicenterOn,
-        multibandOn: state.multibandOn,
       };
     });
     return {
@@ -618,8 +512,20 @@ export function createMixer(player, options = {}) {
       fx: {
         delayFeedback: parseInt(feedback.input.value, 10) / 100,
         delayDivision: parseFloat(delayDivision.value),
-        tapeMode: parseInt(delayMode.value, 10),
         masterLPF: sliderToFreq(parseInt(globalLpf.input.value, 10) / 100),
+        masterPreampEnabled: masterPreampToggle.classList.contains('active'),
+        masterPreampBands: parseInt(masterPreampCount.value, 10),
+        masterPreampCutoffs: [
+          sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
+          sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
+          sliderToFreq(parseInt(preampCut3.input.value, 10) / 100),
+          sliderToFreq(parseInt(preampCut4.input.value, 10) / 100),
+        ],
+        masterPreampHPF: sliderToFreq(parseInt(preampHPF.input.value, 10) / 100),
+        masterPreampLPF: sliderToFreq(parseInt(preampLPF.input.value, 10) / 100),
+        masterPreampQ: parseInt(preampQ.input.value, 10) / 10,
+        masterPreampRev: parseInt(preampRev.input.value, 10) / 100,
+        masterPreampDly: parseInt(preampDly.input.value, 10) / 100,
       },
     };
   }
@@ -648,21 +554,50 @@ export function createMixer(player, options = {}) {
       if (typeof s.volume === 'number') player.setVolume(keyId, s.volume);
       if (typeof s.muted === 'boolean') player.setMute(keyId, s.muted);
       if (typeof s.solo === 'boolean') player.setSolo(keyId, s.solo);
-      if (typeof s.reverbSend === 'number') player.setReverbSend(keyId, s.reverbSend);
-      if (typeof s.delaySend === 'number') player.setDelaySend(keyId, s.delaySend);
-      if (typeof s.lpf === 'number') player.setLPF(keyId, s.lpf);
-      if (typeof s.hpf === 'number') player.setHPF(keyId, s.hpf);
-      if (typeof s.lpfQ === 'number') player.setLPFQ(keyId, s.lpfQ);
       if (typeof s.epicenterOn === 'boolean') player.setEpicenterEnabled(keyId, s.epicenterOn);
-      if (typeof s.multibandOn === 'boolean') player.setMultibandEnabled(keyId, s.multibandOn);
       const strip = stripMap.get(keyId);
       if (strip) strip.syncButtons();
     });
 
     if (typeof fxState.delayFeedback === 'number') player.setDelayFeedback(fxState.delayFeedback);
     if (typeof fxState.delayDivision === 'number') player.setDelayTime(fxState.delayDivision);
-    if (typeof fxState.tapeMode === 'number') player.setDelayMode(fxState.tapeMode);
     if (typeof fxState.masterLPF === 'number') player.setMasterLPF(fxState.masterLPF);
+    if (typeof fxState.masterPreampEnabled === 'boolean') {
+      masterPreampToggle.classList.toggle('active', fxState.masterPreampEnabled);
+      player.setMasterPreampEnabled(fxState.masterPreampEnabled);
+    }
+    if (typeof fxState.masterPreampBands === 'number') {
+      masterPreampCount.value = String(fxState.masterPreampBands);
+      player.setMasterPreampCount(fxState.masterPreampBands);
+    }
+    if (Array.isArray(fxState.masterPreampCutoffs)) {
+      const [c1 = 200, c2 = 2000, c3 = 6000, c4 = 12000] = fxState.masterPreampCutoffs;
+      preampCut1.input.value = String(Math.round(freqToSlider(c1) * 100));
+      preampCut2.input.value = String(Math.round(freqToSlider(c2) * 100));
+      preampCut3.input.value = String(Math.round(freqToSlider(c3) * 100));
+      preampCut4.input.value = String(Math.round(freqToSlider(c4) * 100));
+      player.setMasterPreampCutoffs([c1, c2, c3, c4]);
+    }
+    if (typeof fxState.masterPreampHPF === 'number') {
+      preampHPF.input.value = String(Math.round(freqToSlider(fxState.masterPreampHPF) * 100));
+      player.setMasterPreampHPF(fxState.masterPreampHPF);
+    }
+    if (typeof fxState.masterPreampLPF === 'number') {
+      preampLPF.input.value = String(Math.round(freqToSlider(fxState.masterPreampLPF) * 100));
+      player.setMasterPreampLPF(fxState.masterPreampLPF);
+    }
+    if (typeof fxState.masterPreampQ === 'number') {
+      preampQ.input.value = String(Math.round(fxState.masterPreampQ * 10));
+      player.setMasterPreampQ(fxState.masterPreampQ);
+    }
+    if (typeof fxState.masterPreampRev === 'number') {
+      preampRev.input.value = String(Math.round(fxState.masterPreampRev * 100));
+      player.setMasterPreampReverbSend(fxState.masterPreampRev);
+    }
+    if (typeof fxState.masterPreampDly === 'number') {
+      preampDly.input.value = String(Math.round(fxState.masterPreampDly * 100));
+      player.setMasterPreampDelaySend(fxState.masterPreampDly);
+    }
   }
 
   function setSnapshots(items, selectedId) {
@@ -699,9 +634,6 @@ export function createMixer(player, options = {}) {
     applyState,
     setSnapshots,
     dom: {
-      tapBtn,
-      thunderBtn,
-      holdBtn,
       padButtons,
     },
   };

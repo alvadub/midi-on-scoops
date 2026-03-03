@@ -60,6 +60,11 @@ input[type="range"] {
   cursor: pointer;
 }
 
+#mixer-panel input[type="range"] {
+  width: 100%;
+  min-width: 0;
+}
+
 select {
   padding: 0.35em 0.55em;
   border-radius: 8px;
@@ -93,14 +98,15 @@ select {
 }
 
 #top-visualizer {
-  flex: 0 1 560px;
+  flex: 1 1 auto;
   display: flex;
-  justify-content: center;
-  min-width: 360px;
+  justify-content: stretch;
+  min-width: 0;
 }
 
 #top-visualizer-canvas {
-  width: min(100%, 560px);
+  display: block;
+  width: 100%;
   height: 34px;
   border-radius: 8px;
   background: rgba(7, 17, 28, 0.22);
@@ -115,7 +121,7 @@ select {
 }
 
 #workspace.mixer-open {
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) minmax(460px, 52vw);
 }
 
 #editor-wrap {
@@ -311,8 +317,11 @@ select {
 #mixer-panel {
   border-left: 1px solid var(--muted);
   background: rgba(6, 16, 28, 0.88);
-  padding: 0.7em;
+  padding: 1em;
   overflow: auto;
+  display: grid;
+  gap: 0.75em;
+  align-content: start;
 }
 
 #mixer-panel.collapsed {
@@ -357,14 +366,16 @@ select {
 
 #mixer-strips {
   display: grid;
-  gap: 0.55em;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65em;
 }
 
 .m-strip {
   border: 1px solid #34516b;
   border-radius: 8px;
-  padding: 0.45em;
+  padding: 0.65em;
   background: rgba(16, 38, 63, 0.7);
+  min-height: 110px;
 }
 
 .m-name {
@@ -390,9 +401,9 @@ select {
 
 .m-row {
   display: grid;
-  grid-template-columns: 28px 28px 1fr;
-  gap: 0.35em;
-  margin-bottom: 0.35em;
+  grid-template-columns: 34px 34px 1fr;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
 }
 
 .m-btn {
@@ -424,7 +435,7 @@ select {
 .m-extras {
   margin-top: 0.3em;
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr;
   gap: 0.3em;
 }
 
@@ -434,24 +445,18 @@ select {
   border-radius: 6px;
 }
 
-.m-learn {
-  margin-left: 0.3em;
-  font-size: 10px;
-  padding: 0.08em 0.38em;
-  border-radius: 999px;
-}
-
-.m-learn.learning {
-  background: #f9cb6b;
-  color: #10263f;
+.midi-learning-target {
+  outline: 2px solid #f9cb6b;
+  outline-offset: 1px;
 }
 
 #mixer-fx {
-  margin-top: 0.75em;
+  margin-top: 0.2em;
   border-top: 1px solid #34516b;
-  padding-top: 0.65em;
+  padding-top: 0.8em;
   display: grid;
-  gap: 0.5em;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55em;
 }
 
 #mixer-fx label {
@@ -482,11 +487,12 @@ select {
 }
 
 #mixer-live {
-  margin-top: 0.65em;
+  margin-top: 0.2em;
   border-top: 1px solid #34516b;
-  padding-top: 0.65em;
+  padding-top: 0.8em;
   display: grid;
-  gap: 0.5em;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6em;
 }
 
 .m-live-block {
@@ -498,6 +504,10 @@ select {
   gap: 0.35em;
 }
 
+.m-live-block--pads {
+  grid-column: 1 / -1;
+}
+
 .m-live-block h4 {
   font-size: 11px;
   text-transform: uppercase;
@@ -506,7 +516,7 @@ select {
 
 .m-pad-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.35em;
 }
 
@@ -543,9 +553,9 @@ select {
 }
 
 #snapshot-panel {
-  margin-top: 0.65em;
+  margin-top: 0.2em;
   border-top: 1px solid #34516b;
-  padding-top: 0.65em;
+  padding-top: 0.8em;
   display: grid;
   gap: 0.4em;
 }
@@ -841,6 +851,16 @@ select {
 
   #workspace.mixer-open {
     grid-template-columns: 1fr;
+  }
+
+  #mixer-strips,
+  #mixer-fx,
+  #mixer-live {
+    grid-template-columns: 1fr;
+  }
+
+  .m-pad-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

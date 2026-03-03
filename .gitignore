@@ -13,3 +13,4 @@ cache.json
 /coverage
 /examples/*/*
 /node_modules
+/public/samples

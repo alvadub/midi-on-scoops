@@ -304,18 +304,19 @@ export function createEditor(initialText, options = {}) {
       [3, 4, 5].map(octave => `${note}${accidental}${octave}`)
     ))
   ));
-  const INSTRUMENT_CANDIDATES = [
-    ...Array.from({ length: 128 }, (_, i) => `#${i}`),
-    ...Array.from({ length: 128 }, (_, i) => `#${2000 + i}`),
-  ];
-  const INSTRUMENT_OPTIONS = INSTRUMENT_CANDIDATES.map(value => {
-    const raw = value.slice(1);
-    const title = options.resolveInstrument ? options.resolveInstrument(raw) : null;
-    return {
-      value,
-      label: title ? `${title} (${value})` : value,
-    };
-  });
+  const INSTRUMENT_OPTIONS = Array.isArray(options.instrumentOptions) && options.instrumentOptions.length
+    ? options.instrumentOptions
+    : [
+      ...Array.from({ length: 128 }, (_, i) => `#${i}`),
+      ...Array.from({ length: 128 }, (_, i) => `#${2000 + i}`),
+    ].map(value => {
+      const raw = value.slice(1);
+      const title = options.resolveInstrument ? options.resolveInstrument(raw) : null;
+      return {
+        value,
+        label: title ? `${title} (${value})` : value,
+      };
+    });
   const ALL_CANDIDATES = [...NOTE_CANDIDATES, ...MODE_CANDIDATES];
 
   const tooltipHandlers = [
@@ -593,6 +594,12 @@ export function createEditor(initialText, options = {}) {
 
   function setSuggestMenuOpen(open) {
     suggestMenu.hidden = !open;
+    if (open) {
+      requestAnimationFrame(() => {
+        const active = suggestMenu.querySelector('li[data-active="1"]');
+        if (active) active.scrollIntoView({ block: 'nearest' });
+      });
+    }
   }
 
   function isSameSuggestToken(a, b) {
@@ -614,6 +621,10 @@ export function createEditor(initialText, options = {}) {
         `<li role="option" data-value="${item.value}" data-active="${idx === suggestState.activeIndex ? '1' : '0'}">${item.label || item.value}</li>`
       ))
       .join('');
+    if (!suggestMenu.hidden) {
+      const active = suggestMenu.querySelector('li[data-active="1"]');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   function applySuggestFilter(rawQuery) {
@@ -655,6 +666,17 @@ export function createEditor(initialText, options = {}) {
     applySuggestFilter(initialQuery);
     resizeSuggestInput();
     suggestInput.hidden = false;
+    if (token && token.text) {
+      const raw = token.text.trim();
+      const exact = suggestState.items.findIndex(item => item.value === raw);
+      const exactCI = exact >= 0
+        ? exact
+        : suggestState.items.findIndex(item => item.value.toLowerCase() === raw.toLowerCase());
+      if (exactCI >= 0) {
+        suggestState.activeIndex = exactCI;
+        renderSuggestItems();
+      }
+    }
     setSuggestMenuOpen(document.activeElement === suggestInput);
     setContextOpen(true);
   }
@@ -835,42 +857,96 @@ export function createEditor(initialText, options = {}) {
       });
   }
 
-  function flashActiveTokens(lineNumbers, beatIndex) {
+  function flashActiveTokens(lineNumbers, beatIndex, beatDurationMs = 0) {
     if (!Array.isArray(lineNumbers) || !lineNumbers.length) return;
     const tokenIndex = Number.isInteger(beatIndex) ? Math.max(0, beatIndex) : 0;
+    const getPatternTiming = lineEl => {
+      const rawSteps = [...lineEl.querySelectorAll('.tok-pattern-step')];
+      const slots = [];
+      for (let i = 0; i < rawSteps.length; i += 1) {
+        const step = rawSteps[i];
+        const ch = String(step.dataset.patternChar || '').toLowerCase();
+        if (ch === '[') {
+          const inner = [];
+          let j = i + 1;
+          while (j < rawSteps.length) {
+            const innerStep = rawSteps[j];
+            const innerChar = String(innerStep.dataset.patternChar || '').toLowerCase();
+            if (innerChar === ']') break;
+            if (innerChar === 'x' || innerChar === '-' || innerChar === '_') {
+              inner.push(innerStep);
+            }
+            j += 1;
+          }
+          if (inner.length) {
+            slots.push({
+              steps: inner,
+              pulses: inner.filter(s => String(s.dataset.patternChar || '').toLowerCase() === 'x'),
+            });
+          }
+          i = j;
+          continue;
+        }
+        if (ch === 'x' || ch === '-' || ch === '_') {
+          slots.push({
+            steps: [step],
+            pulses: ch === 'x' ? [step] : [],
+          });
+        }
+      }
+      return slots;
+    };
+    const flashPatternPulses = (slot, durationMs) => {
+      if (!slot || !slot.pulses || !slot.pulses.length) return;
+      const pulses = slot.pulses;
+      if (pulses.length === 1 || !durationMs || durationMs <= 0) {
+        pulses.forEach(pulseEl => {
+          pulseEl.classList.add('tok-active');
+          activeTokens.push(pulseEl);
+        });
+        return;
+      }
+      const stepMs = durationMs / slot.steps.length;
+      pulses.forEach(pulseEl => {
+        const slotIndex = slot.steps.indexOf(pulseEl);
+        const delay = Math.max(0, Math.floor(slotIndex * stepMs));
+        const timer = setTimeout(() => {
+          pulseEl.classList.add('tok-active');
+          activeTokens.push(pulseEl);
+          flashTimers.delete(timer);
+        }, delay);
+        flashTimers.add(timer);
+      });
+    };
     const patternByLine = new Map();
     lineNumbers.forEach(lineNumber => {
       const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
       if (!lineEl) return;
-      patternByLine.set(lineNumber, [...lineEl.querySelectorAll('.tok-pattern-step')]);
+      patternByLine.set(lineNumber, getPatternTiming(lineEl));
     });
     const referencePatternSteps = [...patternByLine.values()]
-      .filter(steps => steps.length > 0)
+      .filter(slots => slots.length > 0)
       .sort((a, b) => {
-        const pulses = steps => steps.reduce((sum, s) => (
-          (s.dataset.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
+        const pulses = slots => slots.reduce((sum, slot) => (
+          sum + slot.pulses.length
         ), 0);
         return pulses(b) - pulses(a);
       })[0] || [];
 
-    function pulseInfo(steps) {
-      if (!steps.length) return null;
-      const stepIndex = tokenIndex % steps.length;
-      const step = steps[stepIndex];
-      const ch = (step && step.dataset ? step.dataset.patternChar : '').toLowerCase();
+    function pulseInfo(slots) {
+      if (!slots.length) return null;
+      const stepIndex = tokenIndex % slots.length;
+      const slot = slots[stepIndex];
       let pulseCount = 0;
       for (let i = 0; i <= stepIndex; i += 1) {
-        const ci = (steps[i].dataset.patternChar || '').toLowerCase();
-        if (ci === 'x') pulseCount += 1;
+        pulseCount += slots[i].pulses.length;
       }
-      const pulsesPerPattern = steps.reduce((sum, s) => (
-        (s.dataset.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
-      ), 0);
-      const cycleIndex = Math.floor(tokenIndex / steps.length);
+      const pulsesPerPattern = slots.reduce((sum, s) => sum + s.pulses.length, 0);
+      const cycleIndex = Math.floor(tokenIndex / slots.length);
       const absolutePulseIndex = pulsesPerPattern > 0
-        ? cycleIndex * pulsesPerPattern + pulseCount - 1
-        : pulseCount - 1;
-      return { step, isPulse: ch === 'x', absolutePulseIndex };
+        ? cycleIndex * pulsesPerPattern + Math.max(0, pulseCount - slot.pulses.length)
+        : 0;
+      return { slot, isPulse: slot.pulses.length > 0, absolutePulseIndex };
     }
 
     lineNumbers.forEach(lineNumber => {
@@ -878,9 +954,8 @@ export function createEditor(initialText, options = {}) {
       if (!lineEl) return;
       const ownPatternSteps = patternByLine.get(lineNumber) || [];
       const info = pulseInfo(ownPatternSteps.length ? ownPatternSteps : referencePatternSteps);
-      if (ownPatternSteps.length && info && info.step && info.isPulse) {
-        info.step.classList.add('tok-active');
-        activeTokens.push(info.step);
+      if (ownPatternSteps.length && info && info.slot && info.isPulse) {
+        flashPatternPulses(info.slot, beatDurationMs);
       }
       const noteTokens = getNoteLikeTokenSpans(lineEl);
       if (!noteTokens.length) return;

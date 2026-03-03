@@ -18,7 +18,6 @@ let lastContext = null;
 let trackLineMap = new Map();
 let lastFlashedBeatIndex = -1;
 let sectionTimeline = [];
-const FORCE_SECTION_BEATS = 32;
 let pendingSectionLaunch = null;
 let lastSectionTimelineIndex = -1;
 
@@ -277,7 +276,7 @@ function buildSectionTimeline(context, merged) {
     const token = expanded[idx] || expanded[expanded.length - 1] || null;
     const name = token ? token.name : null;
     const displayOrder = token ? token.displayOrder : null;
-    const beats = FORCE_SECTION_BEATS || mergedBeats;
+    const beats = Math.max(1, mergedBeats);
     const start = cursor;
     const end = Math.max(start, start + beats - 1);
     cursor = end + 1;
@@ -429,6 +428,49 @@ function resolveInstrumentTooltip(value) {
   } catch (e) {
     return null;
   }
+}
+
+function listInstrumentOptions() {
+  const options = [];
+  try {
+    const keys = p.player && p.player.loader && p.player.loader.instrumentKeys
+      ? p.player.loader.instrumentKeys()
+      : [];
+    for (let i = 0; i < keys.length; i += 1) {
+      const info = p.player.loader.instrumentInfo(i);
+      const value = `#${i}`;
+      options.push({
+        value,
+        label: info && info.title ? `${info.title} (${value})` : value,
+      });
+    }
+  } catch (e) {
+    // ignore and fallback below
+  }
+
+  try {
+    const drumTitles = p.player && p.player.loader && p.player.loader.drumTitles
+      ? p.player.loader.drumTitles()
+      : [];
+    Object.keys(drumTitles || {}).forEach(raw => {
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n)) return;
+      const value = `#${2000 + n}`;
+      const title = drumTitles[n];
+      options.push({
+        value,
+        label: title ? `${title} (${value})` : value,
+      });
+    });
+  } catch (e) {
+    // ignore and fallback below
+  }
+
+  if (options.length) return options;
+  return [
+    ...Array.from({ length: 128 }, (_, i) => ({ value: `#${i}`, label: `#${i}` })),
+    ...Array.from({ length: 128 }, (_, i) => ({ value: `#${2000 + i}`, label: `#${2000 + i}` })),
+  ];
 }
 
 function resolveModeTooltip(name) {
@@ -667,10 +709,10 @@ function createDOM(initialText, initialPreset) {
   const toolbarControls = document.createElement('div');
   toolbarControls.id = 'toolbar-controls';
 
-  const aboutLink = document.createElement('a');
-  aboutLink.id = 'about-link';
-  aboutLink.href = 'landing.html';
-  aboutLink.textContent = '← About';
+  // const aboutLink = document.createElement('a');
+  // aboutLink.id = 'about-link';
+  // aboutLink.href = 'landing.html';
+  // aboutLink.textContent = '← About';
 
   const playBtn = document.createElement('button');
   playBtn.id = 'play-btn';
@@ -693,7 +735,7 @@ function createDOM(initialText, initialPreset) {
 
   const presetLabel = document.createElement('label');
   presetLabel.className = 'field-group';
-  presetLabel.textContent = 'Preset ';
+  // presetLabel.textContent = 'Preset ';
   const presetSelect = document.createElement('select');
   presetSelect.id = 'preset-select';
   const customOption = document.createElement('option');
@@ -716,7 +758,7 @@ function createDOM(initialText, initialPreset) {
   });
    presetLabel.appendChild(presetSelect);
 
-    toolbarControls.appendChild(aboutLink);
+    // toolbarControls.appendChild(aboutLink);
     toolbarControls.appendChild(playBtn);
     toolbarControls.appendChild(stopBtn);
     toolbarControls.appendChild(mixerBtn);
@@ -736,9 +778,10 @@ function createDOM(initialText, initialPreset) {
     resolveMode: resolveModeTooltip,
     resolveModeNotes,
     resolveVelocity: resolveVelocityTooltip,
-    resolveSection: resolveSectionTooltip,
-    resolveVar: resolveVarTooltip,
+   resolveSection: resolveSectionTooltip,
+   resolveVar: resolveVarTooltip,
    resolveInstrument: resolveInstrumentTooltip,
+    instrumentOptions: listInstrumentOptions(),
     suggestions: true,
     onCursorToken: setCursorTokenIndicator,
     getSuggestDockEl: () => document.getElementById('context-tool'),
@@ -841,7 +884,8 @@ function createDOM(initialText, initialPreset) {
       }
       const lines = trackLineMap.get(key);
       if (!lines || !lines.length) return;
-      editorApi.flashActiveTokens(lines, beatIndex);
+      const beatDurationMs = (240000 / ((tempo || 1) * (bars || 1)));
+      editorApi.flashActiveTokens(lines, beatIndex, beatDurationMs);
     }, wait);
   };
 

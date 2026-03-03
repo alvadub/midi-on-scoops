@@ -14,6 +14,17 @@ function noteToPos(noteStr) {
   return diatPos - E4_DIATONIC;
 }
 
+function noteToMidi(noteStr) {
+  const m = String(noteStr || '').match(/^([a-gA-G])([#b]?)(\d+)$/);
+  if (!m) return null;
+  const SEMITONES = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+  const base = SEMITONES[m[1].toLowerCase()];
+  const alt = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
+  const oct = parseInt(m[3], 10);
+  if (Number.isNaN(oct)) return null;
+  return ((oct + 1) * 12) + base + alt;
+}
+
 function posToY(pos) {
   return 60 - pos * 5;
 }
@@ -409,7 +420,88 @@ export function createEditor(initialText, options = {}) {
     gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
       `<span class="editor-ln">${index + 1}</span>`
     )).join('');
+    applyLintMarkers();
     applyQueuedArrangementToken();
+  }
+
+  function applyLintMarkers() {
+    pre.querySelectorAll('.tok-error').forEach(el => {
+      el.classList.remove('tok-error');
+      if (el.dataset) delete el.dataset.lint;
+    });
+
+    const mark = (el, reason) => {
+      if (!el) return;
+      el.classList.add('tok-error');
+      if (el.dataset) el.dataset.lint = reason || 'Invalid token value';
+    };
+
+    const source = String(ta.value || '');
+    const varDefs = new Set();
+    const sectionDefs = new Set();
+    source.split(/\r?\n/).forEach(rawLine => {
+      const noComment = rawLine.replace(/;.*$/, '');
+      const varMatch = noComment.match(/^\s*(%[^\s]+)\s+/);
+      if (varMatch) varDefs.add(varMatch[1]);
+      const sectionMatch = noComment.match(/^\s*@([^\s<]+)/);
+      if (sectionMatch) sectionDefs.add(sectionMatch[1]);
+    });
+
+    pre.querySelectorAll('.tok-channel[data-instrument]').forEach(el => {
+      const raw = el.dataset.instrument;
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n)) {
+        mark(el, 'Invalid instrument number');
+        return;
+      }
+      if (options.resolveInstrument && !options.resolveInstrument(raw)) {
+        mark(el, `Unknown instrument #${raw}`);
+      }
+    });
+
+    pre.querySelectorAll('[data-velocity]').forEach(el => {
+      const n = parseInt(el.dataset.velocity, 10);
+      if (Number.isNaN(n) || n < 0 || n > 127) {
+        mark(el, 'Velocity must be between 0 and 127');
+      }
+    });
+
+    pre.querySelectorAll('.tok-repeat[data-repeat]').forEach(el => {
+      const n = parseInt(el.dataset.repeat, 10);
+      if (Number.isNaN(n) || n < 1) {
+        mark(el, 'Repeat must be >= 1');
+      }
+    });
+
+    pre.querySelectorAll('.tok-note[data-note]').forEach(el => {
+      const midi = noteToMidi(el.dataset.note);
+      if (midi == null || midi < 0 || midi > 127) {
+        mark(el, 'Note out of MIDI range (0..127)');
+      }
+    });
+
+    pre.querySelectorAll('.tok-var-ref[data-var]').forEach(el => {
+      const name = el.dataset.var;
+      if (!name || name === '%') return;
+      if (!varDefs.has(name)) {
+        mark(el, `Unknown variable ${name}`);
+      }
+    });
+
+    pre.querySelectorAll('.tok-arr-token.tok-section[data-section]').forEach(el => {
+      const name = el.dataset.section;
+      if (!sectionDefs.has(name)) {
+        mark(el, `Unknown section @${name}`);
+      }
+    });
+
+    pre.querySelectorAll('.tok-inherit[data-inherit-target]').forEach(el => {
+      const target = String(el.dataset.inheritTarget || '').trim();
+      if (!target) return;
+      if (!sectionDefs.has(target)) {
+        mark(el, `Unknown inherited section @${target}`);
+      }
+    });
   }
 
   function hideTooltip() {

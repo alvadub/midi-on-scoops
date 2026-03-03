@@ -17,8 +17,12 @@ let mixerApi = null;
 let lastContext = null;
 let trackLineMap = new Map();
 
-// Investigation mode: disable features introduced after scrub editing.
-const ENABLE_POST_SCRUB_FEATURES = false;
+const FEATURE_FLAGS = {
+  blockEval: true,
+  activeTokenFlash: true,
+  autocomplete: true,
+  beatGroupingAccents: true,
+};
 
 const p = window.p || new Player();
 window.p = p;
@@ -244,28 +248,11 @@ function getData(input) {
 
 function getMaxPatternSlots() {
   if (!lastContext || !lastContext.trackPatternSlots) return 0;
-  
+
   const slots = Object.values(lastContext.trackPatternSlots);
   if (slots.length === 0) return 0;
-  
+
   return Math.max(...slots);
-}
-
-function getAllSectionNames() {
-  const names = new Set();
-  p.getTrackKeys().forEach(key => {
-    const section = p.sectionFromTrackKey(key);
-    if (section) names.add(section);
-  });
-  return [...names];
-}
-
-function getMutedSectionNames() {
-  const muted = new Set();
-  getAllSectionNames().forEach(section => {
-    if (p.getSectionMuted(section)) muted.add(section.toUpperCase());
-  });
-  return muted;
 }
 
 function evalBlock() {
@@ -436,15 +423,15 @@ function updateBeatDots() {
 function updateToolbarBeats() {
   const beatIndicatorContainer = document.getElementById('beat-indicator-bar');
   if (!beatIndicatorContainer) return;
-  
+
   const maxSlots = getMaxPatternSlots();
   if (maxSlots === 0) return; // Don't update if no patterns found
-  
+
   // Remove extra segments
   while (beatIndicatorContainer.children.length > maxSlots) {
     beatIndicatorContainer.removeChild(beatIndicatorContainer.lastChild);
   }
-  
+
   // Add more segments
   while (beatIndicatorContainer.children.length < maxSlots) {
     const segment = document.createElement('span');
@@ -454,10 +441,14 @@ function updateToolbarBeats() {
 
   [...beatIndicatorContainer.children].forEach((segment, idx) => {
     segment.classList.remove('beat-bar4', 'beat-bar8', 'beat-bar16');
-    if (!ENABLE_POST_SCRUB_FEATURES) return;
-    if (idx % 16 === 0) segment.classList.add('beat-bar16');
-    else if (idx % 8 === 0) segment.classList.add('beat-bar8');
-    else if (idx % 4 === 0) segment.classList.add('beat-bar4');
+    if (!FEATURE_FLAGS.beatGroupingAccents) return;
+    if (idx % 16 === 0) {
+      segment.classList.add('beat-bar16');
+    } else if (idx % 8 === 0) {
+      segment.classList.add('beat-bar8');
+    } else if (idx % 4 === 0) {
+      segment.classList.add('beat-bar4');
+    }
   });
 }
 
@@ -487,7 +478,7 @@ function bindGlobalShortcuts() {
       || target.tagName === 'SELECT'
     );
 
-    if (e.code === 'Space' && !editingField) {
+    if ((e.metaKey || e.ctrlKey) && e.code === 'Enter' && !editingField) {
       e.preventDefault();
       if (playing) stop();
       else play();
@@ -577,7 +568,7 @@ function createDOM(initialText, initialPreset) {
     resolveSection: resolveSectionTooltip,
     resolveVar: resolveVarTooltip,
     resolveInstrument: resolveInstrumentTooltip,
-    suggestions: ENABLE_POST_SCRUB_FEATURES,
+    suggestions: FEATURE_FLAGS.autocomplete,
     onInput: () => {
       const presetSelect = document.getElementById('preset-select');
       if (presetSelect) presetSelect.value = '';
@@ -586,24 +577,10 @@ function createDOM(initialText, initialPreset) {
       updateLoop();
       saveDraft();
     },
-    onSectionClick: ENABLE_POST_SCRUB_FEATURES ? (sectionName, shiftKey) => {
-      if (!sectionName) return;
-      const sections = getAllSectionNames();
-      if (shiftKey) {
-        sections.forEach(name => p.setSectionMute(name, name !== sectionName));
-      } else {
-        const wasMuted = p.getSectionMuted(sectionName);
-        p.setSectionMute(sectionName, !wasMuted);
-      }
-      if (editorApi) {
-        editorApi.setMutedSections(getMutedSectionNames());
-      }
-      syncMixer(p.data);
-    } : null,
   });
 
   editorApi.on('keydown', e => {
-    if (ENABLE_POST_SCRUB_FEATURES && (e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Enter') {
+    if (FEATURE_FLAGS.blockEval && (e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Enter') {
       e.preventDefault();
       evalBlock();
       return;
@@ -654,7 +631,7 @@ function createDOM(initialText, initialPreset) {
     const wait = Math.max(0, (when - p.audioContext.currentTime) * 1000);
     setTimeout(() => {
       mixerApi.flashVU(key);
-      if (!ENABLE_POST_SCRUB_FEATURES || !editorApi) return;
+      if (!FEATURE_FLAGS.activeTokenFlash || !editorApi) return;
       const lines = trackLineMap.get(key);
       if (!lines || !lines.length) return;
       editorApi.flashActiveTokens(lines, beatIndex);
@@ -718,7 +695,6 @@ function play() {
   p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
   updateToolbarBeats();
-  if (ENABLE_POST_SCRUB_FEATURES && editorApi) editorApi.setMutedSections(getMutedSectionNames());
   syncMixer(data);
   p.playLoopMachine();
   updatePlayButton();
@@ -744,7 +720,6 @@ function updateLoop() {
   const changed = p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
   updateToolbarBeats();
-  if (ENABLE_POST_SCRUB_FEATURES && editorApi) editorApi.setMutedSections(getMutedSectionNames());
   syncMixer(data);
   if (changed && playing) {
     p.playLoopMachine(p.beatIndex);
@@ -755,21 +730,21 @@ function beatIndicator() {
   const progressBar = document.getElementById('progress-bar');
   const beatSegments = document.querySelectorAll('.beat-segment');
   const activeIndex = p.loopStarted ? p.beatIndex : -1;
-  
+
   // Update progress bar width
   if (progressBar) {
     const totalBeats = p.beats.length || 1;
     const progress = p.loopStarted ? ((activeIndex + 1) / totalBeats) * 100 : 0;
     progressBar.style.width = `${progress}%`;
   }
-  
+
   // Beat segments cycle through pattern slots
   // Map beatIndex to segment range (cycle through beatSegments.length positions)
   const segmentActiveIndex = p.loopStarted && beatSegments.length > 0
     ? activeIndex % beatSegments.length
     : -1;
   beatSegments.forEach((segment, i) => segment.classList.toggle('active', i === segmentActiveIndex));
-  
+
   requestAnimationFrame(beatIndicator);
 }
 
@@ -783,7 +758,6 @@ async function bootstrap() {
   p.setLoopMachine(data, tempo, bars, transpose);
   updateBeatDots();
   updateToolbarBeats();
-  if (ENABLE_POST_SCRUB_FEATURES && editorApi) editorApi.setMutedSections(getMutedSectionNames());
   syncMixer(data);
   setReadyStatus();
   requestAnimationFrame(beatIndicator);

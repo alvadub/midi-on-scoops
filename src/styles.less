@@ -110,11 +110,32 @@ select {
   position: absolute;
   inset: 0;
   margin: 0;
-  padding: 1em;
+  padding: 1em 1em 1em 4.4em;
   font: 14px/1.6 var(--font-mono);
   white-space: pre-wrap;
   overflow: auto;
   tab-size: 2;
+}
+
+#editor-gutter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3.3em;
+  padding: 1em 0.55em 1em 0.25em;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  color: var(--muted);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 17, 28, 0.18);
+  text-align: right;
+  font: 12px/1.6 var(--font-mono);
+}
+
+.editor-ln {
+  display: block;
 }
 
 #editor {
@@ -135,7 +156,8 @@ select {
 }
 
 .hl-line {
-  xdisplay: block;
+  display: inline-block;
+  width: 100%;
 }
 
 #statusbar {
@@ -345,15 +367,6 @@ select {
   text-decoration: underline dotted rgba(195, 232, 141, 0.45);
 }
 
-.tok-section-def {
-  color: #c3e88d;
-  cursor: pointer;
-  text-decoration: underline dotted rgba(195, 232, 141, 0.35);
-}
-
-.tok-section-def:hover {
-  text-decoration: underline;
-}
 .tok-inherit { color: #94afc8; }
 .tok-arrangement { color: #4ee0df; }
 .tok-var-def { color: #ffd166; }
@@ -374,10 +387,6 @@ select {
 .hl-line.block-flash {
   background: rgba(108, 246, 174, 0.2);
   animation: block-flash 0.8s ease-out;
-}
-
-.hl-line[data-muted-section] {
-  opacity: 0.4;
 }
 
 .tok-active {
@@ -425,6 +434,45 @@ select {
   display: block;
   margin: 0 auto;
   opacity: 0.92;
+}
+
+#var-tooltip .pattern-preview {
+  max-width: min(70vw, 340px);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+#var-tooltip .pattern-preview .pp-grid {
+  display: inline-flex;
+  gap: 3px;
+}
+
+#var-tooltip .pattern-preview .pp-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid #2f4e68;
+  background: #153149;
+}
+
+#var-tooltip .pattern-preview .pp-cell.is-group {
+  border-color: #d7e6ff;
+}
+
+#var-tooltip .pattern-preview .pp-cell.is-pulse {
+  background: #ff4f3f;
+}
+
+#var-tooltip .pattern-preview .pp-cell.is-hold {
+  background: #365d7a;
+}
+
+#var-tooltip .pattern-preview .pp-cell.is-rest {
+  background: #0f2334;
+}
+
+#var-tooltip .pattern-preview .pp-cell.is-sub {
+  background: #184866;
 }
 
 #suggest-list {

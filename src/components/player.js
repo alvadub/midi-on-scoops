@@ -226,35 +226,6 @@ export default class Player {
     this.applyTrackState(key);
   }
 
-  sectionFromTrackKey(key) {
-    const parts = String(key).split('/');
-    const trackName = parts.slice(1).join('/');
-    if (!trackName) return null;
-    const section = trackName.split('#')[0];
-    return section || null;
-  }
-
-  setSectionMute(sectionName, muted) {
-    if (!sectionName) return;
-    const target = String(sectionName).toUpperCase();
-    for (const key of this.trackNodes.keys()) {
-      const section = this.sectionFromTrackKey(key);
-      if (section && section.toUpperCase() === target) {
-        this.setMute(key, muted);
-      }
-    }
-  }
-
-  getSectionMuted(sectionName) {
-    if (!sectionName) return false;
-    const target = String(sectionName).toUpperCase();
-    const keys = [...this.trackNodes.keys()].filter(key => {
-      const section = this.sectionFromTrackKey(key);
-      return section && section.toUpperCase() === target;
-    });
-    return keys.length > 0 && keys.every(key => this.getTrackState(key).muted);
-  }
-
   setSolo(key, value) {
     const state = this.getTrackState(key);
     state.solo = Boolean(value);

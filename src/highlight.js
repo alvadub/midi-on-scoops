@@ -7,7 +7,10 @@ function esc(value) {
 
 function span(cls, value, attrs = {}) {
   const dataAttrs = Object.entries(attrs)
-    .map(([key, attrValue]) => ` data-${key}="${esc(attrValue)}"`)
+    .map(([key, attrValue]) => {
+      const kebabKey = String(key).replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+      return ` data-${kebabKey}="${esc(attrValue)}"`;
+    })
     .join('');
   return `<span class="${cls}"${dataAttrs}>${esc(value)}</span>`;
 }
@@ -32,11 +35,12 @@ export function classify(token) {
 function renderToken(token) {
   const cls = classify(token);
   if (!cls) return esc(token);
+  if (cls === 'tok-inherit') return span(cls, token, { inherit: '1' });
   if (cls === 'tok-var-ref' && token !== '%') return span(cls, token, { var: token });
   if (cls === 'tok-var-ref' && token === '%') return span(cls, token, { repeatLast: '1' });
   if (cls === 'tok-channel') return span(cls, token, { instrument: token.slice(1) });
   if (cls === 'tok-mode') return span(cls, token, { mode: token.toLowerCase() });
-  if (cls === 'tok-pattern') return span(cls, token, { pattern: '1' });
+  if (cls === 'tok-pattern') return span(cls, token, { pattern: token });
   if (cls === 'tok-note') return span(cls, token, { note: token });
   if (cls === 'tok-chord') return span(cls, token, { chord: token });
   if (cls === 'tok-number') return span(cls, token, { number: token });
@@ -67,11 +71,17 @@ function renderBase(base) {
     return base.replace(/^(\s*#\s+)(.*)$/, (_, p1, p2) => `${esc(p1)}${span('tok-track', p2)}`);
   }
   if (/^\s*@/.test(base)) {
-    const match = base.match(/^(\s*)(@[^\s]+)(.*)$/);
-    if (!match) return renderTokens(base.replace(/</g, ' < '));
-    const [, indent, atToken, rest] = match;
-    const sectionName = atToken.slice(1);
-    return `${esc(indent)}${span('tok-section-def', atToken, { sectionDef: sectionName })}${renderTokens(rest.replace(/</g, ' < '))}`;
+    const inheritMatch = base.match(/^(\s*)(@[^\s]+)(\s*)<(\s*)([^\s]+)(.*)$/);
+    if (inheritMatch) {
+      const [, indent, sourceToken, leftGap, rightGap, targetToken, rest] = inheritMatch;
+      const sourceName = sourceToken.slice(1);
+      return `${esc(indent)}${esc(sourceToken)}${esc(leftGap)}${span('tok-inherit', '<', {
+        inherit: '1',
+        inheritSource: sourceName,
+        inheritTarget: targetToken,
+      })}${esc(rightGap)}${esc(targetToken)}${renderTokens(rest.replace(/</g, ' < '))}`;
+    }
+    return renderTokens(base.replace(/</g, ' < '));
   }
   if (/^\s*>/.test(base)) {
     const indent = esc(base.match(/^\s*/)[0]);

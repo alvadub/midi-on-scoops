@@ -100,6 +100,23 @@ function buildStaffSVG(notes, mode = 'chord') {
   return svg;
 }
 
+function buildPatternPreviewMarkup(pattern) {
+  const symbols = String(pattern || '').split('');
+  if (!symbols.length) return null;
+  const cells = symbols.map((ch, i) => {
+    const cls = ch === 'x' || ch === 'X'
+      ? 'is-pulse'
+      : ch === '-'
+        ? 'is-hold'
+        : ch === '_'
+          ? 'is-rest'
+          : 'is-sub';
+    const group = i % 4 === 0 ? 'is-group' : '';
+    return `<span class="pp-cell ${cls} ${group}" aria-label="step ${i + 1}"></span>`;
+  }).join('');
+  return `<div class="pattern-preview" aria-label="Pattern preview"><div class="pp-grid">${cells}</div></div>`;
+}
+
 function clampTooltip(x, y, width = 320) {
   const maxX = Math.max(8, window.innerWidth - width - 8);
   const left = Math.min(x + 12, maxX);
@@ -134,6 +151,10 @@ export function createEditor(initialText, options = {}) {
   const wrap = document.createElement('div');
   wrap.id = 'editor-wrap';
 
+  const gutter = document.createElement('div');
+  gutter.id = 'editor-gutter';
+  gutter.setAttribute('aria-hidden', 'true');
+
   const pre = document.createElement('pre');
   pre.id = 'editor-hl';
   pre.setAttribute('aria-hidden', 'true');
@@ -159,7 +180,6 @@ export function createEditor(initialText, options = {}) {
   const flashTimers = new Set();
   let scrubState = null;
   let activeTokens = [];
-  let mutedSections = new Set();
   let suggestState = {
     open: false,
     items: [],
@@ -207,6 +227,22 @@ export function createEditor(initialText, options = {}) {
       resolve: options.resolveSection,
       title: value => `@${value}`,
     },
+    {
+      attr: 'inherit',
+      resolve: (_value, el) => {
+        const from = el && el.dataset ? el.dataset.inheritSource : null;
+        const to = el && el.dataset ? el.dataset.inheritTarget : null;
+        if (from && to) {
+          return `Section @${from} inherits from @${to}`;
+        }
+        return 'Inherit/copy from another section';
+      },
+      title: (_value, el) => {
+        const from = el && el.dataset ? el.dataset.inheritSource : null;
+        const to = el && el.dataset ? el.dataset.inheritTarget : null;
+        return from && to ? `@${from} < @${to}` : '<';
+      },
+    },
     options.resolveVar && {
       attr: 'var',
       resolve: options.resolveVar,
@@ -239,12 +275,16 @@ export function createEditor(initialText, options = {}) {
       attr: 'pattern',
       resolve: () => 'x = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide',
       title: () => 'Rhythm pattern',
+      visual: value => buildPatternPreviewMarkup(value),
     },
   ].filter(Boolean);
 
   function sync() {
     pre.innerHTML = `${highlight(ta.value)}\n`;
-    applySectionMuteVisuals();
+    const lineCount = String(ta.value).split(/\r?\n/).length;
+    gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
+      `<span class="editor-ln">${index + 1}</span>`
+    )).join('');
   }
 
   function hideTooltip() {
@@ -260,19 +300,6 @@ export function createEditor(initialText, options = {}) {
   function clearActiveTokenHighlight() {
     activeTokens.forEach(token => token.classList.remove('tok-active'));
     activeTokens = [];
-  }
-
-  function applySectionMuteVisuals() {
-    const lines = pre.querySelectorAll('.hl-line');
-    let section = null;
-    lines.forEach(line => {
-      const header = line.querySelector('[data-section-def]');
-      if (header && header.dataset.sectionDef) {
-        section = header.dataset.sectionDef.toUpperCase();
-      }
-      const isMuted = Boolean(section) && mutedSections.has(section);
-      line.toggleAttribute('data-muted-section', isMuted);
-    });
   }
 
   function getPartialToken() {
@@ -498,13 +525,27 @@ export function createEditor(initialText, options = {}) {
         || token.classList.contains('tok-progression'));
   }
 
-  function flashActiveTokens(_lineNumbers, _beatIndex) {
-    // disabled — interacts badly with newline insertion
+  function flashActiveTokens(lineNumbers, beatIndex) {
+    clearActiveTokenHighlight();
+    if (!Array.isArray(lineNumbers) || !lineNumbers.length) return;
+
+    const tokenIndex = Number.isInteger(beatIndex) ? Math.max(0, beatIndex) : 0;
+    lineNumbers.forEach(lineNumber => {
+      const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
+      if (!lineEl) return;
+      const playable = getPlayableTokenSpans(lineEl);
+      if (!playable.length) return;
+      const token = playable[tokenIndex % playable.length];
+      if (!token) return;
+      token.classList.add('tok-active');
+      activeTokens.push(token);
+    });
   }
 
   ta.addEventListener('scroll', () => {
     pre.scrollTop = ta.scrollTop;
     pre.scrollLeft = ta.scrollLeft;
+    gutter.scrollTop = ta.scrollTop;
   });
 
   ta.addEventListener('input', () => {
@@ -545,22 +586,31 @@ export function createEditor(initialText, options = {}) {
     const found = tooltipHandlers
       .map(handler => {
         const hit = elements.find(el => el.dataset && el.dataset[handler.attr]);
-        return hit ? { handler, value: hit.dataset[handler.attr] } : null;
+        return hit ? { handler, value: hit.dataset[handler.attr], element: hit } : null;
       })
       .find(Boolean);
     if (!found) {
       hideTooltip();
       return;
     }
-    const text = found.handler.resolve(found.value);
+    const text = found.handler.resolve(found.value, found.element);
     if (!text) {
       hideTooltip();
       return;
     }
     const pos = clampTooltip(e.clientX, e.clientY);
-    tipTitle.textContent = found.handler.title(found.value);
+    tipTitle.textContent = found.handler.title(found.value, found.element);
     tipBody.textContent = text;
-    if (found.handler.notes) {
+    if (found.handler.visual) {
+      const visual = found.handler.visual(found.value, found.element);
+      if (visual) {
+        tipStaff.innerHTML = visual;
+        tipStaff.hidden = false;
+      } else {
+        tipStaff.innerHTML = '';
+        tipStaff.hidden = true;
+      }
+    } else if (found.handler.notes) {
       const noteArr = found.handler.notes(found.value);
       if (noteArr && noteArr.length) {
         tipStaff.innerHTML = buildStaffSVG(noteArr, found.handler.staffMode);
@@ -581,13 +631,6 @@ export function createEditor(initialText, options = {}) {
   ta.addEventListener('mousedown', e => {
     if (e.button !== 0 || scrubState) return;
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
-    const sectionTarget = elements.find(el => el.dataset && el.dataset.sectionDef);
-    if (sectionTarget && options.onSectionClick) {
-      e.preventDefault();
-      options.onSectionClick(sectionTarget.dataset.sectionDef, e.shiftKey);
-      ta.focus();
-      return;
-    }
     const target = getScrubTarget(elements);
     if (!target) return;
     beginScrub(e, target);
@@ -613,6 +656,7 @@ export function createEditor(initialText, options = {}) {
   });
 
   sync();
+  wrap.appendChild(gutter);
   wrap.appendChild(pre);
   wrap.appendChild(ta);
   wrap.appendChild(tip);
@@ -627,11 +671,6 @@ export function createEditor(initialText, options = {}) {
     flashLines,
     flashActiveTokens,
     clearActiveTokenHighlight,
-    setMutedSections: sections => {
-      const source = sections instanceof Set ? [...sections] : Array.isArray(sections) ? sections : [];
-      mutedSections = new Set(source.map(name => String(name).toUpperCase()));
-      applySectionMuteVisuals();
-    },
     setValue: value => {
       ta.value = value;
       sync();

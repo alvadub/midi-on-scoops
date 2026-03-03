@@ -431,24 +431,15 @@ select {
   cursor: pointer;
 }
 
-.tok-arr-token.is-active-section {
-  position: relative;
-  color: #fff;
-  z-index: 0;
+.tok-arr-token {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 0 0.2em;
 }
 
-.tok-arr-token.is-active-section::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 1.35em;
-  height: 1.35em;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
+.tok-arr-token.is-active-section {
+  color: #fff;
   background: #ff4f3f;
-  box-shadow: 0 0 0 2px rgba(255, 79, 63, 0.28);
-  z-index: -1;
 }
 
 .tok-arr-token.is-queued-section {
@@ -506,7 +497,7 @@ select {
   border: 1px solid var(--muted);
   border-radius: 8px;
   padding: 0.5em 0.7em;
-  max-width: min(320px, 80vw);
+  max-width: min(560px, 96vw);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -534,7 +525,7 @@ select {
 }
 
 #var-tooltip .pattern-preview {
-  max-width: min(70vw, 340px);
+  max-width: min(96vw, 540px);
   overflow-x: auto;
   padding-bottom: 2px;
 }

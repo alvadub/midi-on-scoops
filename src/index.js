@@ -449,19 +449,17 @@ function listInstrumentOptions() {
   }
 
   try {
-    const drumTitles = p.player && p.player.loader && p.player.loader.drumTitles
-      ? p.player.loader.drumTitles()
+    const drumKeys = p.player && p.player.loader && p.player.loader.drumKeys
+      ? p.player.loader.drumKeys()
       : [];
-    Object.keys(drumTitles || {}).forEach(raw => {
-      const n = parseInt(raw, 10);
-      if (Number.isNaN(n)) return;
-      const value = `#${2000 + n}`;
-      const title = drumTitles[n];
+    for (let i = 0; i < drumKeys.length; i += 1) {
+      const value = `#${2000 + i}`;
+      const info = p.player.loader.drumInfo(i);
       options.push({
         value,
-        label: title ? `${title} (${value})` : value,
+        label: info && info.title ? `${info.title} (${value})` : value,
       });
-    });
+    }
   } catch (e) {
     // ignore and fallback below
   }

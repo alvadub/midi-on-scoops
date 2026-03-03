@@ -107,7 +107,7 @@ function clampTooltip(x, y, width = 320) {
   return { left, top };
 }
 
-function charOffsetOfElement(root, target) {
+function charOffsetOfElement(root, target, sourceText = '') {
   if (!root || !target || !root.contains(target)) return -1;
   const lineEl = target.closest('[data-line]');
   const lineNumber = lineEl ? parseInt(lineEl.dataset.line, 10) : 0;
@@ -120,11 +120,12 @@ function charOffsetOfElement(root, target) {
   lineRange.setEndBefore(target);
   const offsetInLine = lineRange.toString().length;
 
-  // Sum character lengths of all preceding lines + 1 newline each
-  const allLines = root.querySelectorAll('[data-line]');
+  // Sum preceding line lengths from source text, not rendered overlay text.
+  // The overlay may inject spacing around tokens like "<", which would skew offsets.
+  const sourceLines = String(sourceText).split(/\r?\n/);
   let total = offsetInLine;
   for (let i = 0; i < lineNumber; i++) {
-    total += (allLines[i] ? allLines[i].textContent.length : 0) + 1;
+    total += (sourceLines[i] ? sourceLines[i].length : 0) + 1;
   }
   return total;
 }
@@ -421,7 +422,7 @@ export function createEditor(initialText, options = {}) {
     const parsed = parseScrubRaw(raw);
     if (Number.isNaN(parsed.value)) return;
 
-    const startOffset = charOffsetOfElement(pre, span);
+    const startOffset = charOffsetOfElement(pre, span, ta.value);
     if (startOffset < 0) return;
 
     scrubState = {

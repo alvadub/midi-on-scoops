@@ -31,60 +31,60 @@ window.p = p;
 const STORAGE_KEY = 'scoops:draft';
 
 const BILLY_JEAN = `
-  %F a3|c#4|f#4
-  %G b3|d#4|g#4
-  %A c#4|e4|a4
-  %E b3|d4|f#4
-  %C d3|f#4|a4 ; how to sum notes to chords?
-  %B c#4|f4|g#3|b4
+%F a3|c#4|f#4
+%G b3|d#4|g#4
+%A c#4|e4|a4
+%E b3|d4|f#4
+%C d3|f#4|a4 ; how to sum notes to chords?
+%B c#4|f4|g#3|b4
 
-  # synth
-    @INTRO
-      #518      ---- ---- ---- ---- ---- ---- ---- ----
-    @N < INTRO
-    @A
-      #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
-    @B < A
-      #518      %E % % %
-    @C < A
-      #518      %C % %F %
-    @D < A
-      #518      %C % %B %
+# synth
+  @INTRO
+    #518      ---- ---- ---- ---- ---- ---- ---- ----
+  @N < INTRO
+  @A
+    #518 75   x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
+  @B < A
+    #518      %E % % %
+  @C < A
+    #518      %C % %F %
+  @D < A
+    #518      %C % %B %
 
-  ## bass
-    %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
-    %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
-    @INTRO
-      #393      ---- ---- ---- ---- ---- ---- ---- ----
-    @A
-      #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
-    @N < A
-    @B
-      #393      x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
-    @C < INTRO
-    @D < INTRO
+## bass
+  %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
+  %d b2 a2 b2 d3 d3 b2 a2 ; how to transpose?
+  @INTRO
+    #393      ---- ---- ---- ---- ---- ---- ---- ----
+  @A
+    #393  112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
+  @N < A
+  @B
+    #393      x-x- x-x- --x- x-x- x-x- x-x- --x- x-x- %d %
+  @C < INTRO
+  @D < INTRO
 
-  ## drums
-    @INTRO
-      #2123     ---- ---- ---- ---- ---- ---- ---- ----
-      #2081 50  x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
-      #2028     ---- x--- ---- x--- ---- x--- ---- x---
-      #2001     x--- ---- x--- ---- x--- ---- x--- ----
-    @A < INTRO
-      #2123 90  x--- x--- x--- x--- x--- x--- x--- x---
-      #2123 70  --x- --x- --x- --x- --x- --x- --x- --x-
-    @N < A
-    @B < A
-    @C < A
-    @D < A
+## drums
+  @INTRO
+    #2123     ---- ---- ---- ---- ---- ---- ---- ----
+    #2081 50  x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x-
+    #2028     ---- x--- ---- x--- ---- x--- ---- x---
+    #2001     x--- ---- x--- ---- x--- ---- x--- ----
+  @A < INTRO
+    #2123 90  x--- x--- x--- x--- x--- x--- x--- x---
+    #2123 70  --x- --x- --x- --x- --x- --x- --x- --x-
+  @N < A
+  @B < A
+  @C < A
+  @D < A
 
-  > INTRO N *2 A %
-  > A % B A B A
-  > A % B A C *3 D
-  > A % B A B A
-  > A % B A B A
-  > A % B A C *3 D
-  > A % B A B A
+> INTRO N *2 A %
+> A % B A B A
+> A % B A C *3 D
+> A % B A B A
+> A % B A B A
+> A % B A C *3 D
+> A % B A B A
 `;
 
 const TETRIS = `

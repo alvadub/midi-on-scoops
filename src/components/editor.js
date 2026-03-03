@@ -533,41 +533,55 @@ export function createEditor(initialText, options = {}) {
   function flashActiveTokens(lineNumbers, beatIndex) {
     if (!Array.isArray(lineNumbers) || !lineNumbers.length) return;
     const tokenIndex = Number.isInteger(beatIndex) ? Math.max(0, beatIndex) : 0;
+    const patternByLine = new Map();
+    lineNumbers.forEach(lineNumber => {
+      const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
+      if (!lineEl) return;
+      patternByLine.set(lineNumber, [...lineEl.querySelectorAll('.tok-pattern-step')]);
+    });
+    const referencePatternSteps = [...patternByLine.values()]
+      .filter(steps => steps.length > 0)
+      .sort((a, b) => {
+        const pulses = steps => steps.reduce((sum, s) => (
+          (s?.dataset?.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
+        ), 0);
+        return pulses(b) - pulses(a);
+      })[0] || [];
+
+    function pulseInfo(steps) {
+      if (!steps.length) return null;
+      const stepIndex = tokenIndex % steps.length;
+      const step = steps[stepIndex];
+      const ch = (step && step.dataset ? step.dataset.patternChar : '').toLowerCase();
+      let pulseCount = 0;
+      for (let i = 0; i <= stepIndex; i += 1) {
+        const ci = (steps[i]?.dataset?.patternChar || '').toLowerCase();
+        if (ci === 'x') pulseCount += 1;
+      }
+      const pulsesPerPattern = steps.reduce((sum, s) => (
+        (s?.dataset?.patternChar || '').toLowerCase() === 'x' ? sum + 1 : sum
+      ), 0);
+      const cycleIndex = Math.floor(tokenIndex / steps.length);
+      const absolutePulseIndex = pulsesPerPattern > 0
+        ? cycleIndex * pulsesPerPattern + pulseCount - 1
+        : pulseCount - 1;
+      return { step, isPulse: ch === 'x', absolutePulseIndex };
+    }
 
     lineNumbers.forEach(lineNumber => {
       const lineEl = pre.querySelector(`[data-line="${lineNumber}"]`);
       if (!lineEl) return;
-      const patternSteps = [...lineEl.querySelectorAll('.tok-pattern-step')];
-      if (patternSteps.length) {
-        const stepIndex = tokenIndex % patternSteps.length;
-        const step = patternSteps[stepIndex];
-        if (step) {
-          step.classList.add('tok-active');
-          activeTokens.push(step);
-        }
-
-        const ch = (step && step.dataset ? step.dataset.patternChar : '').toLowerCase();
-        if (ch === 'x') {
-          const noteTokens = getNoteLikeTokenSpans(lineEl);
-          if (noteTokens.length) {
-            let pulseCount = 0;
-            for (let i = 0; i <= stepIndex; i += 1) {
-              const ci = (patternSteps[i]?.dataset?.patternChar || '').toLowerCase();
-              if (ci === 'x') pulseCount += 1;
-            }
-            const noteToken = noteTokens[(pulseCount - 1) % noteTokens.length];
-            if (noteToken) {
-              noteToken.classList.add('tok-active');
-              activeTokens.push(noteToken);
-            }
-          }
-        }
-        return;
+      const ownPatternSteps = patternByLine.get(lineNumber) || [];
+      const info = pulseInfo(ownPatternSteps.length ? ownPatternSteps : referencePatternSteps);
+      if (ownPatternSteps.length && info && info.step && info.isPulse) {
+        info.step.classList.add('tok-active');
+        activeTokens.push(info.step);
       }
-
       const noteTokens = getNoteLikeTokenSpans(lineEl);
       if (!noteTokens.length) return;
-      const token = noteTokens[tokenIndex % noteTokens.length];
+      if (info && !info.isPulse) return;
+      const idx = info ? info.absolutePulseIndex : tokenIndex;
+      const token = noteTokens[((idx % noteTokens.length) + noteTokens.length) % noteTokens.length];
       if (!token) return;
       token.classList.add('tok-active');
       activeTokens.push(token);

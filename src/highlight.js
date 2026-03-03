@@ -102,7 +102,9 @@ function renderBase(base) {
       .split(/(\s+)/)
       .map(part => {
         if (!part || /\s+/.test(part)) return part;
-        if (/^[A-Z][A-Z0-9]*$/.test(part)) return span('tok-section', part, { section: part });
+        if (/^[A-Z][A-Z0-9]*$/.test(part)) return span('tok-section tok-arr-token', part, { section: part });
+        if (part === '%') return span('tok-var-ref tok-arr-token tok-arr-repeat', part, { repeatLast: '1' });
+        if (/^\*\d+$/.test(part)) return span('tok-repeat tok-arr-token tok-arr-repeat', part, { repeat: part.slice(1) });
         return renderToken(part);
       })
       .join('');

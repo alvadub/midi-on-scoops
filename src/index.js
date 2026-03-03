@@ -294,7 +294,7 @@ function buildSectionTimeline(context, merged) {
 function buildArrangementDisplayExpansion(sourceText) {
   const lines = String(sourceText || '').split(/\r?\n/);
   const expanded = [];
-  let displayOrder = 0;
+  let tokenOrder = 0;
 
   lines.forEach(rawLine => {
     const noComment = rawLine.replace(/;.*$/, '');
@@ -306,18 +306,22 @@ function buildArrangementDisplayExpansion(sourceText) {
     let last = null;
     parts.forEach(part => {
       if (/^[A-Z][A-Z0-9]*$/.test(part)) {
-        last = { name: part, displayOrder };
-        displayOrder += 1;
+        last = { name: part, displayOrder: tokenOrder };
+        tokenOrder += 1;
         expanded.push(last);
         return;
       }
       if (/^\*(\d+)$/.test(part) && last) {
         const count = Math.max(1, parseInt(part.slice(1), 10));
-        for (let i = 1; i < count; i += 1) expanded.push(last);
+        for (let i = 1; i < count; i += 1) {
+          expanded.push({ name: last.name, displayOrder: tokenOrder });
+        }
+        tokenOrder += 1;
         return;
       }
       if (part === '%' && last) {
-        expanded.push(last);
+        expanded.push({ name: last.name, displayOrder: tokenOrder });
+        tokenOrder += 1;
       }
     });
   });

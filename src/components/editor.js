@@ -318,10 +318,10 @@ export function createEditor(initialText, options = {}) {
   }
 
   function setActiveSectionByOrder(order) {
-    pre.querySelectorAll('.tok-section.is-active-section')
+    pre.querySelectorAll('.tok-arr-token.is-active-section')
       .forEach(el => el.classList.remove('is-active-section'));
     if (typeof order !== 'number' || order < 0) return;
-    const tokens = pre.querySelectorAll('.tok-section');
+    const tokens = pre.querySelectorAll('.tok-arr-token');
     const target = tokens[order];
     if (target) target.classList.add('is-active-section');
   }

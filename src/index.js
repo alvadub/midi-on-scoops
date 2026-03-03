@@ -19,6 +19,8 @@ let trackLineMap = new Map();
 let lastFlashedBeatIndex = -1;
 let sectionTimeline = [];
 const FORCE_SECTION_BEATS = 32;
+let pendingSectionLaunch = null;
+let lastSectionTimelineIndex = -1;
 
 const FEATURE_FLAGS = {
   blockEval: true,
@@ -330,17 +332,38 @@ function buildArrangementDisplayExpansion(sourceText) {
 }
 
 function getSectionAtBeat(beatIndex) {
-  const item = sectionTimeline.find(section => (
+  const index = sectionTimeline.findIndex(section => (
     section.name && beatIndex >= section.start && beatIndex <= section.end
   ));
-  return item || null;
+  if (index < 0) return null;
+  return { index, item: sectionTimeline[index] };
+}
+
+function findTimelineIndex(displayOrder, name) {
+  if (typeof displayOrder === 'number' && displayOrder >= 0) {
+    const idx = sectionTimeline.findIndex(section => section.displayOrder === displayOrder);
+    if (idx >= 0) return idx;
+  }
+  if (name) return sectionTimeline.findIndex(section => section.name === name);
+  return -1;
+}
+
+function jumpToSectionTimelineIndex(index) {
+  const target = sectionTimeline[index];
+  if (!target) return;
+  p.beatIndex = target.start;
+  if (playing) {
+    p.stopLoopMachine();
+    p.playLoopMachine(target.start);
+  }
+  syncCurrentSectionUI();
 }
 
 function syncCurrentSectionUI() {
-  const activeSection = p.loopStarted ? getSectionAtBeat(p.beatIndex) : null;
-  setCurrentSectionIndicator(activeSection ? activeSection.name : null);
+  const active = p.loopStarted ? getSectionAtBeat(p.beatIndex) : null;
+  setCurrentSectionIndicator(active ? active.item.name : null);
   if (editorApi) {
-    editorApi.setActiveSectionByOrder(activeSection ? activeSection.displayOrder : null);
+    editorApi.setActiveSectionByOrder(active ? active.item.displayOrder : null);
   }
 }
 
@@ -348,6 +371,20 @@ function setCurrentSectionIndicator(name) {
   const el = document.getElementById('section-indicator');
   if (!el) return;
   el.textContent = name ? `Section: ${name}` : 'Section: —';
+}
+
+function queueSectionLaunch(name, order) {
+  if (!sectionTimeline.length) return;
+  const targetIndex = findTimelineIndex(order, name);
+  if (targetIndex < 0) return;
+  if (!playing) {
+    jumpToSectionTimelineIndex(targetIndex);
+    showStatus(`Ready · section ${name}`, 'ready');
+    return;
+  }
+  pendingSectionLaunch = { name, order, index: targetIndex };
+  if (editorApi) editorApi.setQueuedArrangementToken(order);
+  showStatus(`Queued section ${name}`, 'playing');
 }
 
 function getMaxPatternSlots() {
@@ -496,6 +533,34 @@ function showStatus(msg, state = 'ready') {
 
 function setReadyStatus() {
   showStatus('Ready', 'ready');
+}
+
+function labelCursorToken(token) {
+  if (!token || !token.value) return 'Cursor: —';
+  const map = {
+    'tok-pattern': 'Pattern',
+    'tok-note': 'Note',
+    'tok-chord': 'Chord',
+    'tok-var-ref': 'Variable',
+    'tok-var-def': 'Variable Def',
+    'tok-repeat': 'Repeat',
+    'tok-mode': 'Mode',
+    'tok-channel': 'Channel',
+    'tok-number': 'Number',
+    'tok-inherit': 'Inherit',
+    'tok-section': 'Section',
+    'tok-progression': 'Progression',
+    'tok-operator': 'Operator',
+    'tok-unknown': 'Token',
+  };
+  const kind = map[token.type] || 'Token';
+  return `Cursor: ${kind} ${token.value}`;
+}
+
+function setCursorTokenIndicator(token) {
+  const el = document.getElementById('cursor-token-indicator');
+  if (!el) return;
+  el.textContent = labelCursorToken(token);
 }
 
 function markDirty() {
@@ -677,6 +742,8 @@ function createDOM(initialText, initialPreset) {
     resolveVar: resolveVarTooltip,
     resolveInstrument: resolveInstrumentTooltip,
     suggestions: FEATURE_FLAGS.autocomplete,
+    onCursorToken: setCursorTokenIndicator,
+    onArrangementSectionClick: queueSectionLaunch,
     onInput: () => {
       const presetSelect = document.getElementById('preset-select');
       if (presetSelect) presetSelect.value = '';
@@ -717,9 +784,13 @@ function createDOM(initialText, initialPreset) {
   const sectionIndicator = document.createElement('span');
   sectionIndicator.id = 'section-indicator';
   sectionIndicator.textContent = 'Section: —';
+  const cursorTokenIndicator = document.createElement('span');
+  cursorTokenIndicator.id = 'cursor-token-indicator';
+  cursorTokenIndicator.textContent = 'Cursor: —';
 
   statusbar.appendChild(beatDots);
   statusbar.appendChild(sectionIndicator);
+  statusbar.appendChild(cursorTokenIndicator);
   statusbar.appendChild(statusMessage);
 
   const workspace = document.createElement('div');
@@ -815,6 +886,9 @@ function play() {
   syncMixer(data);
   p.playLoopMachine();
   syncCurrentSectionUI();
+  lastSectionTimelineIndex = -1;
+  pendingSectionLaunch = null;
+  if (editorApi) editorApi.setQueuedArrangementToken(null);
   updatePlayButton();
   showStatus('Playing', 'playing');
 }
@@ -827,9 +901,12 @@ function stop() {
   if (editorApi) {
     editorApi.clearActiveTokenHighlight();
     editorApi.setActiveSection(null);
+    editorApi.setQueuedArrangementToken(null);
   }
   setCurrentSectionIndicator(null);
   lastFlashedBeatIndex = -1;
+  lastSectionTimelineIndex = -1;
+  pendingSectionLaunch = null;
   updatePlayButton();
   setReadyStatus();
 }
@@ -865,6 +942,18 @@ function beatIndicator() {
     ? activeIndex % beatSegments.length
     : -1;
   beatSegments.forEach((segment, i) => segment.classList.toggle('active', i === segmentActiveIndex));
+
+  if (p.loopStarted) {
+    const active = getSectionAtBeat(p.beatIndex);
+    const currentIndex = active ? active.index : -1;
+    if (pendingSectionLaunch && lastSectionTimelineIndex >= 0 && currentIndex !== lastSectionTimelineIndex) {
+      jumpToSectionTimelineIndex(pendingSectionLaunch.index);
+      pendingSectionLaunch = null;
+      if (editorApi) editorApi.setQueuedArrangementToken(null);
+    }
+    lastSectionTimelineIndex = currentIndex;
+  }
+
   syncCurrentSectionUI();
 
   requestAnimationFrame(beatIndicator);

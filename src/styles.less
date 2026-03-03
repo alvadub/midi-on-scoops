@@ -245,6 +245,15 @@ select {
   background: rgba(255, 231, 167, 0.08);
 }
 
+#cursor-token-indicator {
+  font-size: 12px;
+  color: #cfe0f4;
+  border: 1px solid rgba(207, 224, 244, 0.25);
+  border-radius: 999px;
+  padding: 0.15em 0.55em;
+  background: rgba(207, 224, 244, 0.07);
+}
+
 #mixer-panel {
   border-left: 1px solid var(--muted);
   background: rgba(6, 16, 28, 0.88);
@@ -378,7 +387,6 @@ select {
 .tok-subtrack { color: #ff8779; font-weight: 700; }
 .tok-section {
   color: #c3e88d;
-  text-decoration: underline dotted rgba(195, 232, 141, 0.45);
 }
 
 .tok-arr-token.is-active-section {
@@ -399,6 +407,10 @@ select {
   background: #ff4f3f;
   box-shadow: 0 0 0 2px rgba(255, 79, 63, 0.28);
   z-index: -1;
+}
+
+.tok-arr-token.is-queued-section {
+  text-decoration: underline wavy rgba(255, 232, 145, 0.95);
 }
 
 .tok-section-head {

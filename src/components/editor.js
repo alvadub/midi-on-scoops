@@ -147,6 +147,22 @@ function charOffsetOfElement(root, target, sourceText = '') {
   return total;
 }
 
+function tokenAtCursor(text, cursorPos) {
+  const src = String(text || '');
+  const pos = Math.max(0, Math.min(src.length, cursorPos || 0));
+  let start = pos;
+  let end = pos;
+  while (start > 0 && !/\s/.test(src[start - 1])) start -= 1;
+  while (end < src.length && !/\s/.test(src[end])) end += 1;
+  const value = src.slice(start, end);
+  if (!value) return null;
+
+  let type = classify(value);
+  if (!type && /^@[^\s]+$/.test(value)) type = 'tok-section';
+  if (!type) type = 'tok-unknown';
+  return { type, value, start, end };
+}
+
 export function createEditor(initialText, options = {}) {
   const wrap = document.createElement('div');
   wrap.id = 'editor-wrap';
@@ -180,6 +196,7 @@ export function createEditor(initialText, options = {}) {
   const flashTimers = new Set();
   let scrubState = null;
   let activeTokens = [];
+  let queuedArrangementOrder = null;
   let suggestState = {
     open: false,
     items: [],
@@ -285,6 +302,7 @@ export function createEditor(initialText, options = {}) {
     gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
       `<span class="editor-ln">${index + 1}</span>`
     )).join('');
+    applyQueuedArrangementToken();
   }
 
   function hideTooltip() {
@@ -301,6 +319,12 @@ export function createEditor(initialText, options = {}) {
   function clearActiveTokenHighlight() {
     activeTokens.forEach(token => token.classList.remove('tok-active'));
     activeTokens = [];
+  }
+
+  function emitCursorToken() {
+    if (!options.onCursorToken) return;
+    const token = tokenAtCursor(ta.value, ta.selectionStart);
+    options.onCursorToken(token);
   }
 
   function setActiveSection(sectionName, occurrence = null) {
@@ -324,6 +348,20 @@ export function createEditor(initialText, options = {}) {
     const tokens = pre.querySelectorAll('.tok-arr-token');
     const target = tokens[order];
     if (target) target.classList.add('is-active-section');
+  }
+
+  function applyQueuedArrangementToken() {
+    pre.querySelectorAll('.tok-arr-token.is-queued-section')
+      .forEach(el => el.classList.remove('is-queued-section'));
+    if (typeof queuedArrangementOrder !== 'number' || queuedArrangementOrder < 0) return;
+    const tokens = pre.querySelectorAll('.tok-arr-token');
+    const target = tokens[queuedArrangementOrder];
+    if (target) target.classList.add('is-queued-section');
+  }
+
+  function setQueuedArrangementToken(order) {
+    queuedArrangementOrder = (typeof order === 'number' && order >= 0) ? order : null;
+    applyQueuedArrangementToken();
   }
 
   function getPartialToken() {
@@ -621,6 +659,7 @@ export function createEditor(initialText, options = {}) {
     sync();
     hideTooltip();
     updateSuggestions();
+    emitCursorToken();
     if (options.onInput) options.onInput(ta.value);
   });
 
@@ -699,6 +738,19 @@ export function createEditor(initialText, options = {}) {
   ta.addEventListener('mousedown', e => {
     if (e.button !== 0 || scrubState) return;
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const arrToken = elements.find(el => (
+      el.classList
+      && el.classList.contains('tok-arr-token')
+      && el.classList.contains('tok-section')
+    ));
+    if (arrToken && options.onArrangementSectionClick) {
+      e.preventDefault();
+      const tokens = [...pre.querySelectorAll('.tok-arr-token')];
+      const order = tokens.indexOf(arrToken);
+      options.onArrangementSectionClick(arrToken.dataset.section, order);
+      ta.focus();
+      return;
+    }
     const target = getScrubTarget(elements);
     if (!target) return;
     beginScrub(e, target);
@@ -723,7 +775,12 @@ export function createEditor(initialText, options = {}) {
     setTimeout(() => hideSuggest(), 80);
   });
 
+  ta.addEventListener('click', emitCursorToken);
+  ta.addEventListener('keyup', emitCursorToken);
+  ta.addEventListener('focus', emitCursorToken);
+
   sync();
+  emitCursorToken();
   wrap.appendChild(gutter);
   wrap.appendChild(pre);
   wrap.appendChild(ta);
@@ -741,6 +798,7 @@ export function createEditor(initialText, options = {}) {
     clearActiveTokenHighlight,
     setActiveSection,
     setActiveSectionByOrder,
+    setQueuedArrangementToken,
     setValue: value => {
       ta.value = value;
       sync();

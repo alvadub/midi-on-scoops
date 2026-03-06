@@ -26,7 +26,7 @@ You can use the browser playground for instant playback or the CLI to generate `
     #0 50 x-x- x-x- x-x- x-x- f#2
   @A < INTRO
 
-> INTRO *2 A *8
+> INTRO x2 A x8
 ```
 
 | Token | Meaning |
@@ -39,7 +39,7 @@ You can use the browser playground for instant playback or the CLI to generate `
 | `#0 ...` | Drum lane |
 | `%var value` | Variable declaration |
 | `> ...` | Top-level arrangement |
-| `*N` | Repeat N times |
+| `xN` | Repeat N times |
 | `[xx]` | Pattern grouping |
 
 ## Chords & Scales
@@ -72,6 +72,69 @@ Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real ti
 - `Space` or `Cmd/Ctrl+Enter`: play/stop
 - BPM, Bars, and Key controls update the loop
 - Drafts are auto-saved in `localStorage`
+
+## Dub Sound Guide (Preamp + FX)
+
+Use these controls in the right rack to get a classic dub tone quickly.
+
+### 1) Set Musical Context First
+
+At the top of your draft, set transport metadata:
+
+```dub
+; tempo: 138
+; bars: 16
+; key: -2
+```
+
+### 2) Enable Master Preamp
+
+Turn on `Master Preamp` in the FX section.
+The preamp is fixed to **5 bands** with **4 crossover cuts** (`Band Cut 1..4`).
+
+Suggested crossover start point:
+- `Band Cut 1`: ~100 Hz
+- `Band Cut 2`: ~400 Hz
+- `Band Cut 3`: ~1.5 kHz
+- `Band Cut 4`: ~6 kHz
+
+### 3) Shape the Overall Tone
+
+- `Preamp HPF`: raise slightly (20-60 Hz) to clean sub rumble
+- `Preamp LPF`: lower slightly (8-14 kHz) for darker dub top-end
+- `Preamp Q`: keep gentle (`0.7-1.2`) for smooth crossover behavior
+
+### 4) Use Per-Band Sends (Dub Character)
+
+Each band has:
+- `Band N Rev`
+- `Band N Dly`
+- `Band N VU` (activity meter)
+
+A reliable dub starting recipe:
+- Band 1 (sub): low rev, low dly (`0-10%`)
+- Band 2 (low mids): moderate dly (`20-35%`)
+- Band 3 (presence): moderate rev + dly (`25-40%`)
+- Band 4 (highs): higher rev (`35-55%`), light dly (`10-25%`)
+- Band 5 (air): mostly rev, very little dly
+
+### 5) Set Delay Engine
+
+Use global delay controls:
+- `Delay Division`: `1/4` or `3/8` for classic bounce
+- `Feedback`: `25-45%` for repeating tails without runaway
+
+### 6) Arrangement Tips for Dub
+
+- Leave space: fewer notes, more mute/rest bars
+- Throw sends on transitions (A -> B, fills, last beat of bar)
+- Snapshot good moments and recall them live
+
+### 7) Quick Troubleshooting
+
+- If FX feels too dense, lower per-band delay on Bands 2/3 first
+- If mix is muddy, reduce low-band reverb and raise `Preamp HPF`
+- If echoes feel off-grid, recheck `tempo` + `bars` metadata
 
 ## MIDI Drums
 

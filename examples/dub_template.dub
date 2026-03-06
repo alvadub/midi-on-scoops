@@ -1,0 +1,43 @@
+; Dub Template (5-band preamp workflow)
+; tempo: 138
+; bars: 16
+; key: -2
+
+%chA c4|g4|a#4
+%chB c4|f4|a4
+%bassA c2 g1 a#1 g1 f1 g1 c2 g1
+%bassB c2 g1 a1 g1 f1 g1 c2 c2
+
+# skank
+  @A
+    #1 96 --x- --x- --x- --x- --x- --x- --x- --x- %chA %chB %chA %chB
+  @B < A
+    #1 96 --x- --x- --x- --x- --x- --x- --x- --x- %chA %chA %chB %chB
+
+## bubble
+  @A
+    #2 82 -x-x -x-x -x-x -x-x -x-x -x-x -x-x -x-x c4 d#4 g4 d#4 c4 d#4 g4 d#4
+  @B < A
+    #2 82 -x-x -x-x -x-x -x-x -x-x -x-x -x-x -x-x c4 e4 g4 e4 c4 e4 g4 e4
+
+## bass
+  @A
+    #33 118 x--- --x- x--- --x- x--- --x- x--- --x- %bassA %
+  @B
+    #33 118 x--- --x- x--- --x- x--- --x- x--- --x- %bassB %
+
+## drums
+  @A
+    #0 124 x--- ---- x--- ---- x--- ---- x--- ---- b1
+    #0 118 ---- x--- ---- x--- ---- x--- ---- x--- d2
+    #0 78 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- g#2
+    #0 92 ---- ---- ---- ---x ---- ---- ---- ---x f#2
+  @B < A
+    #0 96 ---- --x- ---- --x- ---- --x- ---- --x- a#1
+
+## fx
+  @THROW
+    #89 90 ---- x--- ---- ---- ---- x--- ---- ---- c5
+    #89 90 ---- ---- ---- x--- ---- ---- ---- x--- g4
+
+> A x4 B x2 THROW x2 A x2

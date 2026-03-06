@@ -25,15 +25,15 @@ describe('tokenizer', () => {
 
   it('can build an ast from input', () => {
     expect(transform('x')).to.deep.equal([tok('pattern', 'x')]);
-    expect(transform('x *2')).to.deep.equal([tok('pattern', 'x'), tok('multiply', 2)]);
+    expect(transform('x x2')).to.deep.equal([tok('pattern', 'x'), tok('multiply', 2)]);
     expect(transform('x /2')).to.deep.equal([tok('pattern', 'x'), tok('divide', 2)]);
     expect(transform('0..10')).to.deep.equal([tok('slice', ['0', '10'])]);
-    expect(transform('0..10 *2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 2)]);
+    expect(transform('0..10 x2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 2)]);
     expect(transform('0..10 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('divide', 2)]);
     expect(transform('0..10 0..2')).to.deep.equal([tok('slice', ['0', '10']), tok('slice', ['0', '2'])]);
-    expect(transform('0..10 *3 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 3), tok('divide', 2)]);
+    expect(transform('0..10 x3 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 3), tok('divide', 2)]);
     expect(transform('0..10 /2 0..1')).to.deep.equal([tok('slice', ['0', '10']), tok('divide', 2), tok('slice', ['0', '1'])]);
-    expect(transform('0..10 0..2 /2 *2 0..3')).to.deep.equal([
+    expect(transform('0..10 0..2 /2 x2 0..3')).to.deep.equal([
       tok('slice', ['0', '10']),
       tok('slice', ['0', '2']),
       tok('divide', 2),
@@ -64,7 +64,7 @@ describe('tokenizer', () => {
   });
 
   it('can multiple regular notes', () => {
-    expect(transform('c4 *2 d3 *3')).to.deep.equal([
+    expect(transform('c4 x2 d3 x3')).to.deep.equal([
       tok('note', 'c4'),
       tok('multiply', 2),
       tok('note', 'd3'),
@@ -102,7 +102,7 @@ describe('tokenizer', () => {
       tok('slice', ['CM', '.']),
       tok('slice', ['0', '2']),
     ]);
-    expect(transform('CM... *2 Dm7.. 0..7')).to.deep.equal([tok('slice', ['CM', '.']), tok('multiply', 2), tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', ['0', '7'])]);
+    expect(transform('CM... x2 Dm7.. 0..7')).to.deep.equal([tok('slice', ['CM', '.']), tok('multiply', 2), tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', ['0', '7'])]);
   });
 
   it('can handle ranges, slicing, duplicates, etc.', () => {
@@ -112,7 +112,7 @@ describe('tokenizer', () => {
       tok('divide', 11),
       tok('number', 127, { repeat: 3 }),
     ]);
-    expect(transform('c3 *6 a#2 a#2 c3 *6 d#3 d#3 d#3')).to.deep.equal([
+    expect(transform('c3 x6 a#2 a#2 c3 x6 d#3 d#3 d#3')).to.deep.equal([
       tok('note', 'c3'),
       tok('multiply', 6),
       tok('note', 'a#2'),
@@ -126,7 +126,7 @@ describe('tokenizer', () => {
   });
 
   it('will return placeholders as-is on tokenization', () => {
-    expect(transform('g3 *7 f2 %')).to.deep.equal([
+    expect(transform('g3 x7 f2 %')).to.deep.equal([
       tok('note', 'g3'),
       tok('multiply', 7),
       tok('note', 'f2', { repeat: 2 }),

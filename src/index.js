@@ -85,12 +85,12 @@ const BILLY_JEAN = `; Billy Jean - Michael Jackson
   @C < A
   @D < A
 
-> INTRO N *2 A %
+> INTRO N x2 A %
 > A % B A B A
-> A % B A C *3 D
+> A % B A C x3 D
 > A % B A B A
 > A % B A B A
-> A % B A C *3 D
+> A % B A C x3 D
 > A % B A B A
 `;
 
@@ -146,7 +146,7 @@ const PLAYGROUND = `
     #0 110 -x-x -x-x d2
     #0 100 [xx][xx][xx][xx] [xx][xx][xx][xx] f#2
 
-> A *4
+> A x4
 `.trim();
 
 const LOCKS = `
@@ -164,7 +164,7 @@ const LOCKS = `
   @A
     #1 100 -x-x-x-x-x-x-x-x %Cm %Fm
 
-> A *4
+> A x4
 `.trim();
 
 const PRESETS = {
@@ -340,7 +340,7 @@ function buildArrangementDisplayExpansion(sourceText) {
         expanded.push(last);
         return;
       }
-      if (/^\*(\d+)$/.test(part) && last) {
+      if (/^x(\d+)$/.test(part) && last) {
         const count = Math.max(1, parseInt(part.slice(1), 10));
         for (let i = 1; i < count; i += 1) {
           expanded.push({ name: last.name, displayOrder: tokenOrder });
@@ -809,8 +809,10 @@ function buildMidiActions() {
   actions['master:preamp:hpf'] = data => p.setMasterPreampHPF(20 * Math.pow(1000, msgNorm(data)));
   actions['master:preamp:lpf'] = data => p.setMasterPreampLPF(20 * Math.pow(1000, msgNorm(data)));
   actions['master:preamp:q'] = data => p.setMasterPreampQ(0.7 + (msgNorm(data) * 10));
-  actions['master:preamp:rev'] = data => p.setMasterPreampReverbSend(msgNorm(data));
-  actions['master:preamp:dly'] = data => p.setMasterPreampDelaySend(msgNorm(data));
+  for (let i = 0; i < 5; i += 1) {
+    actions[`master:preamp:b${i + 1}:rev`] = data => p.setMasterPreampBandReverbSend(i, msgNorm(data));
+    actions[`master:preamp:b${i + 1}:dly`] = data => p.setMasterPreampBandDelaySend(i, msgNorm(data));
+  }
   return actions;
 }
 
@@ -1082,9 +1084,6 @@ function createDOM(initialText, initialPreset) {
   stopBtn.textContent = '■ Stop';
   stopBtn.addEventListener('click', stop);
 
-  const mixerBtn = document.createElement('button');
-  mixerBtn.id = 'mixer-btn';
-  mixerBtn.textContent = '⊞ Mixer';
   const midiBtn = document.createElement('button');
   midiBtn.id = 'midi-btn';
   midiBtn.textContent = 'MIDI: init';
@@ -1117,7 +1116,6 @@ function createDOM(initialText, initialPreset) {
     // toolbarControls.appendChild(aboutLink);
     toolbarControls.appendChild(playBtn);
     toolbarControls.appendChild(stopBtn);
-    toolbarControls.appendChild(mixerBtn);
     toolbarControls.appendChild(midiBtn);
 
   const beatIndicatorBar = document.createElement('div');
@@ -1215,6 +1213,8 @@ function createDOM(initialText, initialPreset) {
 
   const workspace = document.createElement('div');
   workspace.id = 'workspace';
+  const rightColumn = document.createElement('div');
+  rightColumn.id = 'right-column';
   mixerApi = createMixer(p, {
     tempo,
     bars,
@@ -1235,11 +1235,6 @@ function createDOM(initialText, initialPreset) {
     onSnapshotExport: exportSnapshots,
     onSnapshotImport: importSnapshots,
   });
-  mixerApi.toggle(false);
-  mixerBtn.addEventListener('click', () => {
-    const open = mixerApi.toggle();
-    workspace.classList.toggle('mixer-open', open);
-  });
   p.onBeat = (key, when, beatIndex) => {
     const wait = Math.max(0, (when - p.audioContext.currentTime) * 1000);
     setTimeout(() => {
@@ -1256,12 +1251,13 @@ function createDOM(initialText, initialPreset) {
     }, wait);
   };
 
-  document.body.appendChild(toolbar);
-  document.body.appendChild(beatIndicatorBar);
   workspace.appendChild(editorApi.el);
-  workspace.appendChild(mixerApi.el);
+  rightColumn.appendChild(toolbar);
+  rightColumn.appendChild(beatIndicatorBar);
+  rightColumn.appendChild(statusbar);
+  rightColumn.appendChild(mixerApi.el);
+  workspace.appendChild(rightColumn);
   document.body.appendChild(workspace);
-  document.body.appendChild(statusbar);
 
   return editorApi;
 }

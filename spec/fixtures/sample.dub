@@ -20,7 +20,7 @@
 @level: 90
 
 ; store local variables (also global variables are available here)
-%x: c3 *16 ; this will duplicate `c3` 16th times
+%x: c3 x16 ; this will duplicate `c3` 16th times
 %y: Cmin3 ; chords are supported as-is, they also support
 ; `spread...` and `unfold..` operations from modes and chords
 ; spread will expand and merge its values on the final expression
@@ -40,4 +40,4 @@ pattern: %a
 ; inheritance is achieved as follows:
 # Section > sub-section
 
-%5: x---x *3
+%5: x---x x3

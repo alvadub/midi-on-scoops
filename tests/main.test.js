@@ -152,7 +152,7 @@ describe('parser', () => {
           #1 .   x--- x--- d5
 
       foo: A A B A
-      main: foo *4
+      main: foo x4
 
       > main
     `)).to.eql({
@@ -229,7 +229,7 @@ describe('reducer', () => {
       c: D
       a: b c
 
-      > a % b *5
+      > a % b x5
       > 3 /2 4.5 /1.5
     `);
 

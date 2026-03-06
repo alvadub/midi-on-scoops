@@ -20,7 +20,7 @@ export function classify(token) {
   if (token === '<') return 'tok-inherit';
   if (token === '%') return 'tok-var-ref';
   if (token.charAt(0) === '%') return 'tok-var-ref';
-  if (/^\*\d+$/.test(token)) return 'tok-repeat';
+  if (/^x\d+$/.test(token)) return 'tok-repeat';
   if (/^[x_\-[\]]+$/.test(token)) return 'tok-pattern';
   if (/^(?:[a-zA-Z_]\w*)?\(\d+\s*,\s*\d+(?:\s*,\s*-?\d+)?\)$/.test(token)) return 'tok-pattern';
   if (/^[a-gA-G][#b]?\d+$/.test(token)) return 'tok-note';
@@ -105,7 +105,7 @@ function renderBase(base) {
         if (!part || /\s+/.test(part)) return part;
         if (/^[A-Z][A-Z0-9]*$/.test(part)) return span('tok-section tok-arr-token', part, { section: part });
         if (part === '%') return span('tok-var-ref tok-arr-token tok-arr-repeat', part, { repeatLast: '1' });
-        if (/^\*\d+$/.test(part)) return span('tok-repeat tok-arr-token tok-arr-repeat', part, { repeat: part.slice(1) });
+        if (/^x\d+$/.test(part)) return span('tok-repeat tok-arr-token tok-arr-repeat', part, { repeat: part.slice(1) });
         return renderToken(part);
       })
       .join('');

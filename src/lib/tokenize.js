@@ -155,6 +155,10 @@ export function transform(expression) {
       return prev;
     }
 
+    if (typeof cur === 'string' && cur.charAt() === '*') {
+      throw new Error(`Deprecated repeat syntax '${cur}'. Use 'xN' instead`);
+    }
+
     if (cur.indexOf('%') > -1) {
       if (cur === '%') {
         if (!last.type) {
@@ -230,7 +234,7 @@ export function transform(expression) {
       cur = [min, max];
     }
 
-    if (typeof cur === 'string' && (cur.charAt() === '/' || cur.charAt() === '*')) {
+    if (typeof cur === 'string' && (cur.charAt() === '/' || /^x\d+$/.test(cur))) {
       const operator = cur.charAt() === '/' ? 'divide' : 'multiply';
       const number = cur.substr(1);
 

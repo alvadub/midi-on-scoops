@@ -24,8 +24,7 @@ body {
   font-family: var(--font-mono);
   height: 100vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 input, button, textarea, select {
@@ -84,10 +83,11 @@ select {
   padding: 0.75em 1em;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1em;
   flex-wrap: wrap;
-  border-bottom: 1px solid var(--muted);
+  border: 1px solid var(--muted);
+  border-radius: 10px;
 }
 
 #toolbar-controls {
@@ -114,20 +114,20 @@ select {
 }
 
 #workspace {
-  flex: 1;
-  min-height: 0;
+  height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-}
-
-#workspace.mixer-open {
-  grid-template-columns: minmax(0, 1fr) minmax(460px, 52vw);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 30vw);
+  gap: 0.75em;
+  padding: 0.75em;
+  min-height: 0;
 }
 
 #editor-wrap {
   position: relative;
-  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
 }
 
 #editor-wrap.scrub-hover #editor {
@@ -200,11 +200,12 @@ select {
 
 #statusbar {
   background-color: rgba(16, 38, 63, 0.92);
-  padding: 0.5em 1em;
+  padding: 0.5em 0.7em;
   display: flex;
   align-items: center;
   gap: 1em;
-  border-top: 1px solid var(--muted);
+  border: 1px solid var(--muted);
+  border-radius: 10px;
   font-size: 12px;
 }
 
@@ -315,7 +316,8 @@ select {
 }
 
 #mixer-panel {
-  border-left: 1px solid var(--muted);
+  border: 1px solid var(--muted);
+  border-radius: 10px;
   background: rgba(6, 16, 28, 0.88);
   padding: 1em;
   overflow: auto;
@@ -366,7 +368,7 @@ select {
 
 #mixer-strips {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.65em;
 }
 
@@ -375,23 +377,28 @@ select {
   border-radius: 8px;
   padding: 0.65em;
   background: rgba(16, 38, 63, 0.7);
-  min-height: 110px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
 }
 
 .m-name {
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 0.2em;
+  margin-bottom: 0;
+  flex: 0 0 88px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .m-vu {
+  flex: 0 0 36px;
   height: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
-  margin-bottom: 0.35em;
+  margin-bottom: 0;
 }
 
 .m-vu.active {
@@ -401,9 +408,11 @@ select {
 
 .m-row {
   display: grid;
-  grid-template-columns: 34px 34px 1fr;
+  grid-template-columns: 34px 34px 40px minmax(0, 1fr);
+  align-items: center;
   gap: 0.5em;
-  margin-bottom: 0.5em;
+  margin-bottom: 0;
+  flex: 1;
 }
 
 .m-btn {
@@ -472,6 +481,34 @@ select {
   font-size: 11px;
 }
 
+.m-band-vu-wrap {
+  display: grid;
+  gap: 0.2em;
+  font-size: 11px;
+}
+
+.m-band-vu-label {
+  color: #b8c9da;
+}
+
+.m-band-vu {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.m-band-vu-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #4bf1b7 0%, #ffe07a 65%, #ff6b6b 100%);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
 .m-mini-btn {
   font-size: 11px;
   padding: 0.32em 0.55em;
@@ -523,16 +560,24 @@ select {
 .m-pad {
   display: grid;
   gap: 0.1em;
-  justify-items: start;
-  text-align: left;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
   min-height: 2.6em;
 }
 
 .m-pad .m-pad-label {
   font-size: 11px;
+  line-height: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.m-pad-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .m-pad .m-pad-sub {
@@ -759,7 +804,7 @@ select {
 #suggest-menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  right: 0;
   z-index: 130;
   min-width: max(16rem, 100%);
   max-width: min(36rem, 60vw);
@@ -844,13 +889,22 @@ select {
   min-width: 9.5rem;
 }
 
+#right-column {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.6em;
+}
+
 @media (max-width: 900px) {
   #workspace {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
   }
 
-  #workspace.mixer-open {
-    grid-template-columns: 1fr;
+  #right-column {
+    grid-template-rows: auto auto auto auto;
   }
 
   #mixer-strips,

@@ -31,6 +31,47 @@ function sliderToFreq(v) {
   return 20 * Math.pow(1000, Math.max(0, Math.min(1, v)));
 }
 
+function padIconTypeForLabel(label) {
+  const name = String(label || '').toLowerCase();
+  if (name.includes('coin')) return 'coin';
+  if (name.includes('explosion') || name.includes('boom')) return 'explosion';
+  if (name.includes('jump')) return 'jump';
+  if (name.includes('powerup') || name.includes('riser')) return 'powerup';
+  if (name.includes('bass') || name.includes('sub')) return 'bass';
+  if (name.includes('gong')) return 'gong';
+  if (name.includes('stab')) return 'stab';
+  if (name.includes('snare') || name.includes('clap')) return 'snare';
+  if (name.includes('wood') || name.includes('click')) return 'click';
+  if (name.includes('noise')) return 'noise';
+  return 'default';
+}
+
+function svgForPadType(type) {
+  const paths = {
+    coin: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="3.5"/>',
+    explosion: '<path d="M10 2 12.4 7.2 18 7.6 13.8 11.3 15.1 16.8 10 13.8 4.9 16.8 6.2 11.3 2 7.6 7.6 7.2Z"/>',
+    jump: '<path d="M4 13 10 6l6 7"/><path d="M4 16h12"/>',
+    powerup: '<path d="M10 3v14"/><path d="M3 10h14"/><circle cx="10" cy="10" r="6.5"/>',
+    bass: '<path d="M3 12h8"/><path d="M3 8h12"/><path d="M3 16h5"/>',
+    gong: '<circle cx="10" cy="10" r="6.5"/><path d="M10 16.5v2.5"/><path d="M8 19h4"/>',
+    stab: '<path d="M4 16 16 4"/><path d="M6 4h10v10"/>',
+    snare: '<circle cx="10" cy="10" r="6.5"/><path d="M5 7.5h10"/><path d="M5 12.5h10"/>',
+    click: '<circle cx="7.5" cy="10" r="2.2"/><path d="M10 10h6"/><path d="M13 8v4"/>',
+    noise: '<path d="M3 12c1.4-4 2.6 4 4 0s2.6-4 4 0 2.6 4 4 0"/>',
+    default: '<circle cx="10" cy="10" r="6.5"/><path d="M10 6.5v5"/><circle cx="10" cy="13.5" r="0.9"/>',
+  };
+  return `<svg class="m-pad-icon" viewBox="0 0 20 20" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths[type] || paths.default}</g></svg>`;
+}
+
+function setPadButtonIcon(button, label) {
+  if (!button) return;
+  const iconType = padIconTypeForLabel(label);
+  const node = button.querySelector('.m-pad-label');
+  if (node) node.innerHTML = svgForPadType(iconType);
+  button.title = String(label || '');
+  button.setAttribute('aria-label', String(label || iconType));
+}
+
 function attachMidiLearn(control, midiId, options) {
   if (!control || !midiId) return null;
   control.dataset.midiId = midiId;
@@ -59,7 +100,6 @@ function makeRange(label, min, max, value, onInput, step = '1') {
 export function createMixer(player, options = {}) {
   const root = document.createElement('aside');
   root.id = 'mixer-panel';
-  root.className = 'collapsed';
 
   const title = document.createElement('h3');
   title.textContent = 'Mixer';
@@ -174,17 +214,6 @@ export function createMixer(player, options = {}) {
     masterPreampToggle.classList.toggle('active', next);
     player.setMasterPreampEnabled(next);
   });
-  const masterPreampCount = document.createElement('select');
-  [3, 4, 5].forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = String(v);
-    opt.textContent = `${v} bands`;
-    if (v === 3) opt.selected = true;
-    masterPreampCount.appendChild(opt);
-  });
-  masterPreampCount.addEventListener('change', () => {
-    player.setMasterPreampCount(parseInt(masterPreampCount.value, 10));
-  });
   const preampCut1 = makeRange('Band Cut 1', 0, 100, 33, () => {
     player.setMasterPreampCutoffs([
       sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
@@ -226,14 +255,37 @@ export function createMixer(player, options = {}) {
   const preampQ = makeRange('Preamp Q', 1, 180, 7, value => {
     player.setMasterPreampQ(parseInt(value, 10) / 10);
   });
-  const preampRev = makeRange('Preamp Rev', 0, 100, 35, value => {
-    player.setMasterPreampReverbSend(parseInt(value, 10) / 100);
-  });
-  const preampDly = makeRange('Preamp Dly', 0, 100, 25, value => {
-    player.setMasterPreampDelaySend(parseInt(value, 10) / 100);
-  });
+
+  const preampBandRev = [];
+  const preampBandDly = [];
+  const preampBandVuWraps = [];
+  const preampBandVus = [];
+  for (let i = 0; i < 5; i += 1) {
+    const rev = makeRange(`Band ${i + 1} Rev`, 0, 100, 35, value => {
+      player.setMasterPreampBandReverbSend(i, parseInt(value, 10) / 100);
+    });
+    const dly = makeRange(`Band ${i + 1} Dly`, 0, 100, 25, value => {
+      player.setMasterPreampBandDelaySend(i, parseInt(value, 10) / 100);
+    });
+    const vuWrap = document.createElement('div');
+    vuWrap.className = 'm-band-vu-wrap';
+    const vuLabel = document.createElement('span');
+    vuLabel.className = 'm-band-vu-label';
+    vuLabel.textContent = `Band ${i + 1} VU`;
+    const vu = document.createElement('span');
+    vu.className = 'm-band-vu';
+    const fill = document.createElement('span');
+    fill.className = 'm-band-vu-fill';
+    vu.appendChild(fill);
+    vuWrap.appendChild(vuLabel);
+    vuWrap.appendChild(vu);
+    preampBandRev.push(rev);
+    preampBandDly.push(dly);
+    preampBandVuWraps.push(vuWrap);
+    preampBandVus.push(fill);
+  }
+
   fx.appendChild(masterPreampToggle);
-  fx.appendChild(masterPreampCount);
   fx.appendChild(preampCut1.wrap);
   fx.appendChild(preampCut2.wrap);
   fx.appendChild(preampCut3.wrap);
@@ -241,10 +293,17 @@ export function createMixer(player, options = {}) {
   fx.appendChild(preampHPF.wrap);
   fx.appendChild(preampLPF.wrap);
   fx.appendChild(preampQ.wrap);
-  fx.appendChild(preampRev.wrap);
-  fx.appendChild(preampDly.wrap);
-  [[masterPreampToggle, 'master:preamp:toggle'], [preampCut1.input, 'master:preamp:cut1'], [preampCut2.input, 'master:preamp:cut2'], [preampCut3.input, 'master:preamp:cut3'], [preampCut4.input, 'master:preamp:cut4'], [preampHPF.input, 'master:preamp:hpf'], [preampLPF.input, 'master:preamp:lpf'], [preampQ.input, 'master:preamp:q'], [preampRev.input, 'master:preamp:rev'], [preampDly.input, 'master:preamp:dly']]
+  for (let i = 0; i < 5; i += 1) {
+    fx.appendChild(preampBandRev[i].wrap);
+    fx.appendChild(preampBandDly[i].wrap);
+    fx.appendChild(preampBandVuWraps[i]);
+  }
+  [[masterPreampToggle, 'master:preamp:toggle'], [preampCut1.input, 'master:preamp:cut1'], [preampCut2.input, 'master:preamp:cut2'], [preampCut3.input, 'master:preamp:cut3'], [preampCut4.input, 'master:preamp:cut4'], [preampHPF.input, 'master:preamp:hpf'], [preampLPF.input, 'master:preamp:lpf'], [preampQ.input, 'master:preamp:q']]
     .forEach(([control, id]) => attachMidiLearn(control, id, options));
+  for (let i = 0; i < 5; i += 1) {
+    attachMidiLearn(preampBandRev[i].input, `master:preamp:b${i + 1}:rev`, options);
+    attachMidiLearn(preampBandDly[i].input, `master:preamp:b${i + 1}:dly`, options);
+  }
 
   const padsWrap = document.createElement('div');
   padsWrap.className = 'm-live-block m-live-block--pads';
@@ -261,7 +320,7 @@ export function createMixer(player, options = {}) {
     const [file] = fileInput.files || [];
     if (!file) return;
     await player.loadPadFromFile(pendingPadLoad, file);
-    padButtons[pendingPadLoad].querySelector('.m-pad-label').textContent = player.pads[pendingPadLoad].label;
+    setPadButtonIcon(padButtons[pendingPadLoad], player.pads[pendingPadLoad].label);
     fileInput.value = '';
   });
   const padButtons = [];
@@ -269,7 +328,8 @@ export function createMixer(player, options = {}) {
     const pad = document.createElement('button');
     pad.className = 'm-pad';
     pad.dataset.midiId = `pad:${i}:trig`;
-    pad.innerHTML = `<span class="m-pad-label">${player.pads[i].label}</span><span class="m-pad-sub">▶</span>`;
+    pad.innerHTML = '<span class="m-pad-label"></span>';
+    setPadButtonIcon(pad, player.pads[i].label);
     pad.addEventListener('click', () => {
       const ok = player.triggerPad(i, player.pads[i].looping);
       if (!ok) {
@@ -290,7 +350,7 @@ export function createMixer(player, options = {}) {
     });
     const drop = async file => {
       await player.loadPadFromFile(i, file);
-      pad.querySelector('.m-pad-label').textContent = player.pads[i].label;
+      setPadButtonIcon(pad, player.pads[i].label);
     };
     pad.addEventListener('dragover', e => {
       e.preventDefault();
@@ -410,16 +470,12 @@ export function createMixer(player, options = {}) {
     volume.addEventListener('input', () => player.setVolume(keyId, clamp01(parseInt(volume.value, 10) / 100)));
     row.appendChild(solo);
     row.appendChild(mute);
+    row.appendChild(epi);
     row.appendChild(volume);
-
-    const extras = document.createElement('div');
-    extras.className = 'm-extras';
-    extras.appendChild(epi);
 
     strip.appendChild(name);
     strip.appendChild(vu);
     strip.appendChild(row);
-    strip.appendChild(extras);
     strips.appendChild(strip);
 
     [
@@ -514,7 +570,6 @@ export function createMixer(player, options = {}) {
         delayDivision: parseFloat(delayDivision.value),
         masterLPF: sliderToFreq(parseInt(globalLpf.input.value, 10) / 100),
         masterPreampEnabled: masterPreampToggle.classList.contains('active'),
-        masterPreampBands: parseInt(masterPreampCount.value, 10),
         masterPreampCutoffs: [
           sliderToFreq(parseInt(preampCut1.input.value, 10) / 100),
           sliderToFreq(parseInt(preampCut2.input.value, 10) / 100),
@@ -524,8 +579,10 @@ export function createMixer(player, options = {}) {
         masterPreampHPF: sliderToFreq(parseInt(preampHPF.input.value, 10) / 100),
         masterPreampLPF: sliderToFreq(parseInt(preampLPF.input.value, 10) / 100),
         masterPreampQ: parseInt(preampQ.input.value, 10) / 10,
-        masterPreampRev: parseInt(preampRev.input.value, 10) / 100,
-        masterPreampDly: parseInt(preampDly.input.value, 10) / 100,
+        masterPreampBandSends: preampBandRev.map((rev, i) => ({
+          reverb: parseInt(rev.input.value, 10) / 100,
+          delay: parseInt(preampBandDly[i].input.value, 10) / 100,
+        })),
       },
     };
   }
@@ -566,10 +623,6 @@ export function createMixer(player, options = {}) {
       masterPreampToggle.classList.toggle('active', fxState.masterPreampEnabled);
       player.setMasterPreampEnabled(fxState.masterPreampEnabled);
     }
-    if (typeof fxState.masterPreampBands === 'number') {
-      masterPreampCount.value = String(fxState.masterPreampBands);
-      player.setMasterPreampCount(fxState.masterPreampBands);
-    }
     if (Array.isArray(fxState.masterPreampCutoffs)) {
       const [c1 = 200, c2 = 2000, c3 = 6000, c4 = 12000] = fxState.masterPreampCutoffs;
       preampCut1.input.value = String(Math.round(freqToSlider(c1) * 100));
@@ -590,13 +643,25 @@ export function createMixer(player, options = {}) {
       preampQ.input.value = String(Math.round(fxState.masterPreampQ * 10));
       player.setMasterPreampQ(fxState.masterPreampQ);
     }
-    if (typeof fxState.masterPreampRev === 'number') {
-      preampRev.input.value = String(Math.round(fxState.masterPreampRev * 100));
-      player.setMasterPreampReverbSend(fxState.masterPreampRev);
-    }
-    if (typeof fxState.masterPreampDly === 'number') {
-      preampDly.input.value = String(Math.round(fxState.masterPreampDly * 100));
-      player.setMasterPreampDelaySend(fxState.masterPreampDly);
+    if (Array.isArray(fxState.masterPreampBandSends)) {
+      for (let i = 0; i < 5; i += 1) {
+        const send = fxState.masterPreampBandSends[i] || {};
+        const reverb = typeof send.reverb === 'number' ? send.reverb : 0.35;
+        const delay = typeof send.delay === 'number' ? send.delay : 0.25;
+        preampBandRev[i].input.value = String(Math.round(reverb * 100));
+        preampBandDly[i].input.value = String(Math.round(delay * 100));
+        player.setMasterPreampBandReverbSend(i, reverb);
+        player.setMasterPreampBandDelaySend(i, delay);
+      }
+    } else {
+      const oldRev = typeof fxState.masterPreampRev === 'number' ? fxState.masterPreampRev : 0.35;
+      const oldDly = typeof fxState.masterPreampDly === 'number' ? fxState.masterPreampDly : 0.25;
+      for (let i = 0; i < 5; i += 1) {
+        preampBandRev[i].input.value = String(Math.round(oldRev * 100));
+        preampBandDly[i].input.value = String(Math.round(oldDly * 100));
+        player.setMasterPreampBandReverbSend(i, oldRev);
+        player.setMasterPreampBandDelaySend(i, oldDly);
+      }
     }
   }
 
@@ -623,6 +688,18 @@ export function createMixer(player, options = {}) {
       snapList.appendChild(li);
     });
   }
+
+  function animatePreampVus() {
+    const levels = typeof player.getMasterPreampBandLevels === 'function'
+      ? player.getMasterPreampBandLevels()
+      : [0, 0, 0, 0, 0];
+    for (let i = 0; i < preampBandVus.length; i += 1) {
+      const level = Math.max(0, Math.min(1, levels[i] || 0));
+      preampBandVus[i].style.transform = `scaleX(${level})`;
+    }
+    requestAnimationFrame(animatePreampVus);
+  }
+  requestAnimationFrame(animatePreampVus);
 
   return {
     el: root,

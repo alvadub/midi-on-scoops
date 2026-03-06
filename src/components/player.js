@@ -84,6 +84,7 @@ export default class Player {
     this.echo.output.connect(this.masterGain);
 
     this.initMasterPreamp();
+    this.masterGain.connect(this.masterPreampInput);
     this.masterGain.connect(this.masterPreampBypass);
     this.masterPreampBypass.connect(this.masterLPF);
     this.masterLPF.connect(this.destination);
@@ -98,21 +99,17 @@ export default class Player {
     const ctx = this.audioContext;
     this.masterPreampState = {
       enabled: false,
-      bandCount: 3,
-      cutoffs: [200, 2000],
+      cutoffs: [100, 400, 1500, 6000],
       hpf: 20,
       lpf: 20000,
       q: 0.707,
-      reverbSend: 0.35,
-      delaySend: 0.25,
+      bandSends: Array.from({ length: 5 }, () => ({ reverb: 0.35, delay: 0.25 })),
     };
     this.masterPreampBypass.gain.value = 1;
     this.masterPreampInput = ctx.createGain();
     this.masterPreampOut = ctx.createGain();
     this.masterPreampHPF = ctx.createBiquadFilter();
     this.masterPreampLPF = ctx.createBiquadFilter();
-    this.masterPreampReverbSend = ctx.createGain();
-    this.masterPreampDelaySend = ctx.createGain();
     this.masterPreampInput.gain.value = 0;
     this.masterPreampOut.gain.value = 1;
     this.masterPreampHPF.type = 'highpass';
@@ -123,22 +120,31 @@ export default class Player {
       const hpf = ctx.createBiquadFilter();
       const lpf = ctx.createBiquadFilter();
       const gain = ctx.createGain();
+      const reverbSend = ctx.createGain();
+      const delaySend = ctx.createGain();
+      const analyser = ctx.createAnalyser();
+      const vuData = new Uint8Array(128);
       hpf.type = 'highpass';
       lpf.type = 'lowpass';
       hpf.Q.value = 0.707;
       lpf.Q.value = 0.707;
       gain.gain.value = 1;
+      reverbSend.gain.value = 0.35;
+      delaySend.gain.value = 0.25;
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
       this.masterPreampLPF.connect(hpf);
       hpf.connect(lpf);
       lpf.connect(gain);
       gain.connect(this.masterPreampOut);
-      return { hpf, lpf, gain };
+      gain.connect(reverbSend);
+      gain.connect(delaySend);
+      gain.connect(analyser);
+      reverbSend.connect(this.echo.input);
+      delaySend.connect(this.delayInput);
+      return { hpf, lpf, gain, reverbSend, delaySend, analyser, vuData };
     });
     this.masterPreampOut.connect(this.masterLPF);
-    this.masterPreampOut.connect(this.masterPreampReverbSend);
-    this.masterPreampOut.connect(this.masterPreampDelaySend);
-    this.masterPreampReverbSend.connect(this.echo.input);
-    this.masterPreampDelaySend.connect(this.delayInput);
     this.applyMasterPreampState();
   }
 
@@ -707,39 +713,29 @@ export default class Player {
 
   applyMasterPreampState() {
     const now = this.audioContext.currentTime;
-    const configs = {
-      3: [200, 2000],
-      4: [150, 800, 3000],
-      5: [100, 400, 1500, 6000],
-    };
-    const count = clamp(this.masterPreampState.bandCount || 3, 3, 5);
     const cutoffs = Array.isArray(this.masterPreampState.cutoffs) && this.masterPreampState.cutoffs.length
       ? this.masterPreampState.cutoffs
-      : configs[count];
+      : [100, 400, 1500, 6000];
     this.masterPreampBypass.gain.setTargetAtTime(this.masterPreampState.enabled ? 0 : 1, now, 0.01);
     this.masterPreampInput.gain.setTargetAtTime(this.masterPreampState.enabled ? 1 : 0, now, 0.01);
     this.masterPreampHPF.frequency.setTargetAtTime(this.masterPreampState.hpf, now, 0.02);
     this.masterPreampLPF.frequency.setTargetAtTime(this.masterPreampState.lpf, now, 0.02);
     this.masterPreampHPF.Q.setTargetAtTime(this.masterPreampState.q, now, 0.02);
     this.masterPreampLPF.Q.setTargetAtTime(this.masterPreampState.q, now, 0.02);
-    this.masterPreampReverbSend.gain.setTargetAtTime(this.masterPreampState.enabled ? this.masterPreampState.reverbSend : 0, now, 0.02);
-    this.masterPreampDelaySend.gain.setTargetAtTime(this.masterPreampState.enabled ? this.masterPreampState.delaySend : 0, now, 0.02);
     this.masterPreampBands.forEach((band, i) => {
+      const sends = this.masterPreampState.bandSends[i] || { reverb: 0, delay: 0 };
       const low = i === 0 ? 20 : cutoffs[Math.min(i - 1, cutoffs.length - 1)];
-      const high = i >= count - 1 ? 20000 : cutoffs[Math.min(i, cutoffs.length - 1)];
+      const high = i >= 4 ? 20000 : cutoffs[Math.min(i, cutoffs.length - 1)];
       band.hpf.frequency.setTargetAtTime(low, now, 0.02);
       band.lpf.frequency.setTargetAtTime(high, now, 0.02);
-      band.gain.gain.setTargetAtTime(i < count ? 1 : 0, now, 0.02);
+      band.gain.gain.setTargetAtTime(1, now, 0.02);
+      band.reverbSend.gain.setTargetAtTime(this.masterPreampState.enabled ? clamp(sends.reverb, 0, 1) : 0, now, 0.02);
+      band.delaySend.gain.setTargetAtTime(this.masterPreampState.enabled ? clamp(sends.delay, 0, 1) : 0, now, 0.02);
     });
   }
 
   setMasterPreampEnabled(enabled) {
     this.masterPreampState.enabled = Boolean(enabled);
-    this.applyMasterPreampState();
-  }
-
-  setMasterPreampCount(count) {
-    this.masterPreampState.bandCount = clamp(parseInt(count, 10) || 3, 3, 5);
     this.applyMasterPreampState();
   }
 
@@ -765,14 +761,33 @@ export default class Player {
     this.applyMasterPreampState();
   }
 
-  setMasterPreampReverbSend(value) {
-    this.masterPreampState.reverbSend = clamp(value, 0, 1);
+  setMasterPreampBandReverbSend(index, value) {
+    const i = clamp(parseInt(index, 10) || 0, 0, 4);
+    const sends = this.masterPreampState.bandSends[i] || { reverb: 0, delay: 0 };
+    sends.reverb = clamp(value, 0, 1);
+    this.masterPreampState.bandSends[i] = sends;
     this.applyMasterPreampState();
   }
 
-  setMasterPreampDelaySend(value) {
-    this.masterPreampState.delaySend = clamp(value, 0, 1);
+  setMasterPreampBandDelaySend(index, value) {
+    const i = clamp(parseInt(index, 10) || 0, 0, 4);
+    const sends = this.masterPreampState.bandSends[i] || { reverb: 0, delay: 0 };
+    sends.delay = clamp(value, 0, 1);
+    this.masterPreampState.bandSends[i] = sends;
     this.applyMasterPreampState();
+  }
+
+  getMasterPreampBandLevels() {
+    if (!Array.isArray(this.masterPreampBands)) return [0, 0, 0, 0, 0];
+    return this.masterPreampBands.map(band => {
+      if (!band || !band.analyser || !band.vuData) return 0;
+      band.analyser.getByteTimeDomainData(band.vuData);
+      let sum = 0;
+      for (let i = 0; i < band.vuData.length; i += 1) {
+        sum += Math.abs((band.vuData[i] - 128) / 128);
+      }
+      return clamp((sum / band.vuData.length) * 3.2, 0, 1);
+    });
   }
 
   setDelayFeedback(value) {

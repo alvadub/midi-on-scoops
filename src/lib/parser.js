@@ -4,6 +4,36 @@ import { scale, inlineChord } from 'harmonics';
 import { isProgression, transform } from './tokenize';
 import { repeat, clone } from './utils';
 
+function parseDegreeToken(token) {
+  if (/^\d+$/.test(token)) return [parseInt(token, 10)];
+  if (/^\d+\.\.\d+$/.test(token)) {
+    const [a, b] = token.split('..').map(n => parseInt(n, 10));
+    if (a > b) {
+      throw new Error(`Invalid degree range '${token}'. Use ascending ranges like '1..7'`);
+    }
+    const out = [];
+    for (let i = a; i <= b; i += 1) out.push(i);
+    return out;
+  }
+  throw new Error(`Invalid degree expression '${token}'`);
+}
+
+function selectScaleDegrees(base, rawDegrees, mapFn) {
+  const notes = mapFn(scale(base));
+  const values = rawDegrees.reduce((memo, token) => {
+    memo.push(...parseDegreeToken(token));
+    return memo;
+  }, []);
+
+  values.forEach(deg => {
+    if (deg < 1 || deg > notes.length) {
+      throw new Error(`Degree '${deg}' is out of range for '${base}'. Allowed range is 1..${notes.length}`);
+    }
+  });
+
+  return values.map(deg => notes[deg - 1]);
+}
+
 export function reduce(input, context, callback) {
   if (!Array.isArray(input)) return input;
 
@@ -84,6 +114,16 @@ export function reduce(input, context, callback) {
         prev[prev.length - 1] = `${last} ++ ${cur.value}`;
         break;
 
+      case 'degrees':
+        if (typeof last !== 'string') {
+          throw new Error(`Missing expression for '** ${cur.value.join(' ')}'`);
+        }
+        if (last.includes('...')) {
+          throw new Error(`Invalid syntax '${last} ** ${cur.value.join(' ')}'. Use either '...' (expand scale) or '**' (degree selection), not both`);
+        }
+        prev[prev.length - 1] = `${last} ** ${cur.value.join(' ')}`;
+        break;
+
       case 'param':
       case 'value': {
         let value = null;
@@ -158,6 +198,14 @@ export function reduce(input, context, callback) {
     }
 
     if (typeof item === 'string' && item.includes(' ')) {
+      if (item.includes(' ** ')) {
+        const [base, raw] = item.split(/\s+\*\*\s+/);
+        const degreeTokens = raw.trim().split(/\s+/).filter(Boolean);
+
+        memo.push(selectScaleDegrees(base, degreeTokens, fn));
+        return memo;
+      }
+
       const chunks = item.split(' ');
 
       if (chunks.some(isProgression)) {

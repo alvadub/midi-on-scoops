@@ -34,6 +34,11 @@ describe('tokenizer', () => {
       tok('mode', 'major'),
       tok('progression', 'I IV V'),
     ]);
+    expect(transform('C4 minor ** 1 3 5')).to.deep.equal([
+      tok('note', 'C4'),
+      tok('mode', 'minor'),
+      tok('degrees', ['1', '3', '5']),
+    ]);
     expect(transform('0..10')).to.deep.equal([tok('slice', ['0', '10'])]);
     expect(transform('0..10 x2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 2)]);
     expect(transform('0..10 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('divide', 2)]);
@@ -143,5 +148,9 @@ describe('tokenizer', () => {
 
   it('throws when ++ is missing progression symbols', () => {
     expect(() => transform('C4 major ++')).to.throw();
+  });
+
+  it('throws when ** is missing degree symbols', () => {
+    expect(() => transform('C4 minor **')).to.throw();
   });
 });

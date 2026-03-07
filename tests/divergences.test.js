@@ -9,8 +9,12 @@ describe('spec divergences (verified)', () => {
     expect(transform('0..10')).to.deep.equal([{ type: 'slice', value: ['0', '10'] }]);
   });
 
-  it('does not support scale operator syntax (**)', () => {
-    expect(() => transform('C2 phrygian.. ** /2')).to.throw();
+  it('supports degree selection syntax (**)', () => {
+    expect(transform('C2 phrygian ** 1 3 5')).to.deep.equal([
+      { type: 'note', value: 'C2' },
+      { type: 'mode', value: 'phrygian' },
+      { type: 'degrees', value: ['1', '3', '5'] },
+    ]);
   });
 
   it('parses progression sample as explicit progression token', () => {

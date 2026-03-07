@@ -9,6 +9,7 @@ export const RE_NOTE = /^[a-gA-G][#b]?\d+$/;
 export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
 export const RE_PROG = /^[ivIV]{1,3}°?$/;
 export const RE_TRIM = /\.+$/;
+export const RE_DEGREE = /^\d+(?:\.\.\d+)?$/;
 
 const CACHE = {};
 
@@ -54,6 +55,10 @@ export function validate(re, value) {
 
 export function isProgression(value) {
   return validate(RE_PROG, value);
+}
+
+export function isDegree(value) {
+  return validate(RE_DEGREE, value);
 }
 
 export function isPattern(value) {
@@ -155,6 +160,24 @@ export function transform(expression) {
       || (cur.includes('%') && cur.indexOf('%') > 0)
     )) {
       add('number', level(cur));
+      return prev;
+    }
+
+    if (cur === '**') {
+      const degrees = [];
+      let offset = i + 1;
+
+      while (tokens[offset] && isDegree(tokens[offset])) {
+        degrees.push(tokens[offset]);
+        ignore.add(offset);
+        offset += 1;
+      }
+
+      if (!degrees.length) {
+        throw new Error(`Missing degree expression after '**', given '${tokens.slice(0, i + 1).join(' ')}'`);
+      }
+
+      add('degrees', degrees);
       return prev;
     }
 

@@ -40,6 +40,7 @@ You can use the browser playground for instant playback or the CLI to generate `
 | `%var value` | Variable declaration |
 | `> ...` | Top-level arrangement |
 | `xN` | Repeat N times |
+| `** 1 3 5` | Select degrees from current `root mode` scale context |
 | `[xx]` | Pattern grouping |
 
 ## Chords & Scales

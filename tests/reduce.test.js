@@ -94,4 +94,22 @@ describe('reduce', () => {
     ], context)).to.throw("Use either '...' (expand scale) or '++' (progression), not both");
   });
 
+  it('resolves degree selection expressions with **', () => {
+    expect(reduce([
+      { type: 'note', value: 'C4' },
+      { type: 'mode', value: 'minor' },
+      { type: 'degrees', value: ['1', '3', '5'] },
+    ], context)).to.deep.equal([
+      ['C4', 'Eb4', 'G4'],
+    ]);
+  });
+
+  it('throws on invalid ... ** combination', () => {
+    expect(() => reduce([
+      { type: 'note', value: 'D4' },
+      { type: 'mode', value: 'minor...' },
+      { type: 'degrees', value: ['1', '3', '5'] },
+    ], context)).to.throw("Use either '...' (expand scale) or '**' (degree selection), not both");
+  });
+
 });

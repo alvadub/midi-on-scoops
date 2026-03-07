@@ -142,9 +142,20 @@ export function reduce(input, context, callback) {
               prev.push(cur.value);
               return prev;
             }
+
+            try {
+              const chord = inlineChord(cur.value);
+              if (Array.isArray(chord) && chord.length > 0) {
+                value = [chord];
+              }
+            } catch (e) {
+              // Keep regular missing-expression errors for non-chord values.
+            }
           }
 
-          throw new Error(`Missing expression for '${cur.value}'`);
+          if (value === null) {
+            throw new Error(`Missing expression for '${cur.value}'`);
+          }
         }
 
         if (value[0] && value[0].type) {

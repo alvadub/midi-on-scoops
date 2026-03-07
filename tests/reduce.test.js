@@ -112,4 +112,14 @@ describe('reduce', () => {
     ], context)).to.throw("Use either '...' (expand scale) or '**' (degree selection), not both");
   });
 
+  it('resolves plain chord symbols as inline chords', () => {
+    expect(reduce([
+      { type: 'value', value: 'CM' },
+      { type: 'value', value: 'Cmaj7' },
+    ], context)).to.deep.equal([
+      ['C4', 'E4', 'G4'],
+      ['C4', 'E4', 'G4', 'B4'],
+    ]);
+  });
+
 });

@@ -97,9 +97,27 @@ describe('tokenizer', () => {
     expect(transform('a3|c4|e4')).to.deep.equal([tok('chord', ['a3', 'c4', 'e4'])]);
   });
 
-  it.skip('should handle scribble-scales', () => {});
+  it('should handle scribble-scales', () => {
+    expect(transform('C4 major C5 minor')).to.deep.equal([
+      tok('note', 'C4'),
+      tok('mode', 'major'),
+      tok('note', 'C5'),
+      tok('mode', 'minor'),
+    ]);
+  });
 
-  it.skip('should handle scribble-progressions', () => {});
+  it('should handle scribble-progressions', () => {
+    expect(transform('C4 minor I iv iii III ii° ..')).to.deep.equal([
+      tok('note', 'C4'),
+      tok('mode', 'minor I iv iii III ii°'),
+      tok('slice', [1, Infinity]),
+    ]);
+    expect(transform('C4 minor ++ I iv iii')).to.deep.equal([
+      tok('note', 'C4'),
+      tok('mode', 'minor'),
+      tok('progression', 'I iv iii'),
+    ]);
+  });
 
   it('can unfold/spread notes by chord-names', () => {
     expect(transform('Dm7...')).to.deep.equal([tok('slice', ['Dm7', '.'])]);
@@ -107,7 +125,17 @@ describe('tokenizer', () => {
     expect(transform('Dm7').length).to.equal(1);
   });
 
-  it.skip('can expands, divide and duplicate regular chords', () => {});
+  it('can expands, divide and duplicate regular chords', () => {
+    expect(transform('CM /2 x2')).to.deep.equal([
+      tok('value', 'CM'),
+      tok('divide', 2),
+      tok('multiply', 2),
+    ]);
+    expect(transform('Cmaj7 x2')).to.deep.equal([
+      tok('chord', inlineChord('Cmaj7')),
+      tok('multiply', 2),
+    ]);
+  });
 
   it('can slice and duplicate unfolded chords', () => {
     expect(transform('CM... 1..2')).to.deep.equal([

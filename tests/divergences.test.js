@@ -5,8 +5,8 @@ const { inlineChord } = require('harmonics');
 const { transform } = require('../build/main.cjs');
 
 describe('spec divergences (verified)', () => {
-  it('uses slice token for range-like expressions', () => {
-    expect(transform('0..10')).to.deep.equal([{ type: 'slice', value: ['0', '10'] }]);
+  it('rejects zero-based slice syntax', () => {
+    expect(() => transform('0..10')).to.throw("Slice start must be >= 1");
   });
 
   it('supports degree selection syntax (**)', () => {
@@ -18,11 +18,11 @@ describe('spec divergences (verified)', () => {
   });
 
   it('parses progression sample as explicit progression token', () => {
-    expect(transform('D4 minor... ++ I IV V ii 0..2')).to.deep.equal([
+    expect(transform('D4 minor... ++ I IV V ii 1..2')).to.deep.equal([
       { type: 'note', value: 'D4' },
       { type: 'mode', value: 'minor...' },
       { type: 'progression', value: 'I IV V ii' },
-      { type: 'slice', value: ['0', '2'] },
+      { type: 'slice', value: [1, 2] },
     ]);
   });
 

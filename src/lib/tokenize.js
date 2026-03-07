@@ -276,8 +276,18 @@ export function transform(expression) {
 
     if (typeof cur === 'string' && cur.indexOf('..') > -1) {
       const parts = cur.split('..');
-      const min = parts[0] || 1;
-      const max = parts[1] || Infinity;
+      const rawMin = parts[0];
+      const rawMax = parts[1];
+      const min = rawMin
+        ? (isNumber(rawMin) ? parseInt(rawMin, 10) : rawMin)
+        : 1;
+      const max = rawMax
+        ? (isNumber(rawMax) ? parseInt(rawMax, 10) : rawMax)
+        : Infinity;
+
+      if (typeof min === 'number' && min < 1) {
+        throw new Error(`Slice start must be >= 1, given '${cur}'`);
+      }
 
       type = 'slice';
       cur = [min, max];

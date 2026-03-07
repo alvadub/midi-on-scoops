@@ -39,18 +39,18 @@ describe('tokenizer', () => {
       tok('mode', 'minor'),
       tok('degrees', ['1', '3', '5']),
     ]);
-    expect(transform('0..10')).to.deep.equal([tok('slice', ['0', '10'])]);
-    expect(transform('0..10 x2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 2)]);
-    expect(transform('0..10 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('divide', 2)]);
-    expect(transform('0..10 0..2')).to.deep.equal([tok('slice', ['0', '10']), tok('slice', ['0', '2'])]);
-    expect(transform('0..10 x3 /2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 3), tok('divide', 2)]);
-    expect(transform('0..10 /2 0..1')).to.deep.equal([tok('slice', ['0', '10']), tok('divide', 2), tok('slice', ['0', '1'])]);
-    expect(transform('0..10 0..2 /2 x2 0..3')).to.deep.equal([
-      tok('slice', ['0', '10']),
-      tok('slice', ['0', '2']),
+    expect(transform('1..10')).to.deep.equal([tok('slice', [1, 10])]);
+    expect(transform('1..10 x2')).to.deep.equal([tok('slice', [1, 10]), tok('multiply', 2)]);
+    expect(transform('1..10 /2')).to.deep.equal([tok('slice', [1, 10]), tok('divide', 2)]);
+    expect(transform('1..10 1..2')).to.deep.equal([tok('slice', [1, 10]), tok('slice', [1, 2])]);
+    expect(transform('1..10 x3 /2')).to.deep.equal([tok('slice', [1, 10]), tok('multiply', 3), tok('divide', 2)]);
+    expect(transform('1..10 /2 1..1')).to.deep.equal([tok('slice', [1, 10]), tok('divide', 2), tok('slice', [1, 1])]);
+    expect(transform('1..10 1..2 /2 x2 1..3')).to.deep.equal([
+      tok('slice', [1, 10]),
+      tok('slice', [1, 2]),
       tok('divide', 2),
       tok('multiply', 2),
-      tok('slice', ['0', '3']),
+      tok('slice', [1, 3]),
     ]);
   });
 
@@ -69,8 +69,8 @@ describe('tokenizer', () => {
 
   it('should handle scribble-modes', () => {
     expect(transform('c d e')).to.deep.equal([tok('value', 'c'), tok('value', 'd'), tok('value', 'e')]);
-    const modeA = transform('c major 4 0..2').map(x => x.type);
-    const modeB = transform('c minor 3 0..2 f minor 3').map(x => x.type);
+    const modeA = transform('c major 4 1..2').map(x => x.type);
+    const modeB = transform('c minor 3 1..2 f minor 3').map(x => x.type);
     expect(modeA).to.deep.equal(['value', 'mode', 'number', 'slice']);
     expect(modeB.includes('mode')).to.equal(true);
   });
@@ -103,24 +103,24 @@ describe('tokenizer', () => {
 
   it('can unfold/spread notes by chord-names', () => {
     expect(transform('Dm7...')).to.deep.equal([tok('slice', ['Dm7', '.'])]);
-    expect(transform('Dm7.. 0..2')).to.deep.equal([tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', ['0', '2'])]);
+    expect(transform('Dm7.. 1..2')).to.deep.equal([tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', [1, 2])]);
     expect(transform('Dm7').length).to.equal(1);
   });
 
   it.skip('can expands, divide and duplicate regular chords', () => {});
 
   it('can slice and duplicate unfolded chords', () => {
-    expect(transform('CM... 0..2')).to.deep.equal([
+    expect(transform('CM... 1..2')).to.deep.equal([
       tok('slice', ['CM', '.']),
-      tok('slice', ['0', '2']),
+      tok('slice', [1, 2]),
     ]);
-    expect(transform('CM... x2 Dm7.. 0..7')).to.deep.equal([tok('slice', ['CM', '.']), tok('multiply', 2), tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', ['0', '7'])]);
+    expect(transform('CM... x2 Dm7.. 1..7')).to.deep.equal([tok('slice', ['CM', '.']), tok('multiply', 2), tok('chord', inlineChord('Dm7'), { unfold: true }), tok('slice', [1, 7])]);
   });
 
   it('can handle ranges, slicing, duplicates, etc.', () => {
     expect(transform('5 10..120 /11 127x3')).to.deep.equal([
       tok('number', 5),
-      tok('slice', ['10', '120']),
+      tok('slice', [10, 120]),
       tok('divide', 11),
       tok('number', 127, { repeat: 3 }),
     ]);
@@ -152,5 +152,9 @@ describe('tokenizer', () => {
 
   it('throws when ** is missing degree symbols', () => {
     expect(() => transform('C4 minor **')).to.throw();
+  });
+
+  it('throws on zero-based slice start', () => {
+    expect(() => transform('0..10')).to.throw("Slice start must be >= 1");
   });
 });

@@ -72,4 +72,26 @@ describe('reduce', () => {
     ])).to.deep.equal(['c3', 'c3', 'c3']);
   });
 
+  it('resolves progression expressions with ++ fragments', () => {
+    expect(reduce([
+      { type: 'note', value: 'C4' },
+      { type: 'mode', value: 'major' },
+      { type: 'progression', value: 'I IV V' },
+    ], context)).to.deep.equal([
+      [
+        ['C4', 'E4', 'G4'],
+        ['F4', 'A4', 'C5'],
+        ['G4', 'B4', 'D5'],
+      ],
+    ]);
+  });
+
+  it('throws on invalid ... ++ combination', () => {
+    expect(() => reduce([
+      { type: 'note', value: 'D4' },
+      { type: 'mode', value: 'minor...' },
+      { type: 'progression', value: 'I IV V ii' },
+    ], context)).to.throw("Use either '...' (expand scale) or '++' (progression), not both");
+  });
+
 });

@@ -13,11 +13,11 @@ describe('spec divergences (verified)', () => {
     expect(() => transform('C2 phrygian.. ** /2')).to.throw();
   });
 
-  it('parses progression sample as generic tokens in current tokenizer', () => {
+  it('parses progression sample as explicit progression token', () => {
     expect(transform('D4 minor... ++ I IV V ii 0..2')).to.deep.equal([
       { type: 'note', value: 'D4' },
       { type: 'mode', value: 'minor...' },
-      { type: 'value', value: '++ I IV V ii' },
+      { type: 'progression', value: 'I IV V ii' },
       { type: 'slice', value: ['0', '2'] },
     ]);
   });

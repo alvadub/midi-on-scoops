@@ -104,6 +104,7 @@ export function transform(expression) {
 
   const ast = [];
   const carry = [];
+  const ignore = new Set();
 
   function add(type, value) {
     const item = { type, value };
@@ -136,6 +137,8 @@ export function transform(expression) {
   }
 
   tokens.reduce((prev, cur, i) => {
+    if (ignore.has(i)) return prev;
+
     let type;
 
     const next = tokens[i + 1];
@@ -175,7 +178,30 @@ export function transform(expression) {
     }
 
     if (isProgression(cur)) {
-      last.value += ` ${cur}`;
+      if (last.type === 'mode' || last.type === 'progression' || last.type === 'value') {
+        last.value += ` ${cur}`;
+        return prev;
+      }
+
+      add('value', cur);
+      return prev;
+    }
+
+    if (cur === '++') {
+      const progression = [];
+      let offset = i + 1;
+
+      while (tokens[offset] && isProgression(tokens[offset])) {
+        progression.push(tokens[offset]);
+        ignore.add(offset);
+        offset += 1;
+      }
+
+      if (!progression.length) {
+        throw new Error(`Missing progression after '++', given '${tokens.slice(0, i + 1).join(' ')}'`);
+      }
+
+      add('progression', progression.join(' '));
       return prev;
     }
 

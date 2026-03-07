@@ -74,11 +74,36 @@ export function reduce(input, context, callback) {
         prev[prev.length - 1] = `${last} ${cur.value}`;
         break;
 
+      case 'progression':
+        if (typeof last !== 'string') {
+          throw new Error(`Missing expression for '++ ${cur.value}'`);
+        }
+        if (last.includes('...')) {
+          throw new Error(`Invalid syntax '${last} ++ ${cur.value}'. Use either '...' (expand scale) or '++' (progression), not both`);
+        }
+        prev[prev.length - 1] = `${last} ++ ${cur.value}`;
+        break;
+
       case 'param':
       case 'value': {
         let value = null;
         if (typeof context[cur.value] !== 'undefined') value = context[cur.value];
         if (value === null) {
+          if (cur.type === 'value' && typeof cur.value === 'string') {
+            if (cur.value.startsWith('++ ') && typeof prev[prev.length - 1] === 'string') {
+              if (prev[prev.length - 1].includes('...')) {
+                throw new Error(`Invalid syntax '${prev[prev.length - 1]} ${cur.value}'. Use either '...' (expand scale) or '++' (progression), not both`);
+              }
+              prev[prev.length - 1] = `${prev[prev.length - 1]} ${cur.value}`;
+              return prev;
+            }
+
+            if (cur.value.includes(' ')) {
+              prev.push(cur.value);
+              return prev;
+            }
+          }
+
           throw new Error(`Missing expression for '${cur.value}'`);
         }
 
@@ -138,6 +163,8 @@ export function reduce(input, context, callback) {
       if (chunks.some(isProgression)) {
         const offset = chunks.findIndex(isProgression);
         const [a, b] = [chunks.slice(0, offset), chunks.slice(offset)];
+
+        if (a[a.length - 1] === '++') a.pop();
 
         memo.push(getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(x => fn(inlineChord(x))));
       } else {

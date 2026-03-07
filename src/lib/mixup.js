@@ -1,6 +1,6 @@
 import { Utils } from 'midi-writer-js';
 import { File, Track } from 'jsmidgen';
-import { zip, flatten } from './utils';
+import { flatten } from './utils';
 import { split, isPattern } from './tokenize';
 import { reduce } from './parser';
 
@@ -68,6 +68,15 @@ export function pack(values, notes) {
       return x.map(resolve);
     }
 
+    // Normalize compact/grouped pattern fragments that may surface as strings
+    // in some runtime/bundle paths: "xx", "[xx]", "x[xx]", etc.
+    if (typeof x === 'string' && x.length > 1 && /[x_\-\[\]]/.test(x)) {
+      const parts = split(x);
+      if (Array.isArray(parts) && parts.length > 1) {
+        return parts.map(resolve);
+      }
+    }
+
     let token;
     if (!'-x_'.includes(x)) {
       token = { v: 127, l: x };
@@ -114,15 +123,7 @@ export function merge(ctx) {
           if (values.length > 1) values.shift();
 
           const input = flatten(reduce(clip.input, ctx.data, pack(values, notes)));
-
-          if (!ticks) {
-            ticks = input;
-            return;
-          }
-
-          zip(ticks, input, (a, b) => {
-            if (b.v > 0) a.v = b.v;
-          });
+          ticks = input;
         }
 
         if (ticks) {

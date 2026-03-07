@@ -14,17 +14,23 @@ export const RE_DEGREE = /^\d+(?:\.\.\d+)?$/;
 const CACHE = {};
 
 export function split(value) {
-  let data = [];
-  try {
-    data = JSON.stringify(value.split(/(?=[\d[\]x_-])/));
-    data = data.replace(/,"\[",/g, ', [');
-    data = data.replace(/"\[",/g, '[');
-    data = data.replace(/,"\]"/g, ']');
-    data = JSON.parse(data);
-  } catch (e) {
-    // ignore
+  if (typeof value !== 'string' || !value.length) return [];
+
+  const out = [];
+  for (let i = 0; i < value.length; i += 1) {
+    const ch = value[i];
+
+    if (ch === '[') {
+      const end = value.indexOf(']', i + 1);
+      if (end < 0) break;
+      out.push(value.slice(i + 1, end).split(''));
+      i = end;
+      continue;
+    }
+
+    out.push(ch);
   }
-  return data;
+  return out;
 }
 
 export function level(value) {

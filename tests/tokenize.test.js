@@ -2,7 +2,7 @@
 
 const { expect } = require('chai');
 const { inlineChord } = require('harmonics');
-const { transform } = require('../build/main.cjs');
+const { transform, split } = require('../build/main.cjs');
 
 function tok(type, value, extra = {}) {
   return { type, value, ...extra };
@@ -51,6 +51,12 @@ describe('tokenizer', () => {
       tok('divide', 2),
       tok('multiply', 2),
       tok('slice', [1, 3]),
+    ]);
+  });
+
+  it('preserves bracket substeps when splitting patterns', () => {
+    expect(split('xxxxxxx[xx]')).to.deep.equal([
+      'x', 'x', 'x', 'x', 'x', 'x', 'x', ['x', 'x'],
     ]);
   });
 

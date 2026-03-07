@@ -148,6 +148,7 @@ select {
   white-space: pre-wrap;
   overflow: auto;
   tab-size: 2;
+  font-variant-ligatures: none;
 }
 
 #editor-gutter {
@@ -647,9 +648,9 @@ select {
 }
 
 .tok-arr-token {
-  display: inline-block;
+  display: inline;
   border-radius: 4px;
-  padding: 0 0.2em;
+  padding: 0;
 }
 
 .tok-arr-token.is-active-section {
@@ -671,7 +672,7 @@ select {
 .tok-var-ref { color: #ffbf5a; }
 .tok-pattern { color: #c9a2ff; }
 .tok-pattern-step {
-  display: inline-block;
+  display: inline;
 }
 .tok-repeat { color: #d8b7ff; }
 .tok-note { color: #8ee7b0; }

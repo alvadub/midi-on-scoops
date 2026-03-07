@@ -134,19 +134,21 @@ const TETRIS = `
 `.trim();
 
 const LOCKS = `
-%Cm c4|eb4|g4 %
-%Fm c4|f4|g#4 %
+; Locks - Iration Steppas
+; tempo: 74
+; bars: 8
 
-# drums
-  @A
-    #0 127 xxxxxxxxxxx[xx]xxxx [xx]xxxxxxxxxxxxxxx f#2
-    #0 127 --x---x---x-x-x[xx] --x---x---x--[-x]x- c#2
-    #0 90  ----------------x___------------ a3
-    #0 120 --[xx]---[xx]---[xx]---[xx]- d#1
+%Cm c4|eb4|g4
+%Fm c4|f4|g#4
 
 ## skanking
   @A
-    #1 100 -x-x-x-x-x-x-x-x %Cm %Fm
+    #1 100 -x-x-x-x %Cm % %Fm %
+
+## hats
+  @A
+    #2035 90 x-x-x-x-
+    ;#2035 90 xxxxxxx[xx]
 
 > A x4
 `.trim();
@@ -251,9 +253,20 @@ function getData(input) {
   trackLineMap = buildTrackLineMap(input);
   try {
     lastContext = parse(input);
+    // Runtime guard: keep the last input clip as the active one per channel.
+    // This enforces "latest line wins" semantics even if parser output varies by bundle path.
+    Object.values(lastContext.tracks || {}).forEach(channels => {
+      Object.keys(channels || {}).forEach(ch => {
+        const clips = channels[ch] || [];
+        const lastInput = clips.reduce((idx, clip, i) => (clip && clip.input ? i : idx), -1);
+        if (lastInput > 0) channels[ch] = clips.slice(lastInput);
+      });
+    });
     const merged = merge(lastContext);
     sectionTimeline = buildSectionTimeline(lastContext, merged);
-    return build(merged);
+    const built = build(merged);
+
+    return built;
   } catch (e) {
     lastContext = null;
     sectionTimeline = [];

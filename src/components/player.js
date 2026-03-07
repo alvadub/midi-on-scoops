@@ -402,6 +402,7 @@ export default class Player {
 
   preload(data) {
     this.data = data || this.data;
+
     let count = 0;
     this.data.forEach(track => {
       if (track[2].length > count) count = track[2].length;
@@ -412,6 +413,48 @@ export default class Player {
     });
 
     const duration = Utils.getTickDuration('32') / 256;
+    const collectDrumEvents = (tick, baseOffset = 0, span = 1) => {
+      if (!tick) return [];
+
+      if (Array.isArray(tick)) {
+        const total = tick.length || 1;
+        return tick.reduce((memo, subTick, subIndex) => {
+          memo.push(...collectDrumEvents(subTick, baseOffset + ((subIndex / total) * span), span / total));
+          return memo;
+        }, []);
+      }
+
+      const level = tick && typeof tick.v !== 'undefined' ? tick.v : 0;
+      if (!(level > 0)) return [];
+      return [[level, baseOffset, span]];
+    };
+    const collectNoteEvents = (tick, baseOffset = 0, span = 1) => {
+      if (!tick) return [];
+
+      if (Array.isArray(tick)) {
+        const total = tick.length || 1;
+        return tick.reduce((memo, subTick, subIndex) => {
+          memo.push(...collectNoteEvents(subTick, baseOffset + ((subIndex / total) * span), span / total));
+          return memo;
+        }, []);
+      }
+
+      const level = tick && typeof tick.v !== 'undefined' ? tick.v : 0;
+      if (!(level > 0) || !tick.n) return [];
+
+      if (Array.isArray(tick.n)) {
+        return tick.n.reduce((memo, tone) => {
+          const pitch = this.pitch(tone);
+          if (Number.isFinite(pitch)) memo.push([pitch, level, baseOffset, span]);
+          return memo;
+        }, []);
+      }
+
+      const pitch = this.pitch(tick.n);
+      if (!Number.isFinite(pitch)) return [];
+      return [[pitch, level, baseOffset, span]];
+    };
+
     const nextKeys = new Set();
     for (let i = 0; i < count; i += 1) {
       const beat = new Map();
@@ -420,15 +463,17 @@ export default class Player {
         nextKeys.add(key);
         if (!beat.has(key)) beat.set(key, { drums: [], notes: [] });
         const slot = beat.get(key);
-        const tick = track[2][i] || {};
+        const tick = typeof track[2][i] === 'undefined' ? null : track[2][i];
         if (track[0] >= 2000) {
-          slot.drums.push([track[0] - 2000, tick.v]);
-        } else if (Array.isArray(tick.n)) {
-          tick.n.forEach(tone => {
-            slot.notes.push([track[0], this.pitch(tone), duration, tick.v]);
+          const events = collectDrumEvents(tick);
+          events.forEach(([level, offset, span]) => {
+            slot.drums.push([track[0] - 2000, level, offset, span]);
           });
-        } else if (tick.n) {
-          slot.notes.push([track[0], this.pitch(tick.n), duration, tick.v]);
+        } else {
+          const events = collectNoteEvents(tick);
+          events.forEach(([pitches, level, offset, span]) => {
+            slot.notes.push([track[0], pitches, duration, level, offset, span]);
+          });
         }
       });
       this.beats[i] = beat;
@@ -910,12 +955,14 @@ export default class Player {
   }
 
   queueToTrackNodes(font, when, pitch, duration, gain, nodes) {
-    this.player.queueWaveTable(this.audioContext, nodes.input, font, when, pitch, duration, gain);
+    const startAt = Math.max(when, this.audioContext.currentTime + 0.001);
+    this.player.queueWaveTable(this.audioContext, nodes.input, font, startAt, pitch, duration, gain);
   }
 
   playBeatAt(when, beat, bpm) {
     if (!beat) return;
     const N = (4 * 60) / bpm;
+    const beatDuration = this.fraq * N;
     const hasSolo = [...this.trackState.values()].some(item => item.solo);
     beat.forEach((slot, key) => {
       const state = this.getTrackState(key);
@@ -924,17 +971,27 @@ export default class Player {
       const nodes = this.getTrackNodes(key);
       let touched = false;
       for (let i = 0; i < slot.drums.length; i += 1) {
-        this.playDrum(when, slot.drums[i], nodes);
+        const drum = slot.drums[i];
+        const subOffsetRatio = typeof drum[2] === 'number' ? drum[2] : 0;
+        this.playDrum(when + (subOffsetRatio * beatDuration), drum, nodes);
         touched = true;
       }
       slot.notes.forEach(note => {
-        const [instrument, pitches, duration, level] = note;
+        const [instrument, pitches, duration, level, subOffsetRatio = 0, subSpan = 1] = note;
+        if (!Number.isFinite(level) || !Number.isFinite(duration) || !Number.isFinite(subSpan)) return;
         const info = this.player.loader.instrumentInfo(instrument);
         if (!window[info.variable]) {
           this.cacheInstrument(info);
           return;
         }
-        this.queueToTrackNodes(window[info.variable], when, pitches, duration * N, (1 / 127) * level, nodes);
+        this.queueToTrackNodes(
+          window[info.variable],
+          when + (subOffsetRatio * beatDuration),
+          pitches,
+          duration * N * subSpan,
+          (1 / 127) * level,
+          nodes,
+        );
         touched = true;
       });
       if (touched && typeof this.onBeat === 'function') {

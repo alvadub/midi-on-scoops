@@ -379,7 +379,13 @@ export function parse(buffer) {
           trackPatternSlots[channel] = 0;
         }
         trackPatternSlots[channel] += patternSlots;
-        
+
+        // Last pattern line wins on duplicated channels.
+        // A new input clip replaces previous input clips on the same channel.
+        if (spec.input && index >= 0) {
+          info[channel] = (info[channel] || []).filter(item => !item.input);
+        }
+
         info[channel].push(spec);
       }
     } catch (e) {

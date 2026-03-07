@@ -407,6 +407,24 @@ export function createEditor(initialText, options = {}) {
       title: v => v,
     },
     {
+      attr: 'degree',
+      resolve: value => {
+        const range = String(value || '').match(/^(\d+)\.\.(\d+)$/);
+        if (range) {
+          const a = parseInt(range[1], 10);
+          const b = parseInt(range[2], 10);
+          return `Selects scale degrees ${a} through ${b} from the current root+mode context (**)`;
+        }
+
+        const n = parseInt(value, 10);
+        if (!Number.isNaN(n)) {
+          return `Selects scale degree ${n} from the current root+mode context (**)`;
+        }
+        return 'Selects degrees from the current root+mode context (**)';
+      },
+      title: value => `Degree ${value}`,
+    },
+    {
       attr: 'pattern',
       resolve: value => `${describePattern(value)}\nx = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide`,
       title: () => 'Rhythm pattern',
@@ -470,6 +488,28 @@ export function createEditor(initialText, options = {}) {
       const n = parseInt(el.dataset.repeat, 10);
       if (Number.isNaN(n) || n < 1) {
         mark(el, 'Repeat must be >= 1');
+      }
+    });
+
+    pre.querySelectorAll('.tok-degree[data-degree]').forEach(el => {
+      const raw = String(el.dataset.degree || '');
+      const range = raw.match(/^(\d+)\.\.(\d+)$/);
+      if (range) {
+        const a = parseInt(range[1], 10);
+        const b = parseInt(range[2], 10);
+        if (a < 1 || b < 1) {
+          mark(el, 'Degree range must be >= 1');
+          return;
+        }
+        if (a > b) {
+          mark(el, 'Degree range must be ascending');
+        }
+        return;
+      }
+
+      const n = parseInt(raw, 10);
+      if (Number.isNaN(n) || n < 1) {
+        mark(el, 'Degree must be >= 1');
       }
     });
 

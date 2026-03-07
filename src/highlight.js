@@ -55,11 +55,24 @@ function renderToken(token) {
   return span(cls, token);
 }
 
+function isDegreeToken(token) {
+  return /^\d+(?:\.\.\d+)?$/.test(token);
+}
+
 function renderTokens(text) {
-  return text
-    .split(/(\s+)/)
-    .map(part => (/\s+/.test(part) ? part : renderToken(part)))
-    .join('');
+  const parts = text.split(/(\s+)/);
+  let degreeContext = false;
+
+  return parts.map(part => {
+    if (/\s+/.test(part) || !part) return part;
+
+    if (degreeContext && isDegreeToken(part)) {
+      return span('tok-number tok-degree', part, { degree: part });
+    }
+
+    degreeContext = part === '**';
+    return renderToken(part);
+  }).join('');
 }
 
 function splitComment(line) {

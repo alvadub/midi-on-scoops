@@ -133,22 +133,6 @@ const TETRIS = `
 > A B A B C D
 `.trim();
 
-const PLAYGROUND = `
-%a C4 phrygian.. ++ I I III IV
-
-# scales
-  @A
-    #3 100 -x-x -x-x -x-x -x-x %a %a
-
-## drums
-  @A
-    #0 120 [xx]-[xx]- [xx]-[xx]- d#1
-    #0 110 -x-x -x-x d2
-    #0 100 [xx][xx][xx][xx] [xx][xx][xx][xx] f#2
-
-> A x4
-`.trim();
-
 const LOCKS = `
 %Cm c4|eb4|g4 %
 %Fm c4|f4|g#4 %
@@ -170,14 +154,12 @@ const LOCKS = `
 const PRESETS = {
   tetris: TETRIS,
   billy_jean: BILLY_JEAN,
-  playground: PLAYGROUND,
   locks: LOCKS,
 };
 
 const PRESET_LABELS = {
   tetris: 'Tetris',
   billy_jean: 'Billy Jean',
-  playground: 'Playground',
   locks: 'Locks',
 };
 

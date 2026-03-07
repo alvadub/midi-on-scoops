@@ -234,7 +234,7 @@ export function transform(expression) {
       cur = [min, max];
     }
 
-    if (typeof cur === 'string' && (cur.charAt() === '/' || /^x\d+$/.test(cur))) {
+    if (typeof cur === 'string' && !isPattern(cur) && (cur.charAt() === '/' || /^x\d+$/.test(cur))) {
       const operator = cur.charAt() === '/' ? 'divide' : 'multiply';
       const number = cur.substr(1);
 

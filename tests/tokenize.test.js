@@ -25,7 +25,9 @@ describe('tokenizer', () => {
 
   it('can build an ast from input', () => {
     expect(transform('x')).to.deep.equal([tok('pattern', 'x')]);
+    expect(transform('#3 x-xx')).to.deep.equal([tok('channel', '#3'), tok('pattern', 'x-xx')]);
     expect(transform('x x2')).to.deep.equal([tok('pattern', 'x'), tok('multiply', 2)]);
+    expect(transform('x-xx x2')).to.deep.equal([tok('pattern', 'x-xx'), tok('multiply', 2)]);
     expect(transform('x /2')).to.deep.equal([tok('pattern', 'x'), tok('divide', 2)]);
     expect(transform('0..10')).to.deep.equal([tok('slice', ['0', '10'])]);
     expect(transform('0..10 x2')).to.deep.equal([tok('slice', ['0', '10']), tok('multiply', 2)]);

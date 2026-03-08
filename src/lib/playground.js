@@ -1,3 +1,5 @@
+import { parseArrangementBody } from './arrangement';
+
 export function extractDraftTempo(input) {
   const m = String(input || '').match(/^\s*;\s*tempo\s*:\s*(\d+(?:\.\d+)?)\s*$/im);
   if (!m) return null;
@@ -87,6 +89,7 @@ export function buildArrangementDisplayExpansion(sourceText) {
   const lines = String(sourceText || '').split(/\r?\n/);
   const expanded = [];
   let tokenOrder = 0;
+  let blockOrder = 0;
 
   lines.forEach(rawLine => {
     const noComment = rawLine.replace(/;.*$/, '');
@@ -94,28 +97,13 @@ export function buildArrangementDisplayExpansion(sourceText) {
     if (!trimmed.startsWith('>')) return;
     const body = trimmed.slice(1).trim();
     if (!body) return;
-    const parts = body.split(/\s+/);
-    let last = null;
-    parts.forEach(part => {
-      if (/^[A-Z][A-Z0-9]*$/.test(part)) {
-        last = { name: part, displayOrder: tokenOrder };
-        tokenOrder += 1;
-        expanded.push(last);
-        return;
-      }
-      if (/^x(\d+)$/.test(part) && last) {
-        const count = Math.max(1, parseInt(part.slice(1), 10));
-        for (let i = 1; i < count; i += 1) {
-          expanded.push({ name: last.name, displayOrder: tokenOrder });
-        }
-        tokenOrder += 1;
-        return;
-      }
-      if (part === '%' && last) {
-        expanded.push({ name: last.name, displayOrder: tokenOrder });
-        tokenOrder += 1;
-      }
+    const parsed = parseArrangementBody(body, {
+      orderOffset: tokenOrder,
+      blockOffset: blockOrder,
     });
+    tokenOrder = parsed.nextOrder;
+    blockOrder = parsed.nextBlock;
+    expanded.push(...parsed.expanded);
   });
 
   return expanded;
@@ -143,12 +131,51 @@ export function buildSectionTimeline(context, merged, sourceText) {
     const token = expanded[idx] || expanded[expanded.length - 1] || null;
     const name = token ? token.name : null;
     const displayOrder = token ? token.displayOrder : null;
+    const blockId = token ? token.blockId : null;
+    const blockLive = token ? Boolean(token.blockLive) : false;
+    const blockStartOrder = token ? token.blockStartOrder : null;
+    const blockEndOrder = token ? token.blockEndOrder : null;
     const beats = Math.max(1, mergedBeats);
     const start = cursor;
     const end = Math.max(start, start + beats - 1);
     cursor = end + 1;
-    timeline.push({ name, displayOrder, start, end });
+    timeline.push({
+      name,
+      displayOrder,
+      start,
+      end,
+      blockId,
+      blockLive,
+      blockStartOrder,
+      blockEndOrder,
+      blockStart: null,
+      blockEnd: null,
+    });
   });
+
+  const blocks = new Map();
+  timeline.forEach(item => {
+    if (!item.blockId) return;
+    const prev = blocks.get(item.blockId);
+    if (!prev) {
+      blocks.set(item.blockId, {
+        start: item.start,
+        end: item.end,
+      });
+      return;
+    }
+    prev.start = Math.min(prev.start, item.start);
+    prev.end = Math.max(prev.end, item.end);
+  });
+
+  timeline.forEach(item => {
+    if (!item.blockId) return;
+    const block = blocks.get(item.blockId);
+    if (!block) return;
+    item.blockStart = block.start;
+    item.blockEnd = block.end;
+  });
+
   return timeline;
 }
 

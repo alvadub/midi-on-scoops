@@ -6,6 +6,7 @@ export * from './parser';
 export * from './tokenize';
 export * from './euclidean';
 export * from './lint.js';
+export { parseArrangementBody, buildArrangementMain } from './arrangement';
 export {
   extractDraftTempo,
   extractDraftBars,

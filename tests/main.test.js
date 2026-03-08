@@ -236,6 +236,35 @@ describe('parser', () => {
       },
     });
   });
+
+  it('should parse bracket arrangement lines', () => {
+    const ast = parse(`
+      # groove
+        @A
+          #1 x---
+        @B
+          #1 --x-
+        @C
+          #1 -x--
+      > [A B C %]
+      > [A B] x2
+    `);
+
+    expect(ast.main).to.eql([
+      [
+        v('A'),
+        v('B'),
+        v('C'),
+        v('C'),
+      ],
+      [
+        v('A'),
+        v('B'),
+        v('A'),
+        v('B'),
+      ],
+    ]);
+  });
 });
 
 describe('reducer', () => {

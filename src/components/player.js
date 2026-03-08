@@ -28,6 +28,7 @@ export default class Player {
     this.beatIndex = 0;
     this.loopStarted = false;
     this.songLoop = false;
+    this.arrangementLoopRange = null;
     this.defaultPadFiles = [
       'coin_1.wav',
       'coin_2.wav',
@@ -540,6 +541,16 @@ export default class Player {
     this.songLoop = Boolean(enabled);
   }
 
+  setArrangementLoopRange(range) {
+    if (!range || !Number.isFinite(range.start) || !Number.isFinite(range.end)) {
+      this.arrangementLoopRange = null;
+      return;
+    }
+    const start = Math.max(0, Math.floor(range.start));
+    const end = Math.max(start, Math.floor(range.end));
+    this.arrangementLoopRange = { start, end };
+  }
+
   setLoopMachine(data, tempo, length, transpose) {
     const appliedTempo = tempo || 127;
     const changed = appliedTempo !== this.bpm || length !== this.bars || transpose !== this.offset;
@@ -569,13 +580,27 @@ export default class Player {
     }
     this.loopStarted = true;
     const wholeNoteDuration = (4 * 60) / bpm;
+    const range = this.arrangementLoopRange;
+    const hasRange = Boolean(
+      range
+      && beats.length > 0
+      && Number.isFinite(range.start)
+      && Number.isFinite(range.end)
+    );
+    const rangeStart = hasRange ? Math.max(0, Math.min(beats.length - 1, range.start)) : 0;
+    const rangeEnd = hasRange ? Math.max(rangeStart, Math.min(beats.length - 1, range.end)) : (beats.length - 1);
     this.beatIndex = fromBeat < beats.length ? fromBeat : 0;
+    if (hasRange && (this.beatIndex < rangeStart || this.beatIndex > rangeEnd)) {
+      this.beatIndex = rangeStart;
+    }
     this.playBeatAt(this.contextTime(), beats[this.beatIndex], bpm);
     let nextLoopTime = this.contextTime() + density * wholeNoteDuration;
     this.loopIntervalID = setInterval(() => {
       while (this.contextTime() >= nextLoopTime) {
         let nextBeatIndex = this.beatIndex + 1;
-        if (nextBeatIndex >= beats.length) {
+        if (hasRange && nextBeatIndex > rangeEnd) {
+          nextBeatIndex = rangeStart;
+        } else if (nextBeatIndex >= beats.length) {
           if (!this.songLoop) {
             this.stopPlayLoop();
             if (typeof this.onPlaybackEnd === 'function') this.onPlaybackEnd();

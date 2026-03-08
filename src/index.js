@@ -37,6 +37,9 @@ let lastFlashedBeatIndex = -1;
 let sectionTimeline = [];
 let pendingSectionLaunch = null;
 let lastSectionTimelineIndex = -1;
+let defaultArrangementLoopBlockId = null;
+let activeArrangementLoopBlockId = null;
+let arrangementLoopDisabled = false;
 let visualizerData = null;
 let midiAccess = null;
 let midiLearn = null;
@@ -162,7 +165,7 @@ const LOCKS = `
 ## hats
   @A
     #2035 90 x-x-x-x-
-    ;#2035 90 xxxxxxx[xx]
+    #2035 90 xxxxxxx[xx]
 
 > A x4
 `.trim();
@@ -272,6 +275,11 @@ function getData(input) {
     const merged = merge(lastContext);
     syncLintIndicator(lintDub(input, { context: lastContext, merged }));
     sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
+    const defaultLoop = sectionTimeline.find(item => item.blockId && item.blockLive);
+    defaultArrangementLoopBlockId = defaultLoop ? defaultLoop.blockId : null;
+    if (activeArrangementLoopBlockId && !sectionTimeline.some(item => item.blockId === activeArrangementLoopBlockId)) {
+      activeArrangementLoopBlockId = null;
+    }
     const built = buildMixFromMerged(merged);
 
     return built;
@@ -279,6 +287,9 @@ function getData(input) {
     lastContext = null;
     syncLintIndicator(null);
     sectionTimeline = [];
+    defaultArrangementLoopBlockId = null;
+    activeArrangementLoopBlockId = null;
+    arrangementLoopDisabled = false;
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
     return [];
@@ -291,6 +302,50 @@ function getSectionAtBeat(beatIndex) {
 
 function findTimelineIndex(displayOrder, name) {
   return findTimelineIndexFromTimeline(sectionTimeline, displayOrder, name);
+}
+
+function getLoopBlockById(blockId) {
+  if (!blockId) return null;
+  const item = sectionTimeline.find(entry => entry.blockId === blockId);
+  if (!item || !Number.isFinite(item.blockStart) || !Number.isFinite(item.blockEnd)) return null;
+  return {
+    id: blockId,
+    start: item.blockStart,
+    end: item.blockEnd,
+  };
+}
+
+function resolveArrangementLoopBlockId() {
+  if (activeArrangementLoopBlockId) return activeArrangementLoopBlockId;
+  if (arrangementLoopDisabled) return null;
+  return defaultArrangementLoopBlockId;
+}
+
+function applyArrangementLoopRange() {
+  const blockId = resolveArrangementLoopBlockId();
+  const range = getLoopBlockById(blockId);
+  if (range) {
+    p.setArrangementLoopRange({ start: range.start, end: range.end });
+  } else {
+    p.setArrangementLoopRange(null);
+  }
+  if (editorApi) editorApi.setActiveArrangementLoopBlock(range ? range.id : null);
+}
+
+function setArrangementLoopFromClick(meta) {
+  const blockId = meta && meta.blockId ? meta.blockId : null;
+  const hadLoop = Boolean(resolveArrangementLoopBlockId());
+  if (blockId) {
+    arrangementLoopDisabled = false;
+    activeArrangementLoopBlockId = blockId;
+    applyArrangementLoopRange();
+    return;
+  }
+  if (hadLoop) {
+    activeArrangementLoopBlockId = null;
+    arrangementLoopDisabled = true;
+    applyArrangementLoopRange();
+  }
 }
 
 function jumpToSectionTimelineIndex(index) {
@@ -310,6 +365,7 @@ function syncCurrentSectionUI() {
   if (editorApi) {
     editorApi.setActiveSectionByOrder(active ? active.item.displayOrder : null);
   }
+  applyArrangementLoopRange();
 }
 
 function setCurrentSectionIndicator(name) {
@@ -318,8 +374,10 @@ function setCurrentSectionIndicator(name) {
   el.textContent = name ? `Section: ${name}` : 'Section: —';
 }
 
-function queueSectionLaunch(name, order) {
+function queueSectionLaunch(name, order, meta = {}) {
   if (!sectionTimeline.length) return;
+  setArrangementLoopFromClick(meta);
+  if (!name) return;
   const targetIndex = findTimelineIndex(order, name);
   if (targetIndex < 0) return;
   if (!playing) {
@@ -1299,6 +1357,7 @@ function play(startBeat = undefined) {
   const data = getData(editorApi.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
   p.setSongLoop(songLoop);
+  applyArrangementLoopRange();
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);
@@ -1320,6 +1379,7 @@ function stop() {
     editorApi.clearActiveTokenHighlight();
     editorApi.setActiveSection(null);
     editorApi.setQueuedArrangementToken(null);
+    editorApi.setActiveArrangementLoopBlock(null);
   }
   setCurrentSectionIndicator(null);
   lastFlashedBeatIndex = -1;
@@ -1334,6 +1394,7 @@ function updateLoop() {
 
   const data = getData(editorApi.getValue());
   const changed = p.setLoopMachine(data, tempo, bars, transpose);
+  applyArrangementLoopRange();
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);

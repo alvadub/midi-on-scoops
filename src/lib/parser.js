@@ -2,6 +2,7 @@ import { getChordsByProgression } from 'scribbletune/src/progression';
 import { scale, inlineChord } from 'harmonics';
 
 import { isProgression, transform } from './tokenize';
+import { buildArrangementMain } from './arrangement';
 import { repeat, clone } from './utils';
 
 function parseDegreeToken(token) {
@@ -267,7 +268,9 @@ export function parse(buffer) {
 
         track = line.split(/\s+/).slice(1).join(' ');
       } else if (line.charAt() === '>') {
-        main.push(transform(line.substr(1).trim()));
+        const body = line.substr(1).trim();
+        const arranged = buildArrangementMain(body);
+        main.push(arranged || transform(body));
       } else if (line.charAt() === '@') {
         const [name, ...extend] = line.substr(1).split(' ');
 

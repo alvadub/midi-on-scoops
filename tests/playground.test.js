@@ -65,6 +65,19 @@ describe('playground helpers', () => {
     expect(expanded.map(x => x.name)).to.deep.equal(['A', 'A', 'A', 'B', 'B', 'C', 'C']);
   });
 
+  it('expands bracket arrangement blocks (live and finite)', () => {
+    const expanded = buildArrangementDisplayExpansion(`
+      > [A B C %]
+      > [A B] x3
+    `);
+    expect(expanded.map(x => x.name)).to.deep.equal([
+      'A', 'B', 'C', 'C',
+      'A', 'B', 'A', 'B', 'A', 'B',
+    ]);
+    expect(expanded.slice(0, 4).every(x => x.blockLive)).to.equal(true);
+    expect(expanded.slice(4).every(x => x.blockLive)).to.equal(false);
+  });
+
   it('builds section timeline and resolves section queries', () => {
     const context = {
       main: [[{ type: 'value', value: 'A' }]],
@@ -76,15 +89,74 @@ describe('playground helpers', () => {
     ]];
     const timeline = buildSectionTimeline(context, merged, '> A B');
     expect(timeline).to.deep.equal([
-      { name: 'A', displayOrder: 0, start: 0, end: 3 },
-      { name: 'B', displayOrder: 1, start: 4, end: 5 },
+      {
+        name: 'A',
+        displayOrder: 0,
+        start: 0,
+        end: 3,
+        blockId: null,
+        blockLive: false,
+        blockStartOrder: null,
+        blockEndOrder: null,
+        blockStart: null,
+        blockEnd: null,
+      },
+      {
+        name: 'B',
+        displayOrder: 1,
+        start: 4,
+        end: 5,
+        blockId: null,
+        blockLive: false,
+        blockStartOrder: null,
+        blockEndOrder: null,
+        blockStart: null,
+        blockEnd: null,
+      },
     ]);
     expect(getSectionAtBeat(timeline, 4)).to.deep.equal({
       index: 1,
-      item: { name: 'B', displayOrder: 1, start: 4, end: 5 },
+      item: {
+        name: 'B',
+        displayOrder: 1,
+        start: 4,
+        end: 5,
+        blockId: null,
+        blockLive: false,
+        blockStartOrder: null,
+        blockEndOrder: null,
+        blockStart: null,
+        blockEnd: null,
+      },
     });
     expect(findTimelineIndex(timeline, 0, null)).to.equal(0);
     expect(findTimelineIndex(timeline, null, 'B')).to.equal(1);
+  });
+
+  it('builds loop range metadata for live arrangement blocks', () => {
+    const context = {
+      main: [[{ type: 'value', value: 'A' }]],
+      tracks: { melody: { 'A#0': [{}] } },
+    };
+    const merged = [[
+      [['0', 'melody', [{ v: 1 }, { v: 0 }]]],
+      [['0', 'melody', [{ v: 1 }]]],
+      [['0', 'melody', [{ v: 1 }, { v: 0 }, { v: 1 }]]],
+    ]];
+    const timeline = buildSectionTimeline(context, merged, '> [A B C]');
+    expect(timeline[0].blockId).to.equal(timeline[1].blockId);
+    expect(timeline[1].blockId).to.equal(timeline[2].blockId);
+    expect(timeline[0].blockLive).to.equal(true);
+    expect(timeline[0].blockStart).to.equal(0);
+    expect(timeline[2].blockEnd).to.equal(5);
+  });
+
+  it('marks bracket tokens with shared block metadata for click hooks', () => {
+    const expanded = buildArrangementDisplayExpansion('> [A B C %]');
+    expect(expanded.length).to.equal(4);
+    expect(expanded.every(item => item.blockId === expanded[0].blockId)).to.equal(true);
+    expect(expanded.every(item => Number.isFinite(item.blockStartOrder))).to.equal(true);
+    expect(expanded.every(item => Number.isFinite(item.blockEndOrder))).to.equal(true);
   });
 
   it('computes max pattern slots from parser context', () => {

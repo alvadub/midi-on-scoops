@@ -1,3 +1,5 @@
+import { parseArrangementBody } from './lib/arrangement';
+
 function esc(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -53,6 +55,30 @@ function renderToken(token) {
   if (cls === 'tok-number') return span(cls, token, { number: token });
   if (cls === 'tok-repeat') return span(cls, token, { repeat: token.slice(1) });
   return span(cls, token);
+}
+
+function renderArrangementToken(part, tokenMeta) {
+  const attrs = {};
+  if (tokenMeta && Number.isFinite(tokenMeta.order)) attrs.arrOrder = tokenMeta.order;
+  if (tokenMeta && tokenMeta.blockId) attrs.arrBlockId = tokenMeta.blockId;
+  if (tokenMeta && tokenMeta.blockLive) attrs.arrBlockLive = '1';
+  if (tokenMeta && Number.isFinite(tokenMeta.blockStartOrder)) attrs.arrBlockStartOrder = tokenMeta.blockStartOrder;
+  if (tokenMeta && Number.isFinite(tokenMeta.blockEndOrder)) attrs.arrBlockEndOrder = tokenMeta.blockEndOrder;
+
+  if (tokenMeta && tokenMeta.kind === 'section') {
+    return span('tok-section tok-arr-token', part, { ...attrs, section: part });
+  }
+  if (tokenMeta && tokenMeta.kind === 'repeat-last') {
+    return span('tok-var-ref tok-arr-token tok-arr-repeat', part, { ...attrs, repeatLast: '1' });
+  }
+  if (tokenMeta && tokenMeta.kind === 'repeat') {
+    const n = /^x(\d+)$/.test(part) ? part.slice(1) : '';
+    return span('tok-repeat tok-arr-token tok-arr-repeat', part, { ...attrs, repeat: n });
+  }
+  if (tokenMeta && (tokenMeta.kind === 'block-open' || tokenMeta.kind === 'block-close')) {
+    return span('tok-operator tok-arr-token tok-arr-bracket', part, attrs);
+  }
+  return renderToken(part);
 }
 
 function isDegreeToken(token) {
@@ -111,18 +137,20 @@ function renderBase(base) {
   }
   if (/^\s*>/.test(base)) {
     const indent = esc(base.match(/^\s*/)[0]);
-    const body = base.trimStart().slice(1).replace(/^\s*/, ' ');
-    const rendered = body
-      .split(/(\s+)/)
+    const tail = base.trimStart().slice(1);
+    const lead = tail.match(/^\s*/)[0] || '';
+    const body = tail.slice(lead.length);
+    const parsed = parseArrangementBody(body);
+    let tokenIndex = 0;
+    const rendered = (body.match(/\s+|\[|\]|[^\s\[\]]+/g) || [])
       .map(part => {
-        if (!part || /\s+/.test(part)) return part;
-        if (/^[A-Z][A-Z0-9]*$/.test(part)) return span('tok-section tok-arr-token', part, { section: part });
-        if (part === '%') return span('tok-var-ref tok-arr-token tok-arr-repeat', part, { repeatLast: '1' });
-        if (/^x\d+$/.test(part)) return span('tok-repeat tok-arr-token tok-arr-repeat', part, { repeat: part.slice(1) });
-        return renderToken(part);
+        if (!part || /^\s+$/.test(part)) return part;
+        const tokenMeta = parsed.tokens[tokenIndex] || null;
+        tokenIndex += 1;
+        return renderArrangementToken(part, tokenMeta);
       })
       .join('');
-    return `${indent}${span('tok-arrangement', '>')}${rendered}`;
+    return `${indent}${span('tok-arrangement', '>')}${esc(lead)}${rendered}`;
   }
   if (/^\s*%[^\s]+\s+/.test(base)) {
     return base.replace(/^(\s*)(%[^\s]+)(\s*)(.*)$/, (_, i, v, s, rest) => (

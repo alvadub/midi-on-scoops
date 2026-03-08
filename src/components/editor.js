@@ -666,17 +666,23 @@ export function createEditor(initialText, options = {}) {
     pre.querySelectorAll('.tok-arr-token.is-active-section')
       .forEach(el => el.classList.remove('is-active-section'));
     if (typeof order !== 'number' || order < 0) return;
-    const tokens = pre.querySelectorAll('.tok-arr-token');
-    const target = tokens[order];
+    const target = pre.querySelector(`.tok-arr-token[data-arr-order="${order}"]`);
     if (target) target.classList.add('is-active-section');
+  }
+
+  function setActiveArrangementLoopBlock(blockId) {
+    pre.querySelectorAll('.tok-arr-token.is-active-loop-block')
+      .forEach(el => el.classList.remove('is-active-loop-block'));
+    if (!blockId) return;
+    pre.querySelectorAll(`.tok-arr-token[data-arr-block-id="${blockId}"]`)
+      .forEach(el => el.classList.add('is-active-loop-block'));
   }
 
   function applyQueuedArrangementToken() {
     pre.querySelectorAll('.tok-arr-token.is-queued-section')
       .forEach(el => el.classList.remove('is-queued-section'));
     if (typeof queuedArrangementOrder !== 'number' || queuedArrangementOrder < 0) return;
-    const tokens = pre.querySelectorAll('.tok-arr-token');
-    const target = tokens[queuedArrangementOrder];
+    const target = pre.querySelector(`.tok-arr-token[data-arr-order="${queuedArrangementOrder}"]`);
     if (target) target.classList.add('is-queued-section');
   }
 
@@ -1280,13 +1286,18 @@ export function createEditor(initialText, options = {}) {
     const arrToken = elements.find(el => (
       el.classList
       && el.classList.contains('tok-arr-token')
-      && el.classList.contains('tok-section')
     ));
     if (arrToken && options.onArrangementSectionClick) {
       e.preventDefault();
-      const tokens = [...pre.querySelectorAll('.tok-arr-token')];
-      const order = tokens.indexOf(arrToken);
-      options.onArrangementSectionClick(arrToken.dataset.section, order);
+      const order = parseInt(arrToken.dataset.arrOrder, 10);
+      options.onArrangementSectionClick(
+        arrToken.dataset.section || null,
+        Number.isFinite(order) ? order : null,
+        {
+          blockId: arrToken.dataset.arrBlockId || null,
+          blockLive: arrToken.dataset.arrBlockLive === '1',
+        },
+      );
       ta.focus();
       return;
     }
@@ -1433,6 +1444,7 @@ export function createEditor(initialText, options = {}) {
     clearActiveTokenHighlight,
     setActiveSection,
     setActiveSectionByOrder,
+    setActiveArrangementLoopBlock,
     setQueuedArrangementToken,
     setValue: value => {
       ta.value = value;

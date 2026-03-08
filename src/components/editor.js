@@ -571,6 +571,83 @@ export function createEditor(initialText, options = {}) {
     options.onCursorToken({ type: 'tok-level', value: String(value) });
   }
 
+  function isCommentToggleShortcut(e) {
+    if (!(e.metaKey || e.ctrlKey) || e.altKey) return false;
+    if (e.code === 'Slash') return true;
+    if (e.code === 'Digit7' && e.shiftKey) return true;
+    if (e.key === '/') return true;
+    return false;
+  }
+
+  function lineColAt(text, pos) {
+    const src = String(text || '');
+    const clamped = Math.max(0, Math.min(src.length, pos || 0));
+    const lines = src.split('\n');
+    let total = 0;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const lineLen = lines[i].length;
+      const lineEnd = total + lineLen;
+      if (clamped <= lineEnd) {
+        return { line: i, col: clamped - total };
+      }
+      total = lineEnd + 1;
+    }
+
+    const lastLine = Math.max(0, lines.length - 1);
+    return { line: lastLine, col: lines[lastLine].length };
+  }
+
+  function offsetAt(lines, line, col) {
+    let total = 0;
+    const idx = Math.max(0, Math.min(lines.length - 1, line));
+    for (let i = 0; i < idx; i += 1) total += lines[i].length + 1;
+    const clampedCol = Math.max(0, Math.min(lines[idx].length, col));
+    return total + clampedCol;
+  }
+
+  function toggleSelectionComments() {
+    const src = ta.value;
+    const selStart = ta.selectionStart;
+    const selEnd = ta.selectionEnd;
+    const startLC = lineColAt(src, selStart);
+    const endProbe = selEnd > selStart ? selEnd - 1 : selEnd;
+    const endLC = lineColAt(src, endProbe);
+    const lines = src.split('\n');
+    const startLine = Math.max(0, startLC.line);
+    const endLine = Math.max(startLine, endLC.line);
+    const slice = lines.slice(startLine, endLine + 1);
+    const nonEmpty = slice.filter(line => line.trim().length > 0);
+    const uncomment = nonEmpty.length > 0 && nonEmpty.every(line => /^\s*;\s?/.test(line));
+
+    for (let i = startLine; i <= endLine; i += 1) {
+      const line = lines[i];
+      if (!line || !line.trim()) continue;
+      if (uncomment) {
+        lines[i] = line.replace(/^(\s*);\s?/, '$1');
+      } else {
+        lines[i] = line.replace(/^(\s*)/, '$1; ');
+      }
+    }
+
+    const nextValue = lines.join('\n');
+    ta.value = nextValue;
+    sync();
+    hideTooltip();
+    updateSuggestions();
+    if (!scrubState) emitCursorToken();
+    if (options.onInput) options.onInput(ta.value);
+
+    const nextLines = nextValue.split('\n');
+    const newStart = offsetAt(nextLines, startLC.line, startLC.col);
+    const newEndLine = selEnd > selStart ? endLC.line : startLC.line;
+    const newEndCol = selEnd > selStart ? endLC.col + 1 : startLC.col;
+    const newEnd = offsetAt(nextLines, newEndLine, newEndCol);
+
+    ta.selectionStart = newStart;
+    ta.selectionEnd = Math.max(newStart, newEnd);
+  }
+
   function setActiveSection(sectionName, occurrence = null) {
     pre.querySelectorAll('.tok-section.is-active-section')
       .forEach(el => el.classList.remove('is-active-section'));
@@ -1115,6 +1192,12 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('keydown', e => {
+    if (isCommentToggleShortcut(e)) {
+      e.preventDefault();
+      toggleSelectionComments();
+      return;
+    }
+
     if (!suggestState.open) return;
     if (document.activeElement !== suggestInput) return;
     if (e.key === 'ArrowDown') {

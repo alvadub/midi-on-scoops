@@ -5,6 +5,7 @@ export * from './mixup';
 export * from './parser';
 export * from './tokenize';
 export * from './euclidean';
+export * from './lint.js';
 export {
   extractDraftTempo,
   extractDraftBars,

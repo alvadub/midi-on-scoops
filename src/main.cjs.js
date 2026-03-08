@@ -4,3 +4,4 @@ export * from './lib/parser';
 export * from './lib/mixup';
 export * from './lib/euclidean';
 export * from './lib/playground';
+export * from './lib/lint.js';

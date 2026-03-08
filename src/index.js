@@ -13,6 +13,7 @@ import {
   findTimelineIndex as findTimelineIndexFromTimeline,
   getMaxPatternSlots as getMaxPatternSlotsFromContext,
 } from './lib';
+import { lintDub } from './lib/lint.js';
 import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
@@ -269,12 +270,14 @@ function getData(input) {
   try {
     lastContext = parse(input);
     const merged = merge(lastContext);
+    syncLintIndicator(lintDub(input, { context: lastContext, merged }));
     sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
     const built = buildMixFromMerged(merged);
 
     return built;
   } catch (e) {
     lastContext = null;
+    syncLintIndicator(null);
     sectionTimeline = [];
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
@@ -544,6 +547,52 @@ function setCursorTokenIndicator(token) {
   const el = document.getElementById('cursor-token-indicator');
   if (!el) return;
   el.textContent = labelCursorToken(token);
+}
+
+function syncLintIndicator(report) {
+  const el = document.getElementById('lint-indicator');
+  if (!el) return;
+
+  if (!report) {
+    el.textContent = 'Lint: —';
+    el.dataset.state = 'idle';
+    el.title = 'No lint report yet.';
+    return;
+  }
+
+  const errors = report.errors ? report.errors.length : 0;
+  const warnings = report.warnings ? report.warnings.length : 0;
+  const issues = []
+    .concat((report.errors || []).map(item => ({ ...item, level: 'error' })))
+    .concat((report.warnings || []).map(item => ({ ...item, level: 'warn' })));
+  if (!issues.length) {
+    el.title = 'No lint issues.';
+  } else {
+    const shown = issues.slice(0, 12).map(item => {
+      const where = item.line ? `line ${item.line}` : 'global';
+      const rule = item.rule ? ` [${item.rule}]` : '';
+      return `${item.level.toUpperCase()} ${where}${rule}: ${item.message}`;
+    });
+    const rest = issues.length - shown.length;
+    el.title = rest > 0
+      ? `${shown.join('\n')}\n... and ${rest} more issue(s).`
+      : shown.join('\n');
+  }
+
+  if (errors > 0) {
+    el.textContent = `Lint: ${errors} err${warnings ? `, ${warnings} warn` : ''}`;
+    el.dataset.state = 'error';
+    return;
+  }
+
+  if (warnings > 0) {
+    el.textContent = `Lint: ${warnings} warn`;
+    el.dataset.state = 'warning';
+    return;
+  }
+
+  el.textContent = 'Lint: ok';
+  el.dataset.state = 'ok';
 }
 
 function markDirty() {
@@ -1128,8 +1177,13 @@ function createDOM(initialText, initialPreset) {
   const cursorTokenIndicator = document.createElement('span');
   cursorTokenIndicator.id = 'cursor-token-indicator';
   cursorTokenIndicator.textContent = 'Cursor: —';
+  const lintIndicator = document.createElement('span');
+  lintIndicator.id = 'lint-indicator';
+  lintIndicator.textContent = 'Lint: —';
+  lintIndicator.dataset.state = 'idle';
   const tokenBadges = document.createElement('div');
   tokenBadges.id = 'token-badges';
+  tokenBadges.appendChild(lintIndicator);
   tokenBadges.appendChild(cursorTokenIndicator);
   tokenBadges.appendChild(sectionIndicator);
   topBadges.appendChild(contextTool);

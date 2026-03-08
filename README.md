@@ -72,6 +72,13 @@ Convert a `.mid` file into a first-pass DUB draft focused on pulse patterns:
 $ midi2dub input.mid output.dub
 ```
 
+Lint a DUB source for semantic issues (unknown sections, pulse/note mismatches, sustain misuse, duplicate input clips):
+
+```sh
+$ npm run dub:lint -- examples/billy_jean.dub
+$ npm run dub:lint -- --strict examples/billy_jean.dub
+```
+
 ## Browser Playground
 
 Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real time.

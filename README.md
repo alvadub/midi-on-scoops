@@ -72,6 +72,28 @@ Convert a `.mid` file into a first-pass DUB draft focused on pulse patterns:
 $ midi2dub input.mid output.dub
 ```
 
+### Compress a source
+
+Use `dub compress` to reduce repeated note/chord expressions by extracting them to `%cN` variables.
+
+```sh
+$ dub compress examples/billy_jean.dub
+$ dub compress examples/billy_jean.dub -o generated/compressed.billy_jean.dub --min-occ 3 --min-len 4
+```
+
+Options:
+
+- `--dry-run`: show a replacement summary without writing files
+- `--min-occ`: minimum occurrences for a replacement candidate (default `2`)
+- `--min-len`: minimum sequence length for pass B (default `2`)
+- `--aggressive`: allow candidates even when local savings is non-positive
+
+Guarantees:
+
+- Parser-compatible output (`parse` is expected to succeed after rewrite)
+- No pattern/rhythm tokens are modified
+- Deterministic `%c1`, `%c2`, ... naming order
+
 Lint a DUB source for semantic issues (unknown sections, pulse/note mismatches, sustain misuse, duplicate input clips):
 
 ```sh

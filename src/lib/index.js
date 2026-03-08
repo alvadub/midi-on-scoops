@@ -1,5 +1,6 @@
 export { merge } from './mixup';
 export { parse } from './parser';
+export { compressDub } from './compress';
 export * from './utils';
 export * from './mixup';
 export * from './parser';

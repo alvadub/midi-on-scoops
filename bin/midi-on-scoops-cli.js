@@ -5,12 +5,12 @@ const watch = require('node-watch');
 const keypress = require('keypress');
 const spawn = require('child_process').spawn;
 
-const { parse } = require('../dist/midi-on-scoops.cjs');
+const { parse, compressDub } = require('../dist/midi-on-scoops.cjs');
 const builder = require('./builder');
 
 const children = [];
 const argv = wargs(process.argv.slice(2), {
-  boolean: ['b', 'fluidsynth'],
+  boolean: ['b', 'fluidsynth', 'dry-run', 'aggressive'],
   alias: {
     o: 'output',
     b: 'bundle',
@@ -22,11 +22,16 @@ Usage:
   dub play [...]     # Play one or more .dub sources
   dub watch [...]    # Watch on *.dub files or directories
   dub export [...]   # Save sources as one or more .midi files
+  dub compress <source> [output]  # Rewrite source with repeated note/chord sequences as %vars
 
 Options:
   -b, --bundle       # Export tracks as a single .midi file
   -o, --output       # Directory for exported .midi files  (default: generated)
   --fluidsynth       # Use FluidSynth instead of timidity
+  --dry-run          # Print summary without writing output
+  --min-occ N        # Minimum occurrences for a candidate (default: 2)
+  --min-len N        # Minimum sequence length for pass B (default: 2)
+  --aggressive       # Compress candidates even when savings are zero/negative
 
 Additional args after -- will set the default playback arguments, e.g.
   dub play track -- fluidsynth -i --gain 2 Unison.sf2
@@ -51,7 +56,7 @@ const keychars = [];
 const prefix = '♫';
 const CLR = '\x1b[K';
 
-const command = ['play', 'watch', 'export'].includes(argv._[0])
+  const command = ['play', 'watch', 'export', 'compress'].includes(argv._[0])
   ? argv._.shift()
   : 'play';
 
@@ -91,6 +96,70 @@ function read(name) {
   }
 
   return fs.readFileSync(file).toString();
+}
+
+function toPositiveInteger(value, fallback) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function buildCompressedOutputPath(sourceFile, outputFlag) {
+  if (!outputFlag) {
+    const parsed = path.parse(sourceFile);
+    return `${parsed.dir ? `${parsed.dir}/` : ''}${parsed.name}.compressed.dub`;
+  }
+
+  if (path.extname(outputFlag)) {
+    return outputFlag;
+  }
+
+  return path.join(outputFlag, `${path.parse(sourceFile).name}.compressed.dub`);
+}
+
+function logCompressionResult(result, outputPath, dryRun) {
+  const summary = `\nreplacements: ${result.summary.replacements}\n`
+    + `variables: ${result.summary.variables}\n`
+    + `token savings: ${result.summary.tokenSavings}\n`
+    + `char savings: ${result.summary.charSavings}\n`;
+
+  if (!result.hasCompressed) {
+    log(`\n${summary}${dryRun ? '' : ''}No profitable repeats detected.\n`);
+    return;
+  }
+
+  if (dryRun) {
+    log(`${summary}\n`);
+    log(`output: ${outputPath}\n`);
+    return;
+  }
+
+  log(`${summary}\nwritten: ${outputPath}\n`);
+}
+
+function runCompression(sourceFile) {
+  const outputPath = buildCompressedOutputPath(sourceFile.filepath, argv.flags.output);
+  const source = read(sourceFile.filepath);
+  const result = compressDub(source, {
+    minOccurrences: toPositiveInteger(
+      (argv.flags['min-occ'] || argv.flags.minOcc),
+      2,
+    ),
+    minSequenceLength: toPositiveInteger(
+      (argv.flags['min-len'] || argv.flags.minLen),
+      2,
+    ),
+    aggressive: !!argv.flags.aggressive,
+  });
+
+  const output = `${outputPath}`;
+  const dryRun = !!(argv.flags['dry-run'] || argv.flags.dryRun);
+
+  logCompressionResult(result, output, dryRun);
+  if (dryRun || !result.hasCompressed) {
+    return;
+  }
+
+  fs.writeFileSync(output, `${result.source}\n`);
 }
 
 function search(message) {
@@ -328,6 +397,17 @@ try {
 }
 
 switch (command) {
+  case 'compress': {
+    if (!sources.length) {
+      onFail(new Error('Missing source file for dub compress'));
+      break;
+    }
+
+    sources.forEach(source => runCompression(source));
+    process.exit(0);
+    break;
+  }
+
   case 'watch': {
     log(search(`\b        Watching ${sources.length} source${sources.length === 1 ? '' : 's'} ...${CLR}\r`));
 

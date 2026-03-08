@@ -219,6 +219,17 @@ describe('reducer', () => {
     ]]);
   });
 
+  it('should honor scribbletune sustain with _ and rest with -', () => {
+    const input = [{ type: 'pattern', value: 'x_--x' }];
+    expect(reduce(input, {}, pack([90, 100], ['c3', 'd3']))).to.eql([[
+      { v: 90, n: 'c3' },
+      { v: 0, h: 1 },
+      { v: 0 },
+      { v: 0 },
+      { v: 100, n: 'd3' },
+    ]]);
+  });
+
   it('should resolve numbers', () => {
     const ctx = parse(`
       A: 1
@@ -356,6 +367,46 @@ describe('remix', () => {
     expect(midi[0][1]).to.eql([A1, AA1]);
     expect(midi[0][2]).to.eql([B1, B2, BB1]);
     expect(midi[0][3]).to.eql([A1, AA1]);
+  });
+
+  it('preserves sustain slots with single shared velocity for notes', () => {
+    const ticks = merge(parse(`
+      # melody
+        @A
+          #0 77 x___x--- D5 D4
+      > A
+    `))[0][0][0][2];
+
+    expect(ticks.slice(0, 8)).to.eql([
+      { v: 77, n: 'D5' },
+      { v: 0, h: 1 },
+      { v: 0, h: 1 },
+      { v: 0, h: 1 },
+      { v: 77, n: 'D4' },
+      { v: 0 },
+      { v: 0 },
+      { v: 0 },
+    ]);
+  });
+
+  it('preserves sustain slots with single shared velocity for chords', () => {
+    const ticks = merge(parse(`
+      # chords
+        @A
+          #0 77 x___x--- D3|A3|D5 G3|B3|G4
+      > A
+    `))[0][0][0][2];
+
+    expect(ticks.slice(0, 8)).to.eql([
+      { v: 77, n: ['D3', 'A3', 'D5'] },
+      { v: 0, h: 1 },
+      { v: 0, h: 1 },
+      { v: 0, h: 1 },
+      { v: 77, n: ['G3', 'B3', 'G4'] },
+      { v: 0 },
+      { v: 0 },
+      { v: 0 },
+    ]);
   });
 });
 

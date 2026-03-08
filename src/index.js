@@ -1,6 +1,19 @@
 import { scale } from 'harmonics';
 import Player from './components/player.js';
-import { parse, merge } from './lib';
+import {
+  parse,
+  merge,
+  extractDraftTempo,
+  extractDraftBars,
+  extractDraftKey,
+  buildMixFromMerged,
+  buildTrackLineMap,
+  applyLatestInputWins,
+  buildSectionTimeline as buildSectionTimelineFromSource,
+  getSectionAtBeat as getSectionAtBeatFromTimeline,
+  findTimelineIndex as findTimelineIndexFromTimeline,
+  getMaxPatternSlots as getMaxPatternSlotsFromContext,
+} from './lib';
 import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
@@ -192,7 +205,7 @@ const ODE_TO_JOY = `
 > A B
 `.trim();
 
-const HOT_CROSS_BUNS_MIDI = `
+const HOT_CROSS_BUNS_MIDI_PLAIN = `
 ; MIDI import: hot_cross_buns.bitmidi.mid
 ; tempo: 125
 ; bars: 16
@@ -208,12 +221,29 @@ const HOT_CROSS_BUNS_MIDI = `
 > A
 `.trim();
 
+const HOT_CROSS_BUNS_MIDI_SUSTAIN = `
+; MIDI import: hot_cross_buns.bitmidi.mid
+; tempo: 125
+; bars: 16
+
+# imported
+  @A
+    #0 77 x---x--- x------- x---x--- x------- x-x-x-x- x-x-x-x- x---x--- x---x-x- x-x-x-x- x---x--- x-x-x-x- x------- x-x-x-x- x-x-x-x- x---x--- x------- x------- D5 D4 G4 D5 D4 G4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4 G4 D5 D5 D5 D5 C5 C5 B4 B4 B4 B4 A4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4
+
+## imported_chords
+  @A
+    #0 74 x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x_______ x------- D3|A3|D5 G3|B3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 C3|G3|C5 D3|G3|B4 D3|Gb3|A4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 G3|B3|G4
+
+> A
+`.trim();
+
 const PRESETS = {
   tetris: TETRIS,
   billy_jean: BILLY_JEAN,
   locks: LOCKS,
   ode_to_joy: ODE_TO_JOY,
-  hot_cross_buns_midi: HOT_CROSS_BUNS_MIDI,
+  hot_cross_buns_midi_plain: HOT_CROSS_BUNS_MIDI_PLAIN,
+  hot_cross_buns_midi_sustain: HOT_CROSS_BUNS_MIDI_SUSTAIN,
 };
 
 const PRESET_LABELS = {
@@ -221,7 +251,8 @@ const PRESET_LABELS = {
   billy_jean: 'Billy Jean',
   locks: 'Locks',
   ode_to_joy: 'Ode to Joy',
-  hot_cross_buns_midi: 'Hot Cross Buns (MIDI import)',
+  hot_cross_buns_midi_plain: 'Hot Cross Buns (MIDI plain)',
+  hot_cross_buns_midi_sustain: 'Hot Cross Buns (MIDI sustain)',
 };
 
 const SCALE_INFO = {
@@ -234,96 +265,14 @@ const SCALE_INFO = {
   locrian: 'H W W H W W W  -  diminished flavor',
 };
 
-function extractDraftTempo(input) {
-  const m = String(input || '').match(/^\s*;\s*tempo\s*:\s*(\d+(?:\.\d+)?)\s*$/im);
-  if (!m) return null;
-  const n = Math.round(parseFloat(m[1]));
-  if (!Number.isFinite(n)) return null;
-  return Math.max(60, Math.min(200, n));
-}
-
-function extractDraftBars(input) {
-  const m = String(input || '').match(/^\s*;\s*bars\s*:\s*(\d+)\s*$/im);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  if (!Number.isFinite(n)) return null;
-  return Math.max(4, Math.min(32, n));
-}
-
-function extractDraftKey(input) {
-  const m = String(input || '').match(/^\s*;\s*key\s*:\s*([+-]?\d+)\s*$/im);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  if (!Number.isFinite(n)) return null;
-  return Math.max(-12, Math.min(12, n));
-}
-
-function build(midi) {
-  const mix = [];
-
-  function get(nth, name) {
-    const key = nth + name;
-
-    if (!get[key]) {
-      const track = [nth, name, []];
-      mix.push(track);
-      get[key] = { track };
-    }
-    return get[key];
-  }
-
-  midi.forEach(section => {
-    section.forEach(parts => {
-      parts.forEach(e => {
-        const { track } = get(e[0], e[1]);
-        for (let i = 0; i < e[2].length; i += 1) {
-          track[2].push(e[2][i]);
-        }
-      });
-    });
-  });
-  return mix;
-}
-
-function buildTrackLineMap(input) {
-  const map = new Map();
-  let currentTrack = null;
-  String(input || '').split(/\r?\n/).forEach((rawLine, lineNumber) => {
-    const line = rawLine.replace(/;.+?$/, '').trim();
-    if (!line) return;
-
-    if (/^#{1,2}\s+/.test(line) && !/^#\d+/.test(line)) {
-      currentTrack = line.replace(/^#{1,2}\s+/, '').trim();
-      return;
-    }
-
-    if (!currentTrack) return;
-    const match = line.match(/^#(\d+)\b/);
-    if (!match) return;
-    const key = `${parseInt(match[1], 10)}/${currentTrack}`;
-    const prev = map.get(key) || [];
-    if (!prev.includes(lineNumber)) prev.push(lineNumber);
-    map.set(key, prev);
-  });
-  return map;
-}
-
 function getData(input) {
   trackLineMap = buildTrackLineMap(input);
   try {
     lastContext = parse(input);
-    // Runtime guard: keep the last input clip as the active one per channel.
-    // This enforces "latest line wins" semantics even if parser output varies by bundle path.
-    Object.values(lastContext.tracks || {}).forEach(channels => {
-      Object.keys(channels || {}).forEach(ch => {
-        const clips = channels[ch] || [];
-        const lastInput = clips.reduce((idx, clip, i) => (clip && clip.input ? i : idx), -1);
-        if (lastInput > 0) channels[ch] = clips.slice(lastInput);
-      });
-    });
+    applyLatestInputWins(lastContext);
     const merged = merge(lastContext);
-    sectionTimeline = buildSectionTimeline(lastContext, merged);
-    const built = build(merged);
+    sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
+    const built = buildMixFromMerged(merged);
 
     return built;
   } catch (e) {
@@ -335,98 +284,12 @@ function getData(input) {
   }
 }
 
-function buildSectionTimeline(context, merged) {
-  if (!context || !Array.isArray(merged) || merged.length === 0) return [];
-  if (!context.main || !context.main.length) return [];
-
-  const sectionRefs = {};
-  Object.values(context.tracks || {}).forEach(channels => {
-    Object.keys(channels || {}).forEach(ch => {
-      const [tag] = String(ch).split('#');
-      if (tag && !sectionRefs[tag]) sectionRefs[tag] = tag;
-    });
-  });
-
-  const expanded = buildArrangementDisplayExpansion(editorApi ? editorApi.getValue() : '');
-  const flattenedSections = [];
-  merged.forEach(group => {
-    (group || []).forEach(parts => {
-      flattenedSections.push(parts);
-    });
-  });
-
-  const timeline = [];
-  let cursor = 0;
-  flattenedSections.forEach((parts, idx) => {
-    const mergedBeats = (parts || []).reduce((max, t) => {
-      const len = Array.isArray(t[2]) ? t[2].length : 0;
-      return Math.max(max, len);
-    }, 0);
-    const token = expanded[idx] || expanded[expanded.length - 1] || null;
-    const name = token ? token.name : null;
-    const displayOrder = token ? token.displayOrder : null;
-    const beats = Math.max(1, mergedBeats);
-    const start = cursor;
-    const end = Math.max(start, start + beats - 1);
-    cursor = end + 1;
-    timeline.push({ name, displayOrder, start, end });
-  });
-  return timeline;
-}
-
-function buildArrangementDisplayExpansion(sourceText) {
-  const lines = String(sourceText || '').split(/\r?\n/);
-  const expanded = [];
-  let tokenOrder = 0;
-
-  lines.forEach(rawLine => {
-    const noComment = rawLine.replace(/;.*$/, '');
-    const trimmed = noComment.trim();
-    if (!trimmed.startsWith('>')) return;
-    const body = trimmed.slice(1).trim();
-    if (!body) return;
-    const parts = body.split(/\s+/);
-    let last = null;
-    parts.forEach(part => {
-      if (/^[A-Z][A-Z0-9]*$/.test(part)) {
-        last = { name: part, displayOrder: tokenOrder };
-        tokenOrder += 1;
-        expanded.push(last);
-        return;
-      }
-      if (/^x(\d+)$/.test(part) && last) {
-        const count = Math.max(1, parseInt(part.slice(1), 10));
-        for (let i = 1; i < count; i += 1) {
-          expanded.push({ name: last.name, displayOrder: tokenOrder });
-        }
-        tokenOrder += 1;
-        return;
-      }
-      if (part === '%' && last) {
-        expanded.push({ name: last.name, displayOrder: tokenOrder });
-        tokenOrder += 1;
-      }
-    });
-  });
-
-  return expanded;
-}
-
 function getSectionAtBeat(beatIndex) {
-  const index = sectionTimeline.findIndex(section => (
-    section.name && beatIndex >= section.start && beatIndex <= section.end
-  ));
-  if (index < 0) return null;
-  return { index, item: sectionTimeline[index] };
+  return getSectionAtBeatFromTimeline(sectionTimeline, beatIndex);
 }
 
 function findTimelineIndex(displayOrder, name) {
-  if (typeof displayOrder === 'number' && displayOrder >= 0) {
-    const idx = sectionTimeline.findIndex(section => section.displayOrder === displayOrder);
-    if (idx >= 0) return idx;
-  }
-  if (name) return sectionTimeline.findIndex(section => section.name === name);
-  return -1;
+  return findTimelineIndexFromTimeline(sectionTimeline, displayOrder, name);
 }
 
 function jumpToSectionTimelineIndex(index) {
@@ -469,12 +332,7 @@ function queueSectionLaunch(name, order) {
 }
 
 function getMaxPatternSlots() {
-  if (!lastContext || !lastContext.trackPatternSlots) return 0;
-
-  const slots = Object.values(lastContext.trackPatternSlots);
-  if (slots.length === 0) return 0;
-
-  return Math.max(...slots);
+  return getMaxPatternSlotsFromContext(lastContext);
 }
 
 function evalBlock() {
@@ -716,9 +574,9 @@ function updatePlayButton() {
   if (playBtn) playBtn.textContent = playing ? '▶ Playing...' : '▶ Play';
 }
 
-function updateLoopButton() {
-  const loopBtn = document.getElementById('loop-btn');
-  if (loopBtn) loopBtn.textContent = songLoop ? '↻ Loop: On' : '↻ Loop: Off';
+function updateLoopCheckbox() {
+  const loopCheckbox = document.getElementById('loop-checkbox');
+  if (loopCheckbox) loopCheckbox.checked = Boolean(songLoop);
 }
 
 function updateBeatDots() {
@@ -1144,15 +1002,20 @@ function createDOM(initialText, initialPreset) {
   stopBtn.textContent = '■ Stop';
   stopBtn.addEventListener('click', stop);
 
-  const loopBtn = document.createElement('button');
-  loopBtn.id = 'loop-btn';
-  loopBtn.addEventListener('click', () => {
-    songLoop = !songLoop;
+  const loopLabel = document.createElement('label');
+  loopLabel.className = 'field-group';
+  loopLabel.textContent = 'Loop ';
+  const loopCheckbox = document.createElement('input');
+  loopCheckbox.id = 'loop-checkbox';
+  loopCheckbox.type = 'checkbox';
+  loopCheckbox.addEventListener('change', () => {
+    songLoop = Boolean(loopCheckbox.checked);
     p.setSongLoop(songLoop);
-    updateLoopButton();
+    updateLoopCheckbox();
     showStatus(songLoop ? 'Loop enabled' : 'Loop disabled', 'ready');
   });
-  updateLoopButton();
+  loopLabel.appendChild(loopCheckbox);
+  updateLoopCheckbox();
 
   const midiBtn = document.createElement('button');
   midiBtn.id = 'midi-btn';
@@ -1186,7 +1049,7 @@ function createDOM(initialText, initialPreset) {
     // toolbarControls.appendChild(aboutLink);
     toolbarControls.appendChild(playBtn);
     toolbarControls.appendChild(stopBtn);
-    toolbarControls.appendChild(loopBtn);
+    toolbarControls.appendChild(loopLabel);
     toolbarControls.appendChild(midiBtn);
 
   const beatIndicatorBar = document.createElement('div');

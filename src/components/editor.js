@@ -132,9 +132,9 @@ function buildPatternPreviewMarkup(pattern) {
     const cls = ch === 'x' || ch === 'X'
       ? 'is-pulse'
       : ch === '-'
-        ? 'is-hold'
+        ? 'is-rest'
         : ch === '_'
-          ? 'is-rest'
+          ? 'is-hold'
           : 'is-sub';
     const group = i % 4 === 0 ? 'is-group' : '';
     return `<span class="pp-cell ${cls} ${group}" aria-label="step ${i + 1}"></span>`;
@@ -151,8 +151,8 @@ function describePattern(pattern) {
   symbols.forEach((ch, i) => {
     const low = ch.toLowerCase();
     if (low === 'x') pulseIdx.push(i);
-    else if (ch === '-') holds += 1;
-    else if (ch === '_') rests += 1;
+    else if (ch === '_') holds += 1;
+    else if (ch === '-') rests += 1;
   });
 
   if (pulseIdx.length === 0) {
@@ -426,7 +426,7 @@ export function createEditor(initialText, options = {}) {
     },
     {
       attr: 'pattern',
-      resolve: value => `${describePattern(value)}\nx = hit  |  - = hold  |  _ = rest  |  [ ] = subdivide`,
+      resolve: value => `${describePattern(value)}\nx = hit  |  - = rest  |  _ = sustain  |  [ ] = subdivide`,
       title: () => 'Rhythm pattern',
       visual: value => buildPatternPreviewMarkup(value),
     },

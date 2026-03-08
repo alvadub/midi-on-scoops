@@ -27,6 +27,7 @@ function parseMidi(buffer) {
 
   let offset = 8 + headerLen;
   const tracks = [];
+  const noteSpans = [];
   const tempos = [];
   const programs = {};
 
@@ -40,6 +41,7 @@ function parseMidi(buffer) {
     let tick = 0;
     let running = null;
     const events = [];
+    const active = new Map();
     while (offset < end) {
       const delta = readVarLen(buffer, offset);
       tick += delta.value;
@@ -90,14 +92,51 @@ function parseMidi(buffer) {
 
       if (type === 0x90 && d2 > 0) {
         events.push({ tick, channel, note: d1, velocity: d2 });
+        if (channel !== 9) {
+          const key = `${channel}:${d1}`;
+          const stack = active.get(key) || [];
+          stack.push({ startTick: tick, velocity: d2 });
+          active.set(key, stack);
+        }
       } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
-        // ignore note-off for first-pass pulse extraction
+        if (channel !== 9) {
+          const key = `${channel}:${d1}`;
+          const stack = active.get(key) || [];
+          const head = stack.pop();
+          if (head) {
+            noteSpans.push({
+              channel,
+              note: d1,
+              velocity: head.velocity,
+              startTick: head.startTick,
+              endTick: Math.max(head.startTick + 1, tick),
+            });
+          }
+          if (stack.length) active.set(key, stack);
+          else active.delete(key);
+        }
       }
     }
+    active.forEach((stack, key) => {
+      const [channelStr, noteStr] = key.split(':');
+      const channel = parseInt(channelStr, 10);
+      const noteValue = parseInt(noteStr, 10);
+      stack.forEach(head => {
+        noteSpans.push({
+          channel,
+          note: noteValue,
+          velocity: head.velocity,
+          startTick: head.startTick,
+          endTick: Math.max(head.startTick + 1, tick),
+        });
+      });
+    });
     tracks.push(events);
   }
 
-  return { format, ppqn, tracks, tempos, programs };
+  return {
+    format, ppqn, tracks, noteSpans, tempos, programs,
+  };
 }
 
 function roundDiv(n, d) {
@@ -214,12 +253,144 @@ function withLoopTail(slotsMap, tailSlot) {
   return next;
 }
 
-function toDub(midi, sourceName) {
+function buildSustainLanes(noteSpans, ppqn, programs = {}, slotsPerBeat = 4) {
+  const slotTicks = ppqn / slotsPerBeat;
+  const lanes = new Map();
+  (noteSpans || []).forEach(ev => {
+    const key = `${ev.channel}`;
+    if (!lanes.has(key)) {
+      lanes.set(key, {
+        channel: ev.channel,
+        program: Number.isFinite(programs[ev.channel]) ? programs[ev.channel] : 0,
+        slots: new Map(),
+      });
+    }
+    const lane = lanes.get(key);
+    const startSlot = Math.max(0, Math.floor(ev.startTick / slotTicks));
+    const endSlot = Math.max(startSlot + 1, Math.ceil(ev.endTick / slotTicks));
+    for (let slot = startSlot; slot < endSlot; slot += 1) {
+      const state = lane.slots.get(slot) || { onset: new Map(), active: new Map() };
+      state.active.set(ev.note, ev.velocity);
+      if (slot === startSlot) state.onset.set(ev.note, ev.velocity);
+      lane.slots.set(slot, state);
+    }
+  });
+  return [...lanes.values()];
+}
+
+function withLoopTailSustainSlots(slotsMap, tailSlot) {
+  let lastSlot = -1;
+  let lastState = null;
+  for (const [slot, state] of slotsMap.entries()) {
+    if (!state || !state.onset || state.onset.size === 0) continue;
+    if (slot > lastSlot) {
+      lastSlot = slot;
+      lastState = state;
+    }
+  }
+  if (!lastState) return slotsMap;
+  const next = new Map(slotsMap);
+  next.set(tailSlot, {
+    onset: new Map(lastState.onset),
+    active: new Map(lastState.active),
+  });
+  return next;
+}
+
+function buildMelodyFromSustainSlots(slotsMap, totalSlots) {
+  const out = [];
+  const notes = [];
+  const velocities = [];
+  let current = null;
+  const toNoteName = n => note(n) || 'C4';
+  for (let slot = 0; slot < totalSlots; slot += 1) {
+    const state = slotsMap.get(slot);
+    if (!state) {
+      out.push('-');
+      current = null;
+      continue;
+    }
+    const onsetNotes = [...state.onset.keys()].sort((a, b) => a - b);
+    if (onsetNotes.length === 1) {
+      current = onsetNotes[onsetNotes.length - 1];
+      out.push('x');
+      notes.push(toNoteName(current));
+      velocities.push(state.onset.get(current) || 100);
+      continue;
+    }
+    if (onsetNotes.length > 1) {
+      current = null;
+      out.push('-');
+      continue;
+    }
+    if (current != null && state.active.has(current)) {
+      out.push('_');
+      continue;
+    }
+    current = null;
+    out.push('-');
+  }
+  const chunks = [];
+  for (let i = 0; i < out.length; i += 8) chunks.push(out.slice(i, i + 8).join(''));
+  return { pattern: chunks.join(' '), notes, velocity: median(velocities) };
+}
+
+function buildChordsFromSustainSlots(slotsMap, totalSlots) {
+  const out = [];
+  const notes = [];
+  const velocities = [];
+  let current = null;
+  const toNoteName = n => note(n) || 'C4';
+  for (let slot = 0; slot < totalSlots; slot += 1) {
+    const state = slotsMap.get(slot);
+    if (!state) {
+      out.push('-');
+      current = null;
+      continue;
+    }
+    const onsetNotes = [...state.onset.keys()].sort((a, b) => a - b);
+    if (onsetNotes.length >= 2) {
+      current = onsetNotes;
+      out.push('x');
+      notes.push(current.map(toNoteName).join('|'));
+      onsetNotes.forEach(n => velocities.push(state.onset.get(n) || 100));
+      continue;
+    }
+    // Keep sustaining the voiced chord while at least one chord tone
+    // remains active; this avoids choppy retriggers from per-note note-off variance.
+    if (current && current.some(n => state.active.has(n))) {
+      out.push('_');
+      continue;
+    }
+    current = null;
+    out.push('-');
+  }
+  const chunks = [];
+  for (let i = 0; i < out.length; i += 8) chunks.push(out.slice(i, i + 8).join(''));
+  return { pattern: chunks.join(' '), notes, velocity: median(velocities) };
+}
+
+function toDub(midi, sourceName, options = {}) {
+  const sustain = Boolean(options && options.sustain);
   const events = midi.tracks.reduce((memo, tr) => memo.concat(tr), []);
   const firstTempo = midi.tempos[0] ? Math.round(60000000 / midi.tempos[0].usPerQuarter) : 120;
-  const { lanes, subDiv } = buildPulseSlots(events, midi.ppqn, midi.programs, 4, 4);
+  const exportTempo = firstTempo;
+  const { lanes: pulseLanes, subDiv } = buildPulseSlots(events, midi.ppqn, midi.programs, 4, 4);
+  const drumLanes = pulseLanes.filter(x => x.isDrum);
+  const melodicSustainLanes = sustain
+    ? buildSustainLanes(midi.noteSpans || [], midi.ppqn, midi.programs, 4)
+    : [];
+  const pulseMelodicLanes = pulseLanes.filter(x => !x.isDrum);
+  const sustainLaneByChannel = new Map(
+    melodicSustainLanes.map(lane => [lane.channel, lane]),
+  );
+
   let maxSlot = 0;
-  lanes.forEach(l => {
+  pulseLanes.forEach(l => {
+    const laneMax = [...l.slots.keys()].reduce((m, n) => Math.max(m, n), 0);
+    if (laneMax > maxSlot) maxSlot = laneMax;
+  });
+  melodicSustainLanes.forEach(l => {
     const laneMax = [...l.slots.keys()].reduce((m, n) => Math.max(m, n), 0);
     if (laneMax > maxSlot) maxSlot = laneMax;
   });
@@ -232,23 +403,11 @@ function toDub(midi, sourceName) {
   const chordLines = [];
   const drumLines = [];
 
-  lanes
+  pulseMelodicLanes
     .sort((a, b) => (a.channel - b.channel) || ((a.note || 0) - (b.note || 0)))
     .forEach(lane => {
+      const instrument = lane.program;
       const laneSlots = withLoopTail(lane.slots, tailSlot);
-      const instrument = lane.isDrum ? 0 : lane.program;
-      if (lane.isDrum) {
-        const out = patternFromSlots(
-          laneSlots,
-          totalSlots,
-          subDiv,
-          (tones, toNoteName) => (tones.length ? toNoteName(tones[0]) : null),
-        );
-        if (!out.notes.length) return;
-        drumLines.push(`    #${instrument} ${out.velocity} ${out.pattern} ${out.notes[0]} x${out.notes.length}`);
-        return;
-      }
-
       const melody = patternFromSlots(
         laneSlots,
         totalSlots,
@@ -259,23 +418,40 @@ function toDub(midi, sourceName) {
         melodyLines.push(`    #${instrument} ${melody.velocity} ${melody.pattern} ${melody.notes.join(' ')}`);
       }
 
-      const chords = patternFromSlots(
-        laneSlots,
-        totalSlots,
-        subDiv,
-        (tones, toNoteName) => {
-          if (tones.length < 2) return null;
-          return tones.map(toNoteName).join('|');
-        },
-      );
+      const sustainLane = sustain ? sustainLaneByChannel.get(lane.channel) : null;
+      const chords = sustain && sustainLane
+        ? buildChordsFromSustainSlots(withLoopTailSustainSlots(sustainLane.slots, tailSlot), totalSlots)
+        : patternFromSlots(
+          laneSlots,
+          totalSlots,
+          subDiv,
+          (tones, toNoteName) => {
+            if (tones.length < 2) return null;
+            return tones.map(toNoteName).join('|');
+          },
+        );
       if (chords.notes.length) {
         chordLines.push(`    #${instrument} ${chords.velocity} ${chords.pattern} ${chords.notes.join(' ')}`);
       }
     });
 
+  drumLanes
+    .sort((a, b) => (a.channel - b.channel) || ((a.note || 0) - (b.note || 0)))
+    .forEach(lane => {
+      const laneSlots = withLoopTail(lane.slots, tailSlot);
+      const out = patternFromSlots(
+        laneSlots,
+        totalSlots,
+        subDiv,
+        (tones, toNoteName) => (tones.length ? toNoteName(tones[0]) : null),
+      );
+      if (!out.notes.length) return;
+      drumLines.push(`    #0 ${out.velocity} ${out.pattern} ${out.notes[0]} x${out.notes.length}`);
+    });
+
   const lines = [];
   lines.push(`; MIDI import: ${sourceName}`);
-  lines.push(`; tempo: ${firstTempo}`);
+  lines.push(`; tempo: ${exportTempo}`);
   lines.push(`; bars: 16`);
   lines.push('');
   if (melodyLines.length) {
@@ -302,24 +478,26 @@ function toDub(midi, sourceName) {
 }
 
 function usage() {
-  console.log('Usage: midi2dub <input.mid> [output.dub]');
+  console.log('Usage: midi2dub <input.mid> [output.dub] [--sustain]');
 }
 
 function main(argv) {
   const args = argv.slice(2).filter(Boolean);
-  if (!args.length) {
+  const sustain = args.includes('--sustain');
+  const positional = args.filter(x => x !== '--sustain');
+  if (!positional.length) {
     usage();
     process.exit(1);
   }
-  const input = args[0];
-  const output = args[1];
+  const input = positional[0];
+  const output = positional[1];
   if (!fs.existsSync(input)) {
     console.error(`Input not found: ${input}`);
     process.exit(1);
   }
   const buffer = fs.readFileSync(input);
   const midi = parseMidi(buffer);
-  const dub = toDub(midi, path.basename(input));
+  const dub = toDub(midi, path.basename(input), { sustain });
   if (output) {
     fs.writeFileSync(output, dub, 'utf8');
     console.log(`Wrote ${output}`);

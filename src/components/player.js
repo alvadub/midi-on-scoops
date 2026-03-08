@@ -430,32 +430,41 @@ export default class Player {
       if (!(level > 0)) return [];
       return [[level, baseOffset, span]];
     };
-    const collectNoteEvents = (tick, baseOffset = 0, span = 1) => {
+    const collectNoteTokens = (tick, baseOffset = 0, span = 1) => {
       if (!tick) return [];
 
       if (Array.isArray(tick)) {
         const total = tick.length || 1;
         return tick.reduce((memo, subTick, subIndex) => {
-          memo.push(...collectNoteEvents(subTick, baseOffset + ((subIndex / total) * span), span / total));
+          memo.push(...collectNoteTokens(subTick, baseOffset + ((subIndex / total) * span), span / total));
           return memo;
         }, []);
+      }
+
+      if (tick.h || tick.l === '_') {
+        return [{ type: 'hold', offset: baseOffset, span }];
       }
 
       const level = tick && typeof tick.v !== 'undefined' ? tick.v : 0;
-      if (!(level > 0) || !tick.n) return [];
+      if (!(level > 0) || !tick.n) {
+        return [{ type: 'rest', offset: baseOffset, span }];
+      }
 
       if (Array.isArray(tick.n)) {
-        return tick.n.reduce((memo, tone) => {
+        const pitches = tick.n.reduce((memo, tone) => {
           const pitch = this.pitch(tone);
-          if (Number.isFinite(pitch)) memo.push([pitch, level, baseOffset, span]);
+          if (Number.isFinite(pitch)) memo.push(pitch);
           return memo;
         }, []);
+        if (!pitches.length) return [{ type: 'rest', offset: baseOffset, span }];
+        return [{ type: 'hit', pitches, level, offset: baseOffset, span }];
       }
 
       const pitch = this.pitch(tick.n);
-      if (!Number.isFinite(pitch)) return [];
-      return [[pitch, level, baseOffset, span]];
+      if (!Number.isFinite(pitch)) return [{ type: 'rest', offset: baseOffset, span }];
+      return [{ type: 'hit', pitches: [pitch], level, offset: baseOffset, span }];
     };
+    const activeNoteRefsByKey = new Map();
 
     const nextKeys = new Set();
     for (let i = 0; i < count; i += 1) {
@@ -472,10 +481,29 @@ export default class Player {
             slot.drums.push([track[0] - 2000, level, offset, span]);
           });
         } else {
-          const events = collectNoteEvents(tick);
-          events.forEach(([pitches, level, offset, span]) => {
-            slot.notes.push([track[0], pitches, duration, level, offset, span]);
+          let activeRefs = activeNoteRefsByKey.get(key) || [];
+          const events = collectNoteTokens(tick);
+          events.forEach((event) => {
+            if (event.type === 'rest') {
+              activeRefs = [];
+              return;
+            }
+            if (event.type === 'hold') {
+              if (!activeRefs.length) return;
+              activeRefs.forEach((ref) => {
+                ref[5] += event.span;
+              });
+              return;
+            }
+            const refs = [];
+            event.pitches.forEach((pitch) => {
+              const row = [track[0], pitch, duration, event.level, event.offset, event.span];
+              slot.notes.push(row);
+              refs.push(row);
+            });
+            activeRefs = refs;
           });
+          activeNoteRefsByKey.set(key, activeRefs);
         }
       });
       this.beats[i] = beat;
@@ -974,6 +1002,12 @@ export default class Player {
 
   queueToTrackNodes(font, when, pitch, duration, gain, nodes) {
     const startAt = Math.max(when, this.audioContext.currentTime + 0.001);
+    if (Array.isArray(pitch)) {
+      const tones = pitch.filter(Number.isFinite);
+      if (!tones.length) return;
+      this.player.queueChord(this.audioContext, nodes.input, font, startAt, tones, duration, gain);
+      return;
+    }
     this.player.queueWaveTable(this.audioContext, nodes.input, font, startAt, pitch, duration, gain);
   }
 
@@ -1002,11 +1036,17 @@ export default class Player {
           this.cacheInstrument(info);
           return;
         }
+        const startAt = when + (subOffsetRatio * beatDuration);
+        const basePulseDuration = duration * N;
+        const baseDuration = basePulseDuration * subSpan;
+        // Held notes can sound shorter than expected on some fonts (e.g. piano envelopes),
+        // so keep a small overlap to preserve legato perception without changing beat timing.
+        const legatoComp = subSpan > 1 ? Math.min(beatDuration, baseDuration * 0.5) : 0;
         this.queueToTrackNodes(
           window[info.variable],
-          when + (subOffsetRatio * beatDuration),
+          startAt,
           pitches,
-          duration * N * subSpan,
+          baseDuration + legatoComp,
           (1 / 127) * level,
           nodes,
         );

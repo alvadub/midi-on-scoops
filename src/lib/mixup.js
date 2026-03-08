@@ -80,16 +80,26 @@ export function pack(values, notes) {
     let token;
     if (!'-x_'.includes(x)) {
       token = { v: 127, l: x };
-    } else {
-      token = { v: x === '-' ? 0 : 127 };
-    }
-
-    if (x !== '-') {
       token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
       if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
       if (values.length === 1) token.v = values[0];
       if (token.v || token.n) offset += 1;
+      return token;
     }
+
+    if (x === '-') {
+      return { v: 0 };
+    }
+
+    if (x === '_') {
+      return { v: 0, h: 1 };
+    }
+
+    token = { v: 127 };
+    token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
+    if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
+    if (values.length === 1) token.v = values[0];
+    if (token.v || token.n) offset += 1;
     return token;
   }
 

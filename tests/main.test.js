@@ -103,6 +103,7 @@ describe('parser', () => {
     expect(parse(sample).tracks).to.eql({
       drums: {
         '#35': [
+          { input: [p('x---'), p('----'), p('x---'), p('----')] },
           { input: [p('----'), p('[xx-x]---'), p('----'), p('x---')] },
         ],
         '#14': [{ input: [p('[1]---'), p('----'), p('----'), p('----')] }],
@@ -193,12 +194,16 @@ describe('parser', () => {
     const D = [{ type: 'note', value: 'C4' }, { type: 'note', value: 'D4' }];
     const D1 = [{ type: 'note', value: 'G4' }, { type: 'note', value: 'A4' }];
     const A1 = { data: D, input: [{ type: 'pattern', value: 'x---' }, { type: 'pattern', value: 'x---' }] };
-    const AA1 = { input: A1.input, values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }] };
+    const AA1 = {
+      input: A1.input,
+      values: [{ type: 'number', value: 110 }, { type: 'number', value: 120 }],
+      data: D1,
+    };
 
     expect(ast.tracks).to.eql({
       track: {
         'A#1': [A1],
-        'B#1': [{ ...A1, data: D1 }, AA1],
+        'B#1': [A1, AA1],
       },
       other: {
         'C#1': [{ input: [{ type: 'pattern', value: '---x' }, { type: 'pattern', value: '---x' }] }],
@@ -367,6 +372,27 @@ describe('remix', () => {
     expect(midi[0][1]).to.eql([A1, AA1]);
     expect(midi[0][2]).to.eql([B1, B2, BB1]);
     expect(midi[0][3]).to.eql([A1, AA1]);
+  });
+
+  it('keeps note overrides on inherited sections without dropping notes', () => {
+    const midi = merge(parse(`
+      %a C4 D4
+      %b E4 F4
+
+      # lead
+        @A
+          #1 x-x- %a
+        @B < A
+          #1 %b
+
+      > A B
+    `));
+
+    const sectionA = midi[0][0][0][2].filter(t => t.v > 0).map(t => t.n);
+    const sectionB = midi[0][1][0][2].filter(t => t.v > 0).map(t => t.n);
+
+    expect(sectionA).to.eql(['C4', 'D4']);
+    expect(sectionB).to.eql(['E4', 'F4']);
   });
 
   it('preserves sustain slots with single shared velocity for notes', () => {

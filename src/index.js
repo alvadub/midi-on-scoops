@@ -8,7 +8,6 @@ import {
   extractDraftKey,
   buildMixFromMerged,
   buildTrackLineMap,
-  applyLatestInputWins,
   buildSectionTimeline as buildSectionTimelineFromSource,
   getSectionAtBeat as getSectionAtBeatFromTimeline,
   findTimelineIndex as findTimelineIndexFromTimeline,
@@ -269,7 +268,6 @@ function getData(input) {
   trackLineMap = buildTrackLineMap(input);
   try {
     lastContext = parse(input);
-    applyLatestInputWins(lastContext);
     const merged = merge(lastContext);
     sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
     const built = buildMixFromMerged(merged);

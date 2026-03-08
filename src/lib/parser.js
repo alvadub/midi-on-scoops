@@ -312,11 +312,14 @@ export function parse(buffer) {
         let spec;
         if (notes > 0 && index === -1) {
           const end = info[channel][info[channel].length - 1];
+          if (!end || !end.input) {
+            throw new TypeError(`Missing expression for '${line}'`);
+          }
 
-          end.data = value.slice(notes);
           spec = {
             input: end.input,
             values: value.slice(1, notes),
+            data: value.slice(notes),
           };
         } else if (offset > 0) {
           spec = {
@@ -379,12 +382,6 @@ export function parse(buffer) {
           trackPatternSlots[channel] = 0;
         }
         trackPatternSlots[channel] += patternSlots;
-
-        // Last pattern line wins on duplicated channels.
-        // A new input clip replaces previous input clips on the same channel.
-        if (spec.input && index >= 0) {
-          info[channel] = (info[channel] || []).filter(item => !item.input);
-        }
 
         info[channel].push(spec);
       }

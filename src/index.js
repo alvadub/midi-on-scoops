@@ -153,16 +153,74 @@ const LOCKS = `
 > A x4
 `.trim();
 
+const ODE_TO_JOY = `
+; Ode to Joy (Beethoven)
+; tempo: 120
+; bars: 16
+
+%melA e4 e4 f4 g4 g4 f4 e4 d4 c4 c4 d4 e4 e4 d4 d4
+%melB e4 e4 f4 g4 g4 f4 e4 d4 c4 c4 d4 e4 d4 c4 c4
+
+%chA c3|e3|g3 c3|f3|a3 g2|b2|d3 c3|e3|g3
+%bassA c2 c2 g1 c2
+
+# lead
+  @A
+    #0 96 x-x-x-x-x-x-x-x-x-x-x-x-x-x-x- %melA
+  @B
+    #0 96 x-x-x-x-x-x-x-x-x-x-x-x-x-x-x- %melB
+
+## harmony
+  @A
+    #48 72 x--- x--- x--- x--- %chA
+  @B < A
+
+## bass
+  @A
+    #33 88 x--- x--- x--- x--- %bassA
+  @B < A
+
+## drums
+  @A
+    #2001 110 x--- x--- x--- x---
+    #2035 78 x-x-x-x- x-x-x-x-
+    #2035 78 xxxxxxx[xx] xxxxxxx[xx]
+    #2004 100 ---- x--- ---- x---
+  @B < A
+
+> A B
+`.trim();
+
+const HOT_CROSS_BUNS_MIDI = `
+; MIDI import: hot_cross_buns.bitmidi.mid
+; tempo: 125
+; bars: 16
+
+# imported
+  @A
+    #0 77 x---x--- x------- x---x--- x------- x-x-x-x- x-x-x-x- x---x--- x---x-x- x-x-x-x- x---x--- x-x-x-x- x------- x-x-x-x- x-x-x-x- x---x--- x D5 D4 G4 D5 D4 G4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4 G4 D5 D5 D5 D5 C5 C5 B4 B4 B4 B4 A4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4
+
+## imported_chords
+  @A
+    #0 72 x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x D3|A3|D5 G3|B3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 C3|G3|C5 D3|G3|B4 D3|Gb3|A4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4
+
+> A
+`.trim();
+
 const PRESETS = {
   tetris: TETRIS,
   billy_jean: BILLY_JEAN,
   locks: LOCKS,
+  ode_to_joy: ODE_TO_JOY,
+  hot_cross_buns_midi: HOT_CROSS_BUNS_MIDI,
 };
 
 const PRESET_LABELS = {
   tetris: 'Tetris',
   billy_jean: 'Billy Jean',
   locks: 'Locks',
+  ode_to_joy: 'Ode to Joy',
+  hot_cross_buns_midi: 'Hot Cross Buns (MIDI import)',
 };
 
 const SCALE_INFO = {
@@ -692,8 +750,9 @@ function updateToolbarBeats() {
   });
 }
 
-function loadPresetByName(name) {
-  const preset = PRESETS[name];
+async function loadPresetByName(name) {
+  let preset = PRESETS[name];
+  if (!preset) preset = await loadExample(name);
   if (!editorApi || !preset) return;
 
   editorApi.setValue(preset.trim());

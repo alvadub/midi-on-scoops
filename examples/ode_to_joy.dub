@@ -1,0 +1,35 @@
+; Ode to Joy (Beethoven) - public domain reference
+; tempo: 120
+; bars: 16
+
+%melA e4 e4 f4 g4 g4 f4 e4 d4 c4 c4 d4 e4 e4 d4 d4
+%melB e4 e4 f4 g4 g4 f4 e4 d4 c4 c4 d4 e4 d4 c4 c4
+
+%chA c3|e3|g3 c3|f3|a3 g2|b2|d3 c3|e3|g3
+%bassA c2 c2 g1 c2
+
+# lead
+  @A
+    #0 96 x-x-x-x-x-x-x-x-x-x-x-x-x-x-x- %melA
+  @B
+    #0 96 x-x-x-x-x-x-x-x-x-x-x-x-x-x-x- %melB
+
+## harmony
+  @A
+    #48 72 x--- x--- x--- x--- %chA
+  @B < A
+
+## bass
+  @A
+    #33 88 x--- x--- x--- x--- %bassA
+  @B < A
+
+## drums
+  @A
+    #2001 110 x--- x--- x--- x---
+    #2035 78 x-x-x-x- x-x-x-x-
+    #2035 78 xxxxxxx[xx] xxxxxxx[xx]
+    #2004 100 ---- x--- ---- x---
+  @B < A
+
+> A B

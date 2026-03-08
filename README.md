@@ -66,6 +66,12 @@ Use a different player by appending arguments:
 $ dub music/src fluidsynth -i --gain 2 music/sf2/PC51f.sf2
 ```
 
+Convert a `.mid` file into a first-pass DUB draft focused on pulse patterns:
+
+```sh
+$ midi2dub input.mid output.dub
+```
+
 ## Browser Playground
 
 Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real time.

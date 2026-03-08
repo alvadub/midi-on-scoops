@@ -126,12 +126,12 @@ export function lintDub(source, opts = {}) {
 
   Object.entries(context.tracks || {}).forEach(([trackName, channels]) => {
     Object.entries(channels || {}).forEach(([channel, clips]) => {
-      const inputClipCount = (clips || []).filter(clip => clip && clip.input).length;
-      if (inputClipCount > 1) {
+      const inputClips = (clips || []).filter(clip => clip && clip.input);
+      if (inputClips.length > 1 && inputClips.some(clip => !clip.merge)) {
         const line = clipLineMap.get(`${trackName}|${channel}|0`) || null;
         report.warnings.push({
           rule: 'duplicate-input-clips',
-          message: `Track '${trackName}' channel '${channel}' has ${inputClipCount} input clips; only the last pattern is used at playback.`,
+          message: `Track '${trackName}' channel '${channel}' has repeated input clips without explicit '!' or '+' merge operator.`,
           line,
         });
       }

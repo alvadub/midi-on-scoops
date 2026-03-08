@@ -333,7 +333,18 @@ export function parse(buffer) {
         }
 
         if (inputs.length > 1) {
-          spec.values = inputs.slice(1);
+          let rest = inputs.slice(1);
+          if (
+            rest[0]
+            && rest[0].type === 'value'
+            && (rest[0].value === '!' || rest[0].value === '+')
+          ) {
+            spec.merge = rest[0].value === '+' ? 'layer' : 'replace';
+            rest = rest.slice(1);
+          }
+          if (rest.length > 0) {
+            spec.values = rest;
+          }
         }
         
         // Count pattern slots for this channel

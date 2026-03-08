@@ -6,6 +6,71 @@ import { reduce } from './parser';
 
 const DEFAULT = Symbol('@main');
 
+function mergeNotePayload(a, b) {
+  const aa = Array.isArray(a) ? a : (a ? [a] : []);
+  const bb = Array.isArray(b) ? b : (b ? [b] : []);
+  const out = [];
+
+  aa.concat(bb).forEach(note => {
+    if (typeof note === 'undefined' || note === null) return;
+    if (!out.includes(note)) out.push(note);
+  });
+
+  if (out.length === 0) return undefined;
+  if (out.length === 1) return out[0];
+  return out;
+}
+
+function mergeTicks(left, right) {
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (Array.isArray(left) && Array.isArray(right)) {
+      const max = Math.max(left.length, right.length);
+      const out = [];
+
+      for (let i = 0; i < max; i += 1) {
+        out.push(mergeTicks(left[i], right[i]));
+      }
+      return out;
+    }
+
+    return typeof right !== 'undefined' ? right : left;
+  }
+
+  if (!left) return right;
+  if (!right) return left;
+
+  const lv = left.v || 0;
+  const rv = right.v || 0;
+  const hitLeft = lv > 0;
+  const hitRight = rv > 0;
+
+  if (!hitLeft && hitRight) return { ...right };
+  if (hitLeft && !hitRight) return { ...left };
+
+  if (!hitLeft && !hitRight) {
+    return (left.h || right.h) ? { v: 0, h: 1 } : { v: 0 };
+  }
+
+  const out = {
+    ...left,
+    ...right,
+    v: Math.max(lv, rv),
+  };
+  const note = mergeNotePayload(left.n, right.n);
+  if (typeof note !== 'undefined') out.n = note;
+  return out;
+}
+
+function mergeTickLayers(base, top) {
+  const max = Math.max(base.length, top.length);
+  const out = [];
+
+  for (let i = 0; i < max; i += 1) {
+    out.push(mergeTicks(base[i], top[i]));
+  }
+  return out;
+}
+
 export function build(midi, bpm = 120, length = 16) {
   const file = new File();
   const q = 16;
@@ -124,7 +189,6 @@ export function merge(ctx) {
       const key = tag || DEFAULT;
 
       let ticks;
-      let inc = 0;
       clips.forEach(clip => {
         const values = clip.values ? reduce(clip.values, ctx.data) : [];
         const notes = clip.data ? reduce(clip.data, ctx.data) : [];
@@ -133,10 +197,23 @@ export function merge(ctx) {
           if (values.length > 1) values.shift();
 
           const input = flatten(reduce(clip.input, ctx.data, pack(values, notes)));
-          ticks = input;
-        }
+          const mode = clip.values
+            && clip.values[0]
+            && clip.values[0].type === 'mode' ? clip.values[0].value : null;
 
-        if (ticks) {
+          input.forEach(tick => {
+            if (tick.v > 0) {
+              if (!tick.n && notes.length > 0) tick.n = notes.shift();
+              if (mode && values.length > 0) tick[mode[0].toLowerCase()] = values.shift();
+            }
+          });
+
+          if (clip.merge === 'layer' && ticks) {
+            ticks = mergeTickLayers(ticks, input);
+          } else {
+            ticks = input;
+          }
+        } else if (ticks) {
           const mode = clip.values
             && clip.values[0]
             && clip.values[0].type === 'mode' ? clip.values[0].value : null;

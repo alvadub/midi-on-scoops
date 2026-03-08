@@ -47,6 +47,18 @@ describe('lint', () => {
     expect(report.warnings.map(w => w.rule)).to.include('duplicate-input-clips');
   });
 
+  it('does not warn for duplicate channel input when using explicit merge operators', () => {
+    const report = lintDub(`
+      # hats
+        @A
+          #2035 ! x-x-
+          #2035 + xxxx
+      > A
+    `);
+
+    expect(report.warnings.map(w => w.rule)).to.not.include('duplicate-input-clips');
+  });
+
   it('passes a valid basic pattern', () => {
     const report = lintDub(`
       # lead

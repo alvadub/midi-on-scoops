@@ -210,6 +210,32 @@ describe('parser', () => {
       },
     });
   });
+
+  it('should parse explicit merge operators for duplicate channels', () => {
+    const ast = parse(`
+      # hats
+        @A
+          #2035 ! 70 x-x-
+          #2035 + 95 ----x---
+    `);
+
+    expect(ast.tracks).to.eql({
+      hats: {
+        'A#2035': [
+          {
+            merge: 'replace',
+            input: [{ type: 'pattern', value: 'x-x-' }],
+            values: [{ type: 'number', value: 70 }],
+          },
+          {
+            merge: 'layer',
+            input: [{ type: 'pattern', value: '----x---' }],
+            values: [{ type: 'number', value: 95 }],
+          },
+        ],
+      },
+    });
+  });
 });
 
 describe('reducer', () => {
@@ -372,6 +398,38 @@ describe('remix', () => {
     expect(midi[0][1]).to.eql([A1, AA1]);
     expect(midi[0][2]).to.eql([B1, B2, BB1]);
     expect(midi[0][3]).to.eql([A1, AA1]);
+  });
+
+  it('layers clips with + and keeps replace semantics for repeated !', () => {
+    const layered = merge(parse(`
+      # hats
+        @A
+          #2035 ! 70 x-x-
+          #2035 + 90 --x-
+      > A
+    `))[0][0][0][2];
+
+    expect(layered).to.eql([
+      { v: 70 },
+      { v: 0 },
+      { v: 90 },
+      { v: 0 },
+    ]);
+
+    const replaced = merge(parse(`
+      # hats
+        @A
+          #2035 ! 70 x-x-
+          #2035 ! 90 --x-
+      > A
+    `))[0][0][0][2];
+
+    expect(replaced).to.eql([
+      { v: 0 },
+      { v: 0 },
+      { v: 90 },
+      { v: 0 },
+    ]);
   });
 
   it('keeps note overrides on inherited sections without dropping notes', () => {

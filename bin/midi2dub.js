@@ -190,6 +190,30 @@ function median(values) {
   return sorted.length % 2 === 0 ? Math.round((sorted[m - 1] + sorted[m]) / 2) : sorted[m];
 }
 
+function withLoopTail(slotsMap, tailSlot) {
+  let lastSlot = -1;
+  let lastSub = -1;
+  let lastEvents = null;
+  for (const [slot, subMap] of slotsMap.entries()) {
+    if (!subMap || subMap.size === 0) continue;
+    for (const [sub, events] of subMap.entries()) {
+      if (!events || !events.length) continue;
+      if (slot > lastSlot || (slot === lastSlot && sub > lastSub)) {
+        lastSlot = slot;
+        lastSub = sub;
+        lastEvents = events;
+      }
+    }
+  }
+  if (!lastEvents || !lastEvents.length) return slotsMap;
+
+  const next = new Map(slotsMap);
+  const tail = new Map(next.get(tailSlot) || []);
+  tail.set(0, lastEvents.slice());
+  next.set(tailSlot, tail);
+  return next;
+}
+
 function toDub(midi, sourceName) {
   const events = midi.tracks.reduce((memo, tr) => memo.concat(tr), []);
   const firstTempo = midi.tempos[0] ? Math.round(60000000 / midi.tempos[0].usPerQuarter) : 120;
@@ -199,7 +223,10 @@ function toDub(midi, sourceName) {
     const laneMax = [...l.slots.keys()].reduce((m, n) => Math.max(m, n), 0);
     if (laneMax > maxSlot) maxSlot = laneMax;
   });
-  const totalSlots = Math.max(1, maxSlot + 1);
+  const baseSlots = Math.max(1, maxSlot + 1);
+  const paddedSlots = Math.ceil(baseSlots / 8) * 8;
+  const totalSlots = paddedSlots + 8;
+  const tailSlot = paddedSlots;
 
   const melodyLines = [];
   const chordLines = [];
@@ -208,10 +235,11 @@ function toDub(midi, sourceName) {
   lanes
     .sort((a, b) => (a.channel - b.channel) || ((a.note || 0) - (b.note || 0)))
     .forEach(lane => {
+      const laneSlots = withLoopTail(lane.slots, tailSlot);
       const instrument = lane.isDrum ? 0 : lane.program;
       if (lane.isDrum) {
         const out = patternFromSlots(
-          lane.slots,
+          laneSlots,
           totalSlots,
           subDiv,
           (tones, toNoteName) => (tones.length ? toNoteName(tones[0]) : null),
@@ -222,7 +250,7 @@ function toDub(midi, sourceName) {
       }
 
       const melody = patternFromSlots(
-        lane.slots,
+        laneSlots,
         totalSlots,
         subDiv,
         (tones, toNoteName) => (tones.length ? toNoteName(tones[tones.length - 1]) : null),
@@ -232,7 +260,7 @@ function toDub(midi, sourceName) {
       }
 
       const chords = patternFromSlots(
-        lane.slots,
+        laneSlots,
         totalSlots,
         subDiv,
         (tones, toNoteName) => {

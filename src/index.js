@@ -13,6 +13,7 @@ let tempo = 146;
 let bars = 16;
 let transpose = 0;
 let playing = false;
+let songLoop = false;
 let debounceTimer = null;
 let statusResetTimer = null;
 let editorApi = null;
@@ -198,11 +199,11 @@ const HOT_CROSS_BUNS_MIDI = `
 
 # imported
   @A
-    #0 77 x---x--- x------- x---x--- x------- x-x-x-x- x-x-x-x- x---x--- x---x-x- x-x-x-x- x---x--- x-x-x-x- x------- x-x-x-x- x-x-x-x- x---x--- x D5 D4 G4 D5 D4 G4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4 G4 D5 D5 D5 D5 C5 C5 B4 B4 B4 B4 A4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4
+    #0 77 x---x--- x------- x---x--- x------- x-x-x-x- x-x-x-x- x---x--- x---x-x- x-x-x-x- x---x--- x-x-x-x- x------- x-x-x-x- x-x-x-x- x---x--- x------- x------- D5 D4 G4 D5 D4 G4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4 G4 D5 D5 D5 D5 C5 C5 B4 B4 B4 B4 A4 D5 C5 B4 A4 G4 A4 B4 C5 D5 D4 G4 G4
 
 ## imported_chords
   @A
-    #0 72 x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x D3|A3|D5 G3|B3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 C3|G3|C5 D3|G3|B4 D3|Gb3|A4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4
+    #0 74 x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- x------- D3|A3|D5 G3|B3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 B2|G3|D5 C3|G3|C5 D3|G3|B4 D3|Gb3|A4 B2|G3|D5 B2|D3|G4 D3|A3|D5 G3|B3|G4 G3|B3|G4
 
 > A
 `.trim();
@@ -715,6 +716,11 @@ function updatePlayButton() {
   if (playBtn) playBtn.textContent = playing ? '▶ Playing...' : '▶ Play';
 }
 
+function updateLoopButton() {
+  const loopBtn = document.getElementById('loop-btn');
+  if (loopBtn) loopBtn.textContent = songLoop ? '↻ Loop: On' : '↻ Loop: Off';
+}
+
 function updateBeatDots() {
   // No longer needed - progress bar is static, width is updated in beatIndicator()
 }
@@ -1138,6 +1144,16 @@ function createDOM(initialText, initialPreset) {
   stopBtn.textContent = '■ Stop';
   stopBtn.addEventListener('click', stop);
 
+  const loopBtn = document.createElement('button');
+  loopBtn.id = 'loop-btn';
+  loopBtn.addEventListener('click', () => {
+    songLoop = !songLoop;
+    p.setSongLoop(songLoop);
+    updateLoopButton();
+    showStatus(songLoop ? 'Loop enabled' : 'Loop disabled', 'ready');
+  });
+  updateLoopButton();
+
   const midiBtn = document.createElement('button');
   midiBtn.id = 'midi-btn';
   midiBtn.textContent = 'MIDI: init';
@@ -1170,6 +1186,7 @@ function createDOM(initialText, initialPreset) {
     // toolbarControls.appendChild(aboutLink);
     toolbarControls.appendChild(playBtn);
     toolbarControls.appendChild(stopBtn);
+    toolbarControls.appendChild(loopBtn);
     toolbarControls.appendChild(midiBtn);
 
   const beatIndicatorBar = document.createElement('div');
@@ -1304,6 +1321,11 @@ function createDOM(initialText, initialPreset) {
       editorApi.flashActiveTokens(lines, beatIndex, beatDurationMs);
     }, wait);
   };
+  p.onPlaybackEnd = () => {
+    if (!playing) return;
+    stop();
+    showStatus('Ended', 'ready');
+  };
 
   workspace.appendChild(editorApi.el);
   rightColumn.appendChild(toolbar);
@@ -1361,6 +1383,7 @@ function play(startBeat = undefined) {
   playing = true;
   const data = getData(editorApi.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
+  p.setSongLoop(songLoop);
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);
@@ -1454,6 +1477,7 @@ async function bootstrap() {
   bindGlobalShortcuts();
   const data = getData(editor.getValue());
   p.setLoopMachine(data, tempo, bars, transpose);
+  p.setSongLoop(songLoop);
   updateBeatDots();
   updateToolbarBeats();
   syncMixer(data);

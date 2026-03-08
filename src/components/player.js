@@ -24,8 +24,10 @@ export default class Player {
     this.trackState = new Map();
     this.delayDivision = 3 / 8;
     this.onBeat = null;
+    this.onPlaybackEnd = null;
     this.beatIndex = 0;
     this.loopStarted = false;
+    this.songLoop = false;
     this.defaultPadFiles = [
       'coin_1.wav',
       'coin_2.wav',
@@ -506,6 +508,10 @@ export default class Player {
     this.stopPlayLoop();
   }
 
+  setSongLoop(enabled) {
+    this.songLoop = Boolean(enabled);
+  }
+
   setLoopMachine(data, tempo, length, transpose) {
     const appliedTempo = tempo || 127;
     const changed = appliedTempo !== this.bpm || length !== this.bars || transpose !== this.offset;
@@ -529,6 +535,10 @@ export default class Player {
   }
 
   startPlayLoop(beats, bpm, density, fromBeat) {
+    if (!beats || !beats.length) {
+      this.loopStarted = false;
+      return;
+    }
     this.loopStarted = true;
     const wholeNoteDuration = (4 * 60) / bpm;
     this.beatIndex = fromBeat < beats.length ? fromBeat : 0;
@@ -536,8 +546,16 @@ export default class Player {
     let nextLoopTime = this.contextTime() + density * wholeNoteDuration;
     this.loopIntervalID = setInterval(() => {
       while (this.contextTime() >= nextLoopTime) {
-        this.beatIndex += 1;
-        if (this.beatIndex >= beats.length) this.beatIndex = 0;
+        let nextBeatIndex = this.beatIndex + 1;
+        if (nextBeatIndex >= beats.length) {
+          if (!this.songLoop) {
+            this.stopPlayLoop();
+            if (typeof this.onPlaybackEnd === 'function') this.onPlaybackEnd();
+            return;
+          }
+          nextBeatIndex = 0;
+        }
+        this.beatIndex = nextBeatIndex;
         this.playBeatAt(nextLoopTime, beats[this.beatIndex], bpm);
         nextLoopTime += density * wholeNoteDuration;
       }

@@ -1,5 +1,22 @@
 import { parseArrangementBody } from './arrangement';
 
+function findSuffixDashCommentIndex(line) {
+  const match = String(line || '').match(/\s--\s/);
+  if (!match || typeof match.index !== 'number') return -1;
+  if (!/\S/.test(String(line || '').slice(0, match.index))) return -1;
+  return match.index;
+}
+
+function stripInlineComment(line) {
+  const value = String(line || '');
+  const semicolonIndex = value.indexOf(';');
+  const dashCommentIndex = findSuffixDashCommentIndex(value);
+  if (semicolonIndex < 0 && dashCommentIndex < 0) return value;
+  if (semicolonIndex < 0) return value.slice(0, dashCommentIndex);
+  if (dashCommentIndex < 0) return value.slice(0, semicolonIndex);
+  return value.slice(0, Math.min(semicolonIndex, dashCommentIndex));
+}
+
 export function extractDraftTempo(input) {
   const m = String(input || '').match(/^\s*;\s*tempo\s*:\s*(\d+(?:\.\d+)?)\s*$/im);
   if (!m) return null;
@@ -55,7 +72,7 @@ export function buildTrackLineMap(input) {
   const map = new Map();
   let currentTrack = null;
   String(input || '').split(/\r?\n/).forEach((rawLine, lineNumber) => {
-    const line = rawLine.replace(/;.+?$/, '').trim();
+    const line = stripInlineComment(rawLine).trim();
     if (!line) return;
 
     if (/^#{1,2}\s+/.test(line) && !/^#\d+/.test(line)) {

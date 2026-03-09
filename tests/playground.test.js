@@ -38,6 +38,18 @@ describe('playground helpers', () => {
     expect(map.get('33/bass')).to.deep.equal([4]);
   });
 
+  it('builds track line map with suffix -- comments like parser', () => {
+    const src = `
+      # lead -- bright
+        #0 90 x--- -- stab
+      ## bass -- low
+        #33 80 x--- -- groove
+    `;
+    const map = buildTrackLineMap(src);
+    expect(map.get('0/lead')).to.deep.equal([2]);
+    expect(map.get('33/bass')).to.deep.equal([4]);
+  });
+
   it('keeps only the latest input clip for duplicated channels', () => {
     const ctx = {
       tracks: {

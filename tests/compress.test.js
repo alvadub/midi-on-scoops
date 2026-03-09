@@ -92,4 +92,22 @@ describe('compress', () => {
 
     expect(rebuilt).to.deep.equal(original);
   });
+
+  it('should preserve suffix -- comments after rewrite', () => {
+    const source = `
+      # groove
+      @A
+        #1 x--- C4 D4 E4 F4 C4 D4 E4 F4 -- motif
+      > A
+    `;
+
+    const result = compressDub(source, {
+      minOccurrences: 2,
+      minSequenceLength: 4,
+    });
+
+    expect(result.hasCompressed).to.equal(true);
+    expect(result.source).to.include('-- motif');
+    expect(() => parse(result.source)).to.not.throw();
+  });
 });

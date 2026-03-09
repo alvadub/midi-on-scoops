@@ -16,8 +16,26 @@ function normalizeSource(source) {
   return String(source || '').replace(/\r/g, '').trim();
 }
 
+function findSuffixDashCommentIndex(rawLine) {
+  const match = rawLine.match(/\s--\s/);
+  if (!match || typeof match.index !== 'number') return -1;
+  if (!/\S/.test(rawLine.slice(0, match.index))) return -1;
+  return match.index;
+}
+
 function stripComment(rawLine) {
-  const index = rawLine.indexOf(';');
+  const semicolonIndex = rawLine.indexOf(';');
+  const dashCommentIndex = findSuffixDashCommentIndex(rawLine);
+  let index = -1;
+
+  if (semicolonIndex >= 0 && dashCommentIndex >= 0) {
+    index = Math.min(semicolonIndex, dashCommentIndex);
+  } else if (semicolonIndex >= 0) {
+    index = semicolonIndex;
+  } else if (dashCommentIndex >= 0) {
+    index = dashCommentIndex;
+  }
+
   if (index < 0) return {
     code: rawLine,
     comment: '',

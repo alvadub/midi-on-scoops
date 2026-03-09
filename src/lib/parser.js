@@ -35,6 +35,23 @@ function selectScaleDegrees(base, rawDegrees, mapFn) {
   return values.map(deg => notes[deg - 1]);
 }
 
+function findSuffixDashCommentIndex(line) {
+  const match = line.match(/\s--\s/);
+  if (!match || typeof match.index !== 'number') return -1;
+  if (!/\S/.test(line.slice(0, match.index))) return -1;
+  return match.index;
+}
+
+function stripInlineComment(line) {
+  const semicolonIndex = line.indexOf(';');
+  const dashCommentIndex = findSuffixDashCommentIndex(line);
+
+  if (semicolonIndex < 0 && dashCommentIndex < 0) return line;
+  if (semicolonIndex < 0) return line.slice(0, dashCommentIndex);
+  if (dashCommentIndex < 0) return line.slice(0, semicolonIndex);
+  return line.slice(0, Math.min(semicolonIndex, dashCommentIndex));
+}
+
 export function reduce(input, context, callback) {
   if (!Array.isArray(input)) return input;
 
@@ -248,7 +265,7 @@ export function parse(buffer) {
   let track;
   let info = {};
   buffer.split(/\r?\n/g).forEach((line, nth) => {
-    line = line.replace(/;.+?$/, '').trim();
+    line = stripInlineComment(line).trim();
     if (!line) return;
 
     try {

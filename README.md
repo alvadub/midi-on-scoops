@@ -38,6 +38,7 @@ You can use the browser playground for instant playback or the CLI to generate `
 | `#N [level] pattern notes` | Clip line: instrument/program + optional velocity + rhythm + notes |
 | `#0 ...` | Drum lane |
 | `%var value` | Variable declaration |
+| `... -- note` | Suffix inline comment |
 | `> ...` | Top-level arrangement |
 | `xN` | Repeat N times |
 | `** 1 3 5` | Select degrees from current `root mode` scale context |

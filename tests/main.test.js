@@ -141,6 +141,29 @@ describe('parser', () => {
     });
   });
 
+  it('should support suffix -- comments without breaking pattern tokens', () => {
+    const sample = `
+      # hats -- track label
+      #1 x--- --x- C4 D4 -- accent
+      #1 x--- --x- E4 F4
+    `;
+
+    expect(parse(sample).tracks).to.eql({
+      hats: {
+        '#1': [
+          {
+            data: [t('C4'), t('D4')],
+            input: [p('x---'), p('--x-')],
+          },
+          {
+            data: [t('E4'), t('F4')],
+            input: [p('x---'), p('--x-')],
+          },
+        ],
+      },
+    });
+  });
+
   it('should extract tags', () => {
     expect(parse(`
       # mix

@@ -4,6 +4,7 @@ import { scale, inlineChord } from 'harmonics';
 import { isProgression, transform } from './tokenize';
 import { buildArrangementMain } from './arrangement';
 import { repeat, clone } from './utils';
+import { resolveChannelToken } from './channels';
 
 function parseDegreeToken(token) {
   if (/^\d+$/.test(token)) return [parseInt(token, 10)];
@@ -254,7 +255,7 @@ export function reduce(input, context, callback) {
   }, []);
 }
 
-export function parse(buffer) {
+export function parse(buffer, options = {}) {
   const tracks = {};
   const main = [];
   const data = {};
@@ -324,7 +325,8 @@ export function parse(buffer) {
         const offset = value.findIndex(x => x.type !== 'pattern');
         const inputs = ticks.slice(0, index > 0 ? index : 1);
 
-        channel = prefix + inputs[0].value;
+        const resolvedChannel = resolveChannelToken(inputs[0].value, options.channelAliases);
+        channel = prefix + resolvedChannel;
         if (!info[channel]) {
           info[channel] = [];
         }

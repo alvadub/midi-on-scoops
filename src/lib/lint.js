@@ -3,6 +3,7 @@ import { merge, pack } from './mixup';
 import { split } from './tokenize';
 import { flatten } from './utils';
 import { buildArrangementDisplayExpansion } from './playground';
+import { resolveChannelToken } from './channels';
 
 function deepVisit(node, fn) {
   if (Array.isArray(node)) {
@@ -53,7 +54,24 @@ function flattenSectionBeats(beats) {
   return active;
 }
 
-function scanClipLineMap(source) {
+function findSuffixDashCommentIndex(line) {
+  const match = String(line || '').match(/\s--\s/);
+  if (!match || typeof match.index !== 'number') return -1;
+  if (!/\S/.test(String(line || '').slice(0, match.index))) return -1;
+  return match.index;
+}
+
+function stripInlineComment(line) {
+  const value = String(line || '');
+  const semicolonIndex = value.indexOf(';');
+  const dashCommentIndex = findSuffixDashCommentIndex(value);
+  if (semicolonIndex < 0 && dashCommentIndex < 0) return value;
+  if (semicolonIndex < 0) return value.slice(0, dashCommentIndex);
+  if (dashCommentIndex < 0) return value.slice(0, semicolonIndex);
+  return value.slice(0, Math.min(semicolonIndex, dashCommentIndex));
+}
+
+function scanClipLineMap(source, opts = {}) {
   const clipLineMap = new Map();
   const sectionNames = new Set();
   let track = null;
@@ -61,7 +79,7 @@ function scanClipLineMap(source) {
   const counters = new Map();
 
   String(source || '').split(/\r?\n/).forEach((rawLine, nth) => {
-    const line = rawLine.replace(/;.+?$/, '').trim();
+    const line = stripInlineComment(rawLine).trim();
     if (!line) return;
 
     if (line.indexOf('# ') >= 0) {
@@ -78,11 +96,17 @@ function scanClipLineMap(source) {
     }
 
     if (!track) return;
-    if (!/^#\d+\b/.test(line)) return;
+    if (!/^#[^\s]+\b/.test(line)) return;
 
-    const channelValue = line.match(/^#(\d+)\b/);
+    const channelValue = line.match(/^(#[^\s]+)\b/);
     if (!channelValue) return;
-    const channel = `${prefix}#${channelValue[1]}`;
+    let resolved;
+    try {
+      resolved = resolveChannelToken(channelValue[1], opts.channelAliases);
+    } catch (e) {
+      return;
+    }
+    const channel = `${prefix}${resolved}`;
     const key = `${track}|${channel}`;
     const idx = counters.get(key) || 0;
     counters.set(key, idx + 1);
@@ -112,7 +136,7 @@ export function lintDub(source, opts = {}) {
     return report;
   }
 
-  const { clipLineMap, sectionNames } = scanClipLineMap(source);
+  const { clipLineMap, sectionNames } = scanClipLineMap(source, opts);
   const expanded = buildArrangementDisplayExpansion(source);
   expanded.forEach((item, idx) => {
     if (!sectionNames.has(item.name)) {

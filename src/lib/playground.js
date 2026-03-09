@@ -1,4 +1,5 @@
 import { parseArrangementBody } from './arrangement';
+import { resolveChannelToken } from './channels';
 
 function findSuffixDashCommentIndex(line) {
   const match = String(line || '').match(/\s--\s/);
@@ -68,7 +69,7 @@ export function buildMixFromMerged(midi) {
   return mix;
 }
 
-export function buildTrackLineMap(input) {
+export function buildTrackLineMap(input, options = {}) {
   const map = new Map();
   let currentTrack = null;
   String(input || '').split(/\r?\n/).forEach((rawLine, lineNumber) => {
@@ -81,9 +82,10 @@ export function buildTrackLineMap(input) {
     }
 
     if (!currentTrack) return;
-    const match = line.match(/^#(\d+)\b/);
+    const match = line.match(/^(#[^\s]+)\b/);
     if (!match) return;
-    const key = `${parseInt(match[1], 10)}/${currentTrack}`;
+    const resolvedChannel = resolveChannelToken(match[1], options.channelAliases);
+    const key = `${parseInt(resolvedChannel.slice(1), 10)}/${currentTrack}`;
     const prev = map.get(key) || [];
     if (!prev.includes(lineNumber)) prev.push(lineNumber);
     map.set(key, prev);

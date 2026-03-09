@@ -111,6 +111,33 @@ describe('parser', () => {
     });
   });
 
+  it('should resolve channel aliases to numeric channels', () => {
+    const sample = `
+      # rhythm
+      #bd x---
+      #sd --x-
+      #hh x-x-
+      #piano x--- C4
+    `;
+
+    expect(parse(sample).tracks).to.eql({
+      rhythm: {
+        '#2001': [{ input: [p('x---')] }],
+        '#2004': [{ input: [p('--x-')] }],
+        '#2035': [{ input: [p('x-x-')] }],
+        '#0': [{ input: [p('x---')], data: [t('C4')] }],
+      },
+    });
+  });
+
+  it('should throw on unknown channel aliases', () => {
+    const sample = `
+      # rhythm
+      #drumz x---
+    `;
+    expect(() => parse(sample)).to.throw("Unknown channel alias '#drumz'");
+  });
+
   it('should extract values', () => {
     const sample = `
       # multiple
@@ -310,6 +337,30 @@ describe('reducer', () => {
       { v: 0 },
       { v: 0 },
       { v: 100, n: 'd3' },
+    ]]);
+  });
+
+  it('should cycle note/chord consumption when pulses exceed notes', () => {
+    const input = [{ type: 'pattern', value: 'x-x-x-' }];
+    expect(reduce(input, {}, pack([90], ['c3', 'd3']))).to.eql([[
+      { v: 90, n: 'c3' },
+      { v: 0 },
+      { v: 90, n: 'd3' },
+      { v: 0 },
+      { v: 90, n: 'c3' },
+      { v: 0 },
+    ]]);
+  });
+
+  it('should cycle velocity consumption when pulses exceed levels', () => {
+    const input = [{ type: 'pattern', value: 'x-x-x-' }];
+    expect(reduce(input, {}, pack([70, 90], ['c3']))).to.eql([[
+      { v: 70, n: 'c3' },
+      { v: 0 },
+      { v: 90, n: 'c3' },
+      { v: 0 },
+      { v: 70, n: 'c3' },
+      { v: 0 },
     ]]);
   });
 

@@ -128,6 +128,12 @@ export function build(midi, bpm = 120, length = 16) {
 
 export function pack(values, notes) {
   let offset;
+  function cyclical(list, index) {
+    if (!Array.isArray(list) || !list.length) return undefined;
+    const pos = ((index % list.length) + list.length) % list.length;
+    return list[pos];
+  }
+
   function resolve(x) {
     if (Array.isArray(x)) {
       return x.map(resolve);
@@ -145,8 +151,10 @@ export function pack(values, notes) {
     let token;
     if (!'-x_'.includes(x)) {
       token = { v: 127, l: x };
-      token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
-      if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
+      const velocity = cyclical(values, offset);
+      token.v = typeof velocity !== 'undefined' ? velocity : token.v || 0;
+      const note = cyclical(notes, offset);
+      if (typeof note !== 'undefined') token.n = note;
       if (values.length === 1) token.v = values[0];
       if (token.v || token.n) offset += 1;
       return token;
@@ -161,8 +169,10 @@ export function pack(values, notes) {
     }
 
     token = { v: 127 };
-    token.v = typeof values[offset] !== 'undefined' ? values[offset] : token.v || 0;
-    if (typeof notes[offset] !== 'undefined') token.n = notes[offset];
+    const velocity = cyclical(values, offset);
+    token.v = typeof velocity !== 'undefined' ? velocity : token.v || 0;
+    const note = cyclical(notes, offset);
+    if (typeof note !== 'undefined') token.n = note;
     if (values.length === 1) token.v = values[0];
     if (token.v || token.n) offset += 1;
     return token;
@@ -203,7 +213,6 @@ export function merge(ctx) {
 
           input.forEach(tick => {
             if (tick.v > 0) {
-              if (!tick.n && notes.length > 0) tick.n = notes.shift();
               if (mode && values.length > 0) tick[mode[0].toLowerCase()] = values.shift();
             }
           });
@@ -220,7 +229,6 @@ export function merge(ctx) {
 
           ticks.forEach(tick => {
             if (tick.v > 0) {
-              if (!tick.n && notes.length > 0) tick.n = notes.shift();
               if (mode && values.length > 0) tick[mode[0].toLowerCase()] = values.shift();
             }
           });

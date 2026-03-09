@@ -269,11 +269,12 @@ const SCALE_INFO = {
 };
 
 function getData(input) {
-  trackLineMap = buildTrackLineMap(input);
+  const channelAliases = typeof p.getChannelAliases === 'function' ? p.getChannelAliases() : null;
+  trackLineMap = buildTrackLineMap(input, { channelAliases });
   try {
-    lastContext = parse(input);
+    lastContext = parse(input, { channelAliases });
     const merged = merge(lastContext);
-    syncLintIndicator(lintDub(input, { context: lastContext, merged }));
+    syncLintIndicator(lintDub(input, { context: lastContext, merged, channelAliases }));
     sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
     const defaultLoop = sectionTimeline.find(item => item.blockId && item.blockLive);
     defaultArrangementLoopBlockId = defaultLoop ? defaultLoop.blockId : null;

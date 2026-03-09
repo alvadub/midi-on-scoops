@@ -36,6 +36,7 @@ You can use the browser playground for instant playback or the CLI to generate `
 | `@SEC` | Section label |
 | `@B < A` | Section inheritance |
 | `#N [level] pattern notes` | Clip line: instrument/program + optional velocity + rhythm + notes |
+| `#alias [level] pattern notes` | High-level channel alias (`#bd`, `#sd`, `#hh`, `#piano`, `#bass`, etc.) mapped to `#N` |
 | `#0 ...` | Drum lane |
 | `%var value` | Variable declaration |
 | `... -- note` | Suffix inline comment |
@@ -110,6 +111,7 @@ Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real ti
 - BPM, Bars, and Key controls update the loop
 - Drafts are auto-saved in `localStorage`
 - WebAudioFont load order: remote preset URL -> local `/webaudiofont/sound/` subset -> built-in synth fallback
+- Channel aliases plus fallback drum/instrument families are loaded from `/sound-map.json` (edit this file to remap without JS changes)
 
 ## Dub Sound Guide (Preamp + FX)
 

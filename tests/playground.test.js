@@ -50,6 +50,20 @@ describe('playground helpers', () => {
     expect(map.get('33/bass')).to.deep.equal([4]);
   });
 
+  it('builds track line map with channel aliases', () => {
+    const src = `
+      # drums
+        #bd x---
+        #sd --x-
+      # keys
+        #piano x--- C4
+    `;
+    const map = buildTrackLineMap(src);
+    expect(map.get('2001/drums')).to.deep.equal([2]);
+    expect(map.get('2004/drums')).to.deep.equal([3]);
+    expect(map.get('0/keys')).to.deep.equal([5]);
+  });
+
   it('keeps only the latest input clip for duplicated channels', () => {
     const ctx = {
       tracks: {

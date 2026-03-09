@@ -1,9 +1,50 @@
 import { Utils } from 'midi-writer-js';
+import { DEFAULT_CHANNEL_ALIASES, normalizeChannelAliases } from '../lib/channels.js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const FONT_LOAD_TIMEOUT_MS = 4500;
 const LOCAL_FONT_BASE = '/webaudiofont/sound';
 const midiToFrequency = pitch => 440 * (2 ** ((pitch - 69) / 12));
+const SOUND_MAP_URL_CANDIDATES = ['/sound-map.json', './sound-map.json'];
+const DRUM_KINDS = ['kick', 'snare', 'hat', 'perc'];
+const DEFAULT_SOUND_MAP = {
+  drums: {
+    '#2001': { kind: 'kick', label: 'Kick' },
+    '#2004': { kind: 'snare', label: 'Snare' },
+    '#2028': { kind: 'snare', label: 'Snare/Clap' },
+    '#2035': { kind: 'hat', label: 'Hi-Hat' },
+    '#2081': { kind: 'hat', label: 'Ride/Hi-Hat' },
+    '#2123': { kind: 'perc', label: 'Percussion' },
+  },
+  instruments: {
+    '393': { family: 'bass', fallbackWave: 'square', label: 'Bass' },
+    '518': { family: 'lead', fallbackWave: 'triangle', label: 'Lead' },
+  },
+  keywordHints: {
+    kick: ['kick', 'bass drum', 'bd'],
+    snare: ['snare', 'rim', 'clap'],
+    hat: ['hat', 'hi-hat', 'hihat', 'cymbal', 'ride', 'crash', 'shaker', 'tamb'],
+    perc: ['perc', 'tom', 'conga', 'bongo', 'cowbell', 'clave'],
+  },
+  aliases: DEFAULT_CHANNEL_ALIASES,
+};
+const cloneSoundMap = () => JSON.parse(JSON.stringify(DEFAULT_SOUND_MAP));
+const normalizeDrumKind = (value) => {
+  const kind = String(value || '').toLowerCase();
+  return DRUM_KINDS.includes(kind) ? kind : 'perc';
+};
+const normalizeDrumChannelKey = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('#')) {
+    const n = parseInt(raw.slice(1), 10);
+    return Number.isFinite(n) ? `#${n}` : '';
+  }
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return '';
+  if (n >= 2000) return `#${n}`;
+  return `#${n + 2000}`;
+};
 const normalizeFallbackWave = (value) => {
   const wave = String(value || '').toLowerCase();
   if (wave === 'triangle' || wave === 'square' || wave === 'sawtooth') return wave;
@@ -76,9 +117,11 @@ export default class Player {
     this.pendingMidiPulse = null;
     this.fontLoadStatus = new Map();
     this.fontLoadPromises = new Map();
+    this.soundMap = cloneSoundMap();
     this.synthFallbackEnabled = true;
     this.synthVoiceGain = 0.32;
     this.initAudio();
+    this.loadSoundMap();
   }
 
   initAudio() {
@@ -863,6 +906,90 @@ export default class Player {
     state.fallbackWave = normalizeFallbackWave(value);
   }
 
+  normalizeLoadedSoundMap(raw) {
+    const next = cloneSoundMap();
+    if (!raw || typeof raw !== 'object') return next;
+
+    if (raw.drums && typeof raw.drums === 'object') {
+      Object.entries(raw.drums).forEach(([id, value]) => {
+        const key = normalizeDrumChannelKey(id);
+        if (!key) return;
+        const row = value && typeof value === 'object' ? value : { kind: value };
+        const prev = next.drums[key] || {};
+        next.drums[key] = {
+          ...prev,
+          ...row,
+          kind: normalizeDrumKind(row.kind || prev.kind),
+        };
+      });
+    }
+
+    if (raw.instruments && typeof raw.instruments === 'object') {
+      Object.entries(raw.instruments).forEach(([id, value]) => {
+        const key = String(parseInt(id, 10));
+        if (!key || key === 'NaN') return;
+        const row = value && typeof value === 'object' ? value : {};
+        const prev = next.instruments[key] || {};
+        next.instruments[key] = {
+          ...prev,
+          ...row,
+          fallbackWave: normalizeFallbackWave(row.fallbackWave || prev.fallbackWave),
+        };
+      });
+    }
+
+    if (raw.keywordHints && typeof raw.keywordHints === 'object') {
+      DRUM_KINDS.forEach(kind => {
+        const row = raw.keywordHints[kind];
+        if (!Array.isArray(row)) return;
+        next.keywordHints[kind] = row
+          .map(item => String(item || '').toLowerCase().trim())
+          .filter(Boolean);
+      });
+    }
+
+    if (raw.aliases && typeof raw.aliases === 'object') {
+      next.aliases = normalizeChannelAliases(raw.aliases);
+    }
+
+    return next;
+  }
+
+  async loadSoundMap() {
+    if (typeof fetch !== 'function') return;
+    for (let i = 0; i < SOUND_MAP_URL_CANDIDATES.length; i += 1) {
+      const url = SOUND_MAP_URL_CANDIDATES[i];
+      try {
+        const response = await fetch(url, { cache: 'no-store', credentials: 'same-origin' });
+        if (!response.ok) continue;
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.includes('text/html')) continue;
+        const loaded = await response.json();
+        this.soundMap = this.normalizeLoadedSoundMap(loaded);
+        return;
+      } catch (e) {
+        // ignore and continue with defaults
+      }
+    }
+  }
+
+  getDrumProfile(instrument) {
+    const id = Number.isFinite(instrument) ? instrument : 0;
+    const key = `#${id + 2000}`;
+    return this.soundMap && this.soundMap.drums ? this.soundMap.drums[key] : null;
+  }
+
+  getInstrumentProfile(instrument) {
+    const key = String(parseInt(instrument, 10));
+    if (!this.soundMap || !this.soundMap.instruments || key === 'NaN') return null;
+    return this.soundMap.instruments[key] || null;
+  }
+
+  getChannelAliases() {
+    if (!this.soundMap || !this.soundMap.aliases) return DEFAULT_CHANNEL_ALIASES;
+    return this.soundMap.aliases;
+  }
+
   applyMasterPreampState() {
     const now = this.audioContext.currentTime;
     const cutoffs = Array.isArray(this.masterPreampState.cutoffs) && this.masterPreampState.cutoffs.length
@@ -1249,6 +1376,8 @@ export default class Player {
 
   isBassFallbackVoice(instrument, tones) {
     const program = Number.isFinite(instrument) ? instrument : -1;
+    const profile = this.getInstrumentProfile(program);
+    if (profile && String(profile.family || '').toLowerCase() === 'bass') return true;
     if (program >= 32 && program <= 39) return true;
     if (!Array.isArray(tones) || !tones.length) return false;
     const maxPitch = Math.max(...tones);
@@ -1258,6 +1387,9 @@ export default class Player {
   getSynthFallbackWaveform(instrument, pitch, bassLike = false, fallbackWave = 'auto') {
     const explicit = normalizeFallbackWave(fallbackWave);
     if (explicit !== 'auto') return explicit;
+    const profile = this.getInstrumentProfile(instrument);
+    const profileWave = normalizeFallbackWave(profile && profile.fallbackWave ? profile.fallbackWave : 'auto');
+    if (profileWave !== 'auto') return profileWave;
     if (!bassLike) return 'triangle';
     if (!Number.isFinite(pitch) || pitch <= 45) return 'square';
     return 'sawtooth';
@@ -1311,11 +1443,38 @@ export default class Player {
     osc.stop(startAt + hold + 0.08);
   }
 
+  resolveDrumFallbackType(instrument) {
+    const n = Number.isFinite(instrument) ? instrument : 0;
+    const profile = this.getDrumProfile(n);
+    if (profile && profile.kind) return normalizeDrumKind(profile.kind);
+
+    let title = '';
+    try {
+      const info = this.player && this.player.loader ? this.player.loader.drumInfo(n) : null;
+      title = String((info && info.title) || '').toLowerCase();
+    } catch (e) {
+      title = '';
+    }
+
+    const hints = this.soundMap && this.soundMap.keywordHints ? this.soundMap.keywordHints : DEFAULT_SOUND_MAP.keywordHints;
+    for (let i = 0; i < DRUM_KINDS.length; i += 1) {
+      const kind = DRUM_KINDS[i];
+      const words = Array.isArray(hints[kind]) ? hints[kind] : [];
+      if (words.some(word => word && title.includes(word))) return kind;
+    }
+
+    if (n === 1 || n === 36) return 'kick';
+    if (n === 4 || n === 37 || n === 38 || n === 39 || n === 40) return 'snare';
+    if (n === 35 || n === 42 || n === 44 || n === 46) return 'hat';
+    return 'perc';
+  }
+
   queueSynthDrumToTrackNodes(when, instrument, level, nodes) {
     if (!this.synthFallbackEnabled || !(level > 0)) return;
     const ctx = this.audioContext;
     const startAt = Math.max(when, ctx.currentTime + 0.001);
-    const isKick = instrument <= 40;
+    const kind = this.resolveDrumFallbackType(instrument);
+    const isKick = kind === 'kick';
     const peak = clamp((level / 127) * (isKick ? 0.36 : 0.24), 0.01, 0.45);
 
     if (isKick) {
@@ -1338,17 +1497,23 @@ export default class Player {
     const filter = ctx.createBiquadFilter();
     const amp = ctx.createGain();
     noise.buffer = this.synthNoiseBuffer || this.createNoiseBuffer(0.25);
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1400 + ((instrument % 7) * 220), startAt);
-    filter.Q.value = 0.9;
+    if (kind === 'hat') {
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(5200 + ((instrument % 5) * 280), startAt);
+      filter.Q.value = 0.6;
+    } else {
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(kind === 'snare' ? 1900 : 1300 + ((instrument % 7) * 180), startAt);
+      filter.Q.value = kind === 'snare' ? 0.8 : 0.9;
+    }
     amp.gain.setValueAtTime(0.0001, startAt);
     amp.gain.exponentialRampToValueAtTime(peak, startAt + 0.002);
-    amp.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.11);
+    amp.gain.exponentialRampToValueAtTime(0.0001, startAt + (kind === 'hat' ? 0.07 : 0.12));
     noise.connect(filter);
     filter.connect(amp);
     amp.connect(nodes.input);
     noise.start(startAt);
-    noise.stop(startAt + 0.14);
+    noise.stop(startAt + (kind === 'hat' ? 0.09 : 0.16));
   }
 
   playBeatAt(when, beat, bpm) {

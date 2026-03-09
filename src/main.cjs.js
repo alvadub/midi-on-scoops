@@ -1,4 +1,5 @@
 export * from './lib/utils';
+export * from './lib/channels';
 export * from './lib/tokenize';
 export * from './lib/parser';
 export { compressDub } from './lib/compress';

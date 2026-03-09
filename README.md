@@ -109,6 +109,7 @@ Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real ti
 - `Space` or `Cmd/Ctrl+Enter`: play/stop
 - BPM, Bars, and Key controls update the loop
 - Drafts are auto-saved in `localStorage`
+- WebAudioFont load order: remote preset URL -> local `/webaudiofont/sound/` subset -> built-in synth fallback
 
 ## Dub Sound Guide (Preamp + FX)
 

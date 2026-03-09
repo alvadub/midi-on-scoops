@@ -1,6 +1,20 @@
 import { Utils } from 'midi-writer-js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const FONT_LOAD_TIMEOUT_MS = 4500;
+const LOCAL_FONT_BASE = '/webaudiofont/sound';
+const midiToFrequency = pitch => 440 * (2 ** ((pitch - 69) / 12));
+const normalizeFallbackWave = (value) => {
+  const wave = String(value || '').toLowerCase();
+  if (wave === 'triangle' || wave === 'square' || wave === 'sawtooth') return wave;
+  return 'auto';
+};
+const normalizeVelocity = (level) => {
+  if (!Number.isFinite(level) || level <= 0) return 0;
+  if (level <= 1) return clamp(level, 0, 1);
+  if (level <= 16) return clamp(level / 16, 0, 1);
+  return clamp(level / 127, 0, 1);
+};
 
 function makeExciterCurve(drive = 4, samples = 512) {
   const curve = new Float32Array(samples);
@@ -60,6 +74,10 @@ export default class Player {
       'noise sweep',
     ];
     this.pendingMidiPulse = null;
+    this.fontLoadStatus = new Map();
+    this.fontLoadPromises = new Map();
+    this.synthFallbackEnabled = true;
+    this.synthVoiceGain = 0.32;
     this.initAudio();
   }
 
@@ -95,6 +113,7 @@ export default class Player {
 
     this.initDelayBus();
     this.initPads();
+    this.synthNoiseBuffer = this.createNoiseBuffer(0.25);
     this.updateDelayTime();
   }
 
@@ -399,6 +418,17 @@ export default class Player {
     return buf;
   }
 
+  createNoiseBuffer(durationSec = 0.25) {
+    const ctx = this.audioContext;
+    const len = Math.max(1, Math.floor(ctx.sampleRate * durationSec));
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i += 1) {
+      data[i] = (Math.random() * 2) - 1;
+    }
+    return buf;
+  }
+
   pitch(value) {
     return Utils.getPitch(value) + this.offset;
   }
@@ -637,6 +667,7 @@ export default class Player {
         epicenterFreq: 90,
         epicenterDrive: 4,
         epicenterBlend: 0.3,
+        fallbackWave: 'auto',
       });
     }
     return this.trackState.get(key);
@@ -827,6 +858,11 @@ export default class Player {
     this.applyTrackState(key);
   }
 
+  setFallbackWave(key, value) {
+    const state = this.getTrackState(key);
+    state.fallbackWave = normalizeFallbackWave(value);
+  }
+
   applyMasterPreampState() {
     const now = this.audioContext.currentTime;
     const cutoffs = Array.isArray(this.masterPreampState.cutoffs) && this.masterPreampState.cutoffs.length
@@ -1002,27 +1038,202 @@ export default class Player {
     this.player.cancelQueue(this.audioContext);
   }
 
-  cacheInstrument(info) {
-    if (info && !window[info.variable]) {
-      if (window[info.variable + 127]) return;
-      window[info.variable + 127] = true;
-      this.player.loader.startLoad(this.audioContext, info.url, info.variable);
-      this.player.loader.waitLoad(() => {
-        delete window[info.variable + 127];
-      });
+  isFontReady(variable) {
+    const preset = window[variable];
+    return Boolean(preset && Array.isArray(preset.zones) && preset.zones.length > 0);
+  }
+
+  getFontFilename(url) {
+    if (!url || typeof url !== 'string') return '';
+    const clean = url.split('?')[0].split('#')[0];
+    const parts = clean.split('/');
+    return parts[parts.length - 1] || '';
+  }
+
+  getFontSourceCandidates(info) {
+    const out = [];
+    const seen = new Set();
+    const push = (url) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      out.push(url);
+    };
+
+    push(info && info.url ? String(info.url) : '');
+
+    const filename = this.getFontFilename(info && info.url);
+    if (filename) {
+      push(`${LOCAL_FONT_BASE}/${filename}`);
+      push(`./webaudiofont/sound/${filename}`);
     }
+
+    return out;
+  }
+
+  isCrossOriginUrl(url) {
+    try {
+      return new URL(url, window.location.href).origin !== window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  isHtmlLikeResponse(contentType, source) {
+    const type = String(contentType || '').toLowerCase();
+    if (type.includes('text/html') || type.includes('application/xhtml+xml')) return true;
+    const head = String(source || '').trimStart().slice(0, 160).toLowerCase();
+    return (
+      head.startsWith('<!doctype html')
+      || head.startsWith('<html')
+      || head.startsWith('<head')
+      || head.startsWith('<body')
+    );
+  }
+
+  executeFontScriptSource(url, source, variable) {
+    if (typeof document === 'undefined') throw new Error('Missing document for script execution');
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.text = `${source}\n//# sourceURL=${url}`;
+    document.head.appendChild(script);
+    script.remove();
+    if (this.isFontReady(variable)) return true;
+    throw new Error(`Loaded ${url}, but missing preset '${variable}'`);
+  }
+
+  loadFontScriptTag(url, variable, timeoutMs = FONT_LOAD_TIMEOUT_MS) {
+    if (this.isFontReady(variable)) return Promise.resolve(true);
+    if (typeof document === 'undefined') return Promise.reject(new Error('Missing document for script loading'));
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      let done = false;
+      const finish = (ok, error) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timeoutId);
+        script.onload = null;
+        script.onerror = null;
+        if (ok) resolve(true);
+        else reject(error || new Error(`Failed to load ${url}`));
+      };
+
+      const timeoutId = setTimeout(() => {
+        finish(false, new Error(`Timed out loading ${url}`));
+      }, timeoutMs);
+
+      script.async = true;
+      script.src = url;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => {
+        if (this.isFontReady(variable)) {
+          finish(true);
+          return;
+        }
+        finish(false, new Error(`Loaded ${url}, but missing preset '${variable}'`));
+      };
+      script.onerror = () => {
+        finish(false, new Error(`Network error loading ${url}`));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  async loadFontScript(url, variable, timeoutMs = FONT_LOAD_TIMEOUT_MS) {
+    if (this.isFontReady(variable)) return true;
+    if (typeof fetch !== 'function') return this.loadFontScriptTag(url, variable, timeoutMs);
+
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timeoutId = null;
+    if (controller) {
+      timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        signal: controller ? controller.signal : undefined,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status} loading ${url}`);
+      const source = await response.text();
+      if (this.isHtmlLikeResponse(response.headers.get('content-type'), source)) {
+        throw new Error(`Received HTML response for ${url}`);
+      }
+      return this.executeFontScriptSource(url, source, variable);
+    } catch (error) {
+      const message = String((error && error.message) || error || '').toLowerCase();
+      const corsOrNetwork =
+        error && error.name === 'TypeError'
+        && (message.includes('fetch') || message.includes('network') || message.includes('cors'));
+      const aborted = error && error.name === 'AbortError';
+
+      if (aborted) throw new Error(`Timed out loading ${url}`);
+      if (corsOrNetwork && this.isCrossOriginUrl(url)) {
+        return this.loadFontScriptTag(url, variable, timeoutMs);
+      }
+      throw error;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async loadFontWithFallback(info) {
+    const candidates = this.getFontSourceCandidates(info);
+    let lastError = null;
+    for (let i = 0; i < candidates.length; i += 1) {
+      const url = candidates[i];
+      try {
+        await this.loadFontScript(url, info.variable);
+        if (this.isFontReady(info.variable)) return true;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError) {
+      console.warn(`Preset load failed for '${info.variable}', enabling synth fallback.`, lastError.message || lastError);
+    }
+    return false;
+  }
+
+  cacheInstrument(info) {
+    if (!info || !info.variable) return;
+    if (this.isFontReady(info.variable)) {
+      this.fontLoadStatus.set(info.variable, 'ready');
+      return;
+    }
+    if (this.fontLoadPromises.has(info.variable)) return;
+
+    this.fontLoadStatus.set(info.variable, 'loading');
+    const deferred = this.loadFontWithFallback(info)
+      .then(ok => {
+        this.fontLoadStatus.set(info.variable, ok ? 'ready' : 'failed');
+      })
+      .catch(error => {
+        this.fontLoadStatus.set(info.variable, 'failed');
+        console.warn(`Preset load threw for '${info.variable}', using synth fallback.`, error && error.message ? error.message : error);
+      })
+      .finally(() => {
+        this.fontLoadPromises.delete(info.variable);
+      });
+
+    this.fontLoadPromises.set(info.variable, deferred);
   }
 
   playDrum(when, drum, nodes) {
     const [instrument, level] = drum;
     const info = this.player.loader.drumInfo(instrument);
-    if (!window[info.variable]) {
+    if (!this.isFontReady(info.variable)) {
       this.cacheInstrument(info);
+      this.queueSynthDrumToTrackNodes(when, instrument, level, nodes);
       return;
     }
-    const pitch = window[info.variable].zones[0].keyRangeLow;
+    const preset = window[info.variable];
+    const pitch = preset.zones[0].keyRangeLow;
     const gain = (1 / 127) * level;
-    if (level > 0) this.queueToTrackNodes(window[info.variable], when, pitch, 1 / 64, gain, nodes);
+    if (level > 0) this.queueToTrackNodes(preset, when, pitch, 1 / 64, gain, nodes);
   }
 
   queueToTrackNodes(font, when, pitch, duration, gain, nodes) {
@@ -1034,6 +1245,110 @@ export default class Player {
       return;
     }
     this.player.queueWaveTable(this.audioContext, nodes.input, font, startAt, pitch, duration, gain);
+  }
+
+  isBassFallbackVoice(instrument, tones) {
+    const program = Number.isFinite(instrument) ? instrument : -1;
+    if (program >= 32 && program <= 39) return true;
+    if (!Array.isArray(tones) || !tones.length) return false;
+    const maxPitch = Math.max(...tones);
+    return Number.isFinite(maxPitch) && maxPitch <= 52;
+  }
+
+  getSynthFallbackWaveform(instrument, pitch, bassLike = false, fallbackWave = 'auto') {
+    const explicit = normalizeFallbackWave(fallbackWave);
+    if (explicit !== 'auto') return explicit;
+    if (!bassLike) return 'triangle';
+    if (!Number.isFinite(pitch) || pitch <= 45) return 'square';
+    return 'sawtooth';
+  }
+
+  queueSynthNoteToTrackNodes(when, instrument, pitch, duration, level, nodes, fallbackWave = 'auto') {
+    if (!this.synthFallbackEnabled) return;
+    const tones = Array.isArray(pitch)
+      ? pitch.filter(Number.isFinite)
+      : [pitch].filter(Number.isFinite);
+    if (!tones.length) return;
+
+    const velocity = normalizeVelocity(level);
+    if (velocity <= 0) return;
+    const unit = clamp((0.04 + (velocity * this.synthVoiceGain)) / Math.sqrt(tones.length), 0.02, 0.42);
+    const bassLike = this.isBassFallbackVoice(instrument, tones);
+    tones.forEach(tone => {
+      const waveform = this.getSynthFallbackWaveform(instrument, tone, bassLike, fallbackWave);
+      this.queueSynthToneToTrackNodes(when, tone, duration, unit, nodes, waveform);
+    });
+  }
+
+  queueSynthToneToTrackNodes(when, pitch, duration, gain, nodes, waveform = 'triangle') {
+    const ctx = this.audioContext;
+    const startAt = Math.max(when, ctx.currentTime + 0.001);
+    const freq = midiToFrequency(pitch);
+    if (!Number.isFinite(freq)) return;
+
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const amp = ctx.createGain();
+    const hold = clamp(duration, 0.03, 1.5);
+    const peak = clamp(gain, 0.001, 0.35);
+
+    const wave = waveform === 'square' || waveform === 'sawtooth' ? waveform : 'triangle';
+    osc.type = wave;
+    osc.frequency.setValueAtTime(freq, startAt);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(clamp(freq * (wave === 'triangle' ? 5 : 3.2), 180, wave === 'triangle' ? 9800 : 4200), startAt);
+    filter.Q.value = 0.7;
+
+    amp.gain.setValueAtTime(0.0001, startAt);
+    amp.gain.exponentialRampToValueAtTime(peak, startAt + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, startAt + hold + 0.06);
+
+    osc.connect(filter);
+    filter.connect(amp);
+    amp.connect(nodes.input);
+
+    osc.start(startAt);
+    osc.stop(startAt + hold + 0.08);
+  }
+
+  queueSynthDrumToTrackNodes(when, instrument, level, nodes) {
+    if (!this.synthFallbackEnabled || !(level > 0)) return;
+    const ctx = this.audioContext;
+    const startAt = Math.max(when, ctx.currentTime + 0.001);
+    const isKick = instrument <= 40;
+    const peak = clamp((level / 127) * (isKick ? 0.36 : 0.24), 0.01, 0.45);
+
+    if (isKick) {
+      const osc = ctx.createOscillator();
+      const amp = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140, startAt);
+      osc.frequency.exponentialRampToValueAtTime(48, startAt + 0.14);
+      amp.gain.setValueAtTime(0.0001, startAt);
+      amp.gain.exponentialRampToValueAtTime(peak, startAt + 0.005);
+      amp.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.16);
+      osc.connect(amp);
+      amp.connect(nodes.input);
+      osc.start(startAt);
+      osc.stop(startAt + 0.19);
+      return;
+    }
+
+    const noise = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const amp = ctx.createGain();
+    noise.buffer = this.synthNoiseBuffer || this.createNoiseBuffer(0.25);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1400 + ((instrument % 7) * 220), startAt);
+    filter.Q.value = 0.9;
+    amp.gain.setValueAtTime(0.0001, startAt);
+    amp.gain.exponentialRampToValueAtTime(peak, startAt + 0.002);
+    amp.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.11);
+    noise.connect(filter);
+    filter.connect(amp);
+    amp.connect(nodes.input);
+    noise.start(startAt);
+    noise.stop(startAt + 0.14);
   }
 
   playBeatAt(when, beat, bpm) {
@@ -1057,21 +1372,27 @@ export default class Player {
         const [instrument, pitches, duration, level, subOffsetRatio = 0, subSpan = 1] = note;
         if (!Number.isFinite(level) || !Number.isFinite(duration) || !Number.isFinite(subSpan)) return;
         const info = this.player.loader.instrumentInfo(instrument);
-        if (!window[info.variable]) {
-          this.cacheInstrument(info);
-          return;
-        }
         const startAt = when + (subOffsetRatio * beatDuration);
         const basePulseDuration = duration * N;
         const baseDuration = basePulseDuration * subSpan;
         // Held notes can sound shorter than expected on some fonts (e.g. piano envelopes),
         // so keep a small overlap to preserve legato perception without changing beat timing.
         const legatoComp = subSpan > 1 ? Math.min(beatDuration, baseDuration * 0.5) : 0;
+        const actualDuration = baseDuration + legatoComp;
+
+        if (!this.isFontReady(info.variable)) {
+          this.cacheInstrument(info);
+          this.queueSynthNoteToTrackNodes(startAt, instrument, pitches, actualDuration, level, nodes, state.fallbackWave);
+          touched = true;
+          return;
+        }
+
+        const preset = window[info.variable];
         this.queueToTrackNodes(
-          window[info.variable],
+          preset,
           startAt,
           pitches,
-          baseDuration + legatoComp,
+          actualDuration,
           (1 / 127) * level,
           nodes,
         );

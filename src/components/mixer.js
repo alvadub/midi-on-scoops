@@ -31,6 +31,13 @@ function sliderToFreq(v) {
   return 20 * Math.pow(1000, Math.max(0, Math.min(1, v)));
 }
 
+const FALLBACK_WAVE_OPTIONS = [
+  ['Auto', 'auto'],
+  ['Tri', 'triangle'],
+  ['Square', 'square'],
+  ['Saw', 'sawtooth'],
+];
+
 function padIconTypeForLabel(label) {
   const name = String(label || '').toLowerCase();
   if (name.includes('coin')) return 'coin';
@@ -449,12 +456,23 @@ export function createMixer(player, options = {}) {
       player.setEpicenterEnabled(keyId, on);
       epi.classList.toggle('active', on);
     });
+    const wave = document.createElement('select');
+    wave.className = 'm-wave';
+    FALLBACK_WAVE_OPTIONS.forEach(([labelText, value]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = labelText;
+      wave.appendChild(option);
+    });
+    wave.value = state.fallbackWave || 'auto';
+    wave.addEventListener('change', () => player.setFallbackWave(keyId, wave.value));
 
     function syncButtons() {
       const cur = player.getTrackState(keyId);
       solo.classList.toggle('active', cur.solo);
       mute.classList.toggle('active', cur.muted);
       epi.classList.toggle('active', cur.epicenterOn);
+      wave.value = cur.fallbackWave || 'auto';
     }
 
     solo.addEventListener('click', () => {
@@ -471,6 +489,7 @@ export function createMixer(player, options = {}) {
     row.appendChild(solo);
     row.appendChild(mute);
     row.appendChild(epi);
+    row.appendChild(wave);
     row.appendChild(volume);
 
     strip.appendChild(name);
@@ -483,6 +502,7 @@ export function createMixer(player, options = {}) {
       [mute, `track:${keyId}:mute`],
       [solo, `track:${keyId}:solo`],
       [epi, `track:${keyId}:epi`],
+      [wave, `track:${keyId}:wave`],
     ].forEach(([control, id]) => attachMidiLearn(control, id, options));
 
     syncButtons();
@@ -495,6 +515,7 @@ export function createMixer(player, options = {}) {
       mute,
       solo,
       epi,
+      wave,
     };
   }
 
@@ -556,6 +577,7 @@ export function createMixer(player, options = {}) {
         muted: state.muted,
         solo: state.solo,
         epicenterOn: state.epicenterOn,
+        fallbackWave: state.fallbackWave || 'auto',
       };
     });
     return {
@@ -612,6 +634,7 @@ export function createMixer(player, options = {}) {
       if (typeof s.muted === 'boolean') player.setMute(keyId, s.muted);
       if (typeof s.solo === 'boolean') player.setSolo(keyId, s.solo);
       if (typeof s.epicenterOn === 'boolean') player.setEpicenterEnabled(keyId, s.epicenterOn);
+      if (typeof s.fallbackWave === 'string') player.setFallbackWave(keyId, s.fallbackWave);
       const strip = stripMap.get(keyId);
       if (strip) strip.syncButtons();
     });

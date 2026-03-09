@@ -39,6 +39,9 @@ You can use the browser playground for instant playback or the CLI to generate `
 | `#alias [level] pattern notes` | High-level channel alias (`#bd`, `#sd`, `#hh`, `#piano`, `#bass`, etc.) mapped to `#N` |
 | `#0 ...` | Drum lane |
 | `%var value` | Variable declaration |
+| `; bank: name` | Select shared alias bank (from `/sound-map.json`) |
+| `; bank.drums: name` | Override drum alias bank |
+| `; bank.instruments: name` | Override instrument alias bank |
 | `... -- note` | Suffix inline comment |
 | `> ...` | Top-level arrangement |
 | `xN` | Repeat N times |
@@ -112,6 +115,14 @@ Open [m0s.soypache.co](https://m0s.soypache.co) to write and play DUB in real ti
 - Drafts are auto-saved in `localStorage`
 - WebAudioFont load order: remote preset URL -> local `/webaudiofont/sound/` subset -> built-in synth fallback
 - Channel aliases plus fallback drum/instrument families are loaded from `/sound-map.json` (edit this file to remap without JS changes)
+
+Example bank headers:
+
+```dub
+; bank: default
+; bank.drums: tr808
+; bank.instruments: gm
+```
 
 ## Dub Sound Guide (Preamp + FX)
 

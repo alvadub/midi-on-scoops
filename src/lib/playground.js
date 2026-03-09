@@ -42,6 +42,27 @@ export function extractDraftKey(input) {
   return Math.max(-12, Math.min(12, n));
 }
 
+export function extractDraftBankSelection(input) {
+  const out = {
+    bank: null,
+    drums: null,
+    instruments: null,
+  };
+
+  String(input || '').split(/\r?\n/).forEach((line) => {
+    const m = String(line).match(/^\s*;\s*bank(?:\.(drums|instruments))?\s*:\s*([a-z0-9._-]+)\s*$/i);
+    if (!m) return;
+    const scope = String(m[1] || 'bank').toLowerCase();
+    const value = String(m[2] || '').trim();
+    if (!value) return;
+    if (scope === 'bank') out.bank = value;
+    if (scope === 'drums') out.drums = value;
+    if (scope === 'instruments') out.instruments = value;
+  });
+
+  return out;
+}
+
 export function buildMixFromMerged(midi) {
   const mix = [];
 

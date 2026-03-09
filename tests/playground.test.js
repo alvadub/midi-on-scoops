@@ -5,6 +5,7 @@ const {
   extractDraftTempo,
   extractDraftBars,
   extractDraftKey,
+  extractDraftBankSelection,
   buildTrackLineMap,
   applyLatestInputWins,
   buildArrangementDisplayExpansion,
@@ -24,6 +25,19 @@ describe('playground helpers', () => {
     expect(extractDraftKey('; key: -40')).to.equal(-12);
     expect(extractDraftKey('; key: 40')).to.equal(12);
     expect(extractDraftTempo('; foo: 120')).to.equal(null);
+  });
+
+  it('extracts bank header selections', () => {
+    const meta = extractDraftBankSelection(`
+      ; bank: default
+      ; bank.drums: tr808
+      ; bank.instruments: gm
+    `);
+    expect(meta).to.deep.equal({
+      bank: 'default',
+      drums: 'tr808',
+      instruments: 'gm',
+    });
   });
 
   it('builds track line map from track/channel lines', () => {

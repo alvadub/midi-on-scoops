@@ -26,6 +26,45 @@ const DEFAULT_SOUND_MAP = {
     hat: ['hat', 'hi-hat', 'hihat', 'cymbal', 'ride', 'crash', 'shaker', 'tamb'],
     perc: ['perc', 'tom', 'conga', 'bongo', 'cowbell', 'clave'],
   },
+  banks: {
+    default: { aliases: {} },
+    tr808: {
+      aliases: {
+        drums: {
+          bd: 2001,
+          kick: 2001,
+          sd: 2004,
+          sn: 2004,
+          snare: 2004,
+          cp: 2028,
+          clap: 2028,
+          hh: 2035,
+          hat: 2035,
+          oh: 2081,
+          ride: 2081,
+          perc: 2123,
+        },
+      },
+    },
+    gm: {
+      aliases: {
+        instruments: {
+          piano: 0,
+          epiano: 4,
+          organ: 16,
+          guitar: 24,
+          bass: 33,
+          strings: 48,
+          brass: 61,
+          choir: 52,
+          lead: 80,
+          pad: 88,
+          fx: 98,
+          synth: 94,
+        },
+      },
+    },
+  },
   aliases: DEFAULT_CHANNEL_ALIASES,
 };
 const cloneSoundMap = () => JSON.parse(JSON.stringify(DEFAULT_SOUND_MAP));
@@ -45,6 +84,16 @@ const normalizeDrumChannelKey = (value) => {
   if (n >= 2000) return `#${n}`;
   return `#${n + 2000}`;
 };
+const mergeChannelAliases = (base, overrides) => normalizeChannelAliases({
+  drums: {
+    ...((base && base.drums) || {}),
+    ...((overrides && overrides.drums) || {}),
+  },
+  instruments: {
+    ...((base && base.instruments) || {}),
+    ...((overrides && overrides.instruments) || {}),
+  },
+});
 const normalizeFallbackWave = (value) => {
   const wave = String(value || '').toLowerCase();
   if (wave === 'triangle' || wave === 'square' || wave === 'sawtooth') return wave;
@@ -948,6 +997,21 @@ export default class Player {
       });
     }
 
+    if (raw.banks && typeof raw.banks === 'object') {
+      const banks = {};
+      Object.entries(raw.banks).forEach(([name, value]) => {
+        const bankName = String(name || '').toLowerCase().trim();
+        if (!bankName || !value || typeof value !== 'object') return;
+        const aliasesSource = value.aliases && typeof value.aliases === 'object' ? value.aliases : value;
+        const aliases = normalizeChannelAliases(aliasesSource);
+        banks[bankName] = {
+          drums: aliases.drums,
+          instruments: aliases.instruments,
+        };
+      });
+      next.banks = banks;
+    }
+
     if (raw.aliases && typeof raw.aliases === 'object') {
       next.aliases = normalizeChannelAliases(raw.aliases);
     }
@@ -988,6 +1052,27 @@ export default class Player {
   getChannelAliases() {
     if (!this.soundMap || !this.soundMap.aliases) return DEFAULT_CHANNEL_ALIASES;
     return this.soundMap.aliases;
+  }
+
+  getAliasBank(name) {
+    const key = String(name || '').toLowerCase().trim();
+    if (!key || !this.soundMap || !this.soundMap.banks) return null;
+    return this.soundMap.banks[key] || null;
+  }
+
+  resolveChannelAliases(selection = {}) {
+    let aliases = this.getChannelAliases();
+
+    const allBank = this.getAliasBank(selection.bank);
+    if (allBank) aliases = mergeChannelAliases(aliases, allBank);
+
+    const drumsBank = this.getAliasBank(selection.drums);
+    if (drumsBank) aliases = mergeChannelAliases(aliases, { drums: drumsBank.drums });
+
+    const instrumentsBank = this.getAliasBank(selection.instruments);
+    if (instrumentsBank) aliases = mergeChannelAliases(aliases, { instruments: instrumentsBank.instruments });
+
+    return aliases;
   }
 
   applyMasterPreampState() {

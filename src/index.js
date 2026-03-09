@@ -6,6 +6,7 @@ import {
   extractDraftTempo,
   extractDraftBars,
   extractDraftKey,
+  extractDraftBankSelection,
   buildMixFromMerged,
   buildTrackLineMap,
   buildSectionTimeline as buildSectionTimelineFromSource,
@@ -269,7 +270,10 @@ const SCALE_INFO = {
 };
 
 function getData(input) {
-  const channelAliases = typeof p.getChannelAliases === 'function' ? p.getChannelAliases() : null;
+  const bankSelection = extractDraftBankSelection(input);
+  const channelAliases = typeof p.resolveChannelAliases === 'function'
+    ? p.resolveChannelAliases(bankSelection)
+    : (typeof p.getChannelAliases === 'function' ? p.getChannelAliases() : null);
   trackLineMap = buildTrackLineMap(input, { channelAliases });
   try {
     lastContext = parse(input, { channelAliases });

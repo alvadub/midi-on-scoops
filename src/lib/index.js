@@ -13,6 +13,7 @@ export {
   extractDraftTempo,
   extractDraftBars,
   extractDraftKey,
+  extractDraftBankSelection,
   buildMixFromMerged,
   buildTrackLineMap,
   applyLatestInputWins,

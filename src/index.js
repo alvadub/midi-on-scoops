@@ -642,7 +642,9 @@ function setCursorTokenIndicator(token) {
     return;
   }
   el.textContent = next;
-  lastCursorTokenLabel = next;
+  if (next !== 'Cursor: —') {
+    lastCursorTokenLabel = next;
+  }
 }
 
 function syncLintIndicator(report) {

@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "npm run build -- -w",
     "dist": "npm run build -- -q",
-    "check": "eslint 'src/**/*.{js,pug,svelte}'",
+    "check": "eslint 'src/**/*.{js,pug}'",
     "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
     "test": "npm run test:unit --",
     "dub:lint": "node bin/dub-lint.js",
@@ -46,16 +46,15 @@
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-svelte3": "^3.4.1",
     "harmonics": "^1.1.2",
     "japa": "^4.0.0",
     "less": "^4.5.1",
     "less-plugin-autoprefix": "^2.0.0",
+    "live-server": "^1.2.2",
     "midi-writer-js": "^3.2.1",
     "mortero": "^0.0.126",
     "pug": "^3.0.3",
-    "scribbletune": "^5.5.4",
-    "svelte": "^5.53.9"
+    "scribbletune": "^5.5.4"
   },
   "dependencies": {
     "fs-extra": "^11.3.4",

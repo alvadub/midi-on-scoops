@@ -1,10 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
-import harmonics from 'harmonics';
+import './_setup.js';
+import { inlineChord } from 'harmonics';
 import { transform } from '../src/lib/tokenize.js';
-
-const { inlineChord } = harmonics;
 
 describe('spec divergences (verified)', () => {
   it('rejects zero-based slice syntax', () => {

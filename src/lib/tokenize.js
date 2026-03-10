@@ -1,7 +1,5 @@
-import harmonics from 'harmonics';
+import { inlineChord } from 'harmonics';
 import { euclidean, parseEuclideanToken } from './euclidean.js';
-
-const { inlineChord } = harmonics;
 
 export const RE_SEPARATOR = /\|/;
 export const RE_PATTERN = /^(?:[x_-]|\[.+?\])+$/;

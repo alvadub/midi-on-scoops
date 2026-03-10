@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
+import './_setup.js';
 import { transform } from '../src/lib/tokenize.js';
 import { euclidean } from '../src/lib/euclidean.js';
 

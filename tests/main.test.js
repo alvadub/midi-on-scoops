@@ -2,7 +2,7 @@
 
 import { exec } from 'child_process';
 import fs from 'fs-extra';
-import { expect } from 'chai';
+import './_setup.js';
 import { flatten, zip } from '../src/lib/utils.js';
 import { build, merge, pack } from '../src/lib/mixup.js';
 import { parse, reduce } from '../src/lib/parser.js';

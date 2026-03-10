@@ -1,10 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
-import harmonics from 'harmonics';
+import './_setup.js';
+import { inlineChord } from 'harmonics';
 import { transform, split } from '../src/lib/tokenize.js';
-
-const { inlineChord } = harmonics;
 
 function tok(type, value, extra = {}) {
   return { type, value, ...extra };

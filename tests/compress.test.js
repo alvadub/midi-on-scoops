@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import './_setup.js';
 import { compressDub } from '../src/lib/compress.js';
 import { parse } from '../src/lib/parser.js';
 import { merge } from '../src/lib/mixup.js';

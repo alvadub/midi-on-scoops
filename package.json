@@ -18,14 +18,12 @@
     "dist": "npm run build -- -q",
     "check": "eslint 'src/**/*.{js,pug,svelte}'",
     "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
-    "mocha": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test ./node_modules/.bin/mocha --exit --verbose --recursive",
     "test": "npm run test:unit --",
     "dub:lint": "node bin/dub-lint.js",
-    "pretest": "npm run dist",
-    "test:unit": "npm run mocha -- -bR spec 'tests/*.test.js'",
-    "test:coverage": "nyc --silent -x '**/*.test.js'",
-    "test:coverage:unit": "npm run test:coverage -- npm run test:unit --",
-    "test:report": "nyc report"
+    "test:unit": "node japaFile.js",
+    "test:coverage": "c8 --all --src src --reporter=text --reporter=html node japaFile.js",
+    "test:coverage:unit": "npm run test:coverage --",
+    "test:report": "c8 report"
   },
   "mortero": {
     "bundle": [
@@ -43,26 +41,27 @@
     }
   },
   "devDependencies": {
-    "chai": "^4.3.4",
-    "codecov": "^3.7.1",
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-svelte3": "^3.2.0",
-    "harmonics": "^1.0.8",
-    "less": "^4.1.1",
+    "c8": "^11.0.0",
+    "esbuild": "^0.25.12",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-svelte3": "^3.4.1",
+    "harmonics": "^1.1.2",
+    "japa": "^4.0.0",
+    "less": "^4.5.1",
     "less-plugin-autoprefix": "^2.0.0",
-    "midi-writer-js": "^2.0.1",
-    "mocha": "^9.1.1",
-    "mortero": "^0.0.125",
-    "pug": "^3.0.2",
-    "scribbletune": "^4.1.1",
-    "svelte": "^3.42.5"
+    "midi-writer-js": "^3.2.1",
+    "mortero": "^0.0.126",
+    "pug": "^3.0.3",
+    "scribbletune": "^5.5.4",
+    "svelte": "^5.53.9"
   },
   "dependencies": {
-    "fs-extra": "^10.0.0",
+    "fs-extra": "^11.3.4",
+    "jsmidgen": "^0.1.8",
     "keypress": "^0.2.1",
-    "node-watch": "^0.7.1",
-    "wargs": "^0.9.5"
+    "node-watch": "^0.7.4",
+    "wargs": "^0.10.0"
   }
 }

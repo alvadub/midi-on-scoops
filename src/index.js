@@ -1,5 +1,5 @@
-import harmonics from 'harmonics';
-import Player from './components/player.js';
+import { scale } from 'harmonics';
+import * as PlayerModule from './components/player.js';
 import {
   parse,
   merge,
@@ -22,8 +22,6 @@ import { createMixer } from './components/mixer.js';
 import { MidiAccess, msgNorm, msgType, msgValue } from './lib/midi.js';
 import { MidiLearn } from './components/midi-learn.js';
 import { SnapshotManager } from './lib/snapshots.js';
-
-const { scale } = harmonics;
 
 let tempo = 146;
 let bars = 16;
@@ -49,6 +47,7 @@ let midiLearn = null;
 let snapshotManager = null;
 let midiLearnKeyHeld = false;
 
+const Player = PlayerModule.default || PlayerModule;
 const p = window.p || new Player();
 window.p = p;
 

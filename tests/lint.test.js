@@ -1,4 +1,4 @@
-import { expect } from 'chai';
+import './_setup.js';
 import { lintDub } from '../src/lib/lint.js';
 
 describe('lint', () => {

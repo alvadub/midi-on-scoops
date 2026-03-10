@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-expressions */
 
-import { expect } from 'chai';
+import './_setup.js';
 import { parse } from '../src/lib/parser.js';
 import {
   extractDraftTempo,

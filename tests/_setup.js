@@ -1,8 +1,5 @@
-import { createRequire } from 'module';
 import { expect } from './_expect.js';
-
-const require = createRequire(import.meta.url);
-const test = require('japa');
+import test from 'japa';
 
 globalThis.expect = expect;
 globalThis.describe = (title, callback) => {

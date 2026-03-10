@@ -1,10 +1,9 @@
-import { createRequire } from 'module';
 import jsmidgen from 'jsmidgen';
 import fs from 'fs-extra';
 import path from 'path';
+import midiOnScoops from '../dist/midi-on-scoops.cjs';
 
-const require = createRequire(import.meta.url);
-const { utils, convert } = require('../dist/midi-on-scoops.cjs');
+const { utils, convert } = midiOnScoops;
 
 function save(file, data) {
   const out = `${file}.mid`;

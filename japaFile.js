@@ -1,7 +1,6 @@
-import { createRequire } from 'module';
+import test from 'japa';
 
-const require = createRequire(import.meta.url);
-const { configure } = require('japa');
+const { configure } = test;
 
 configure({
   files: ['tests/*.test.js'],

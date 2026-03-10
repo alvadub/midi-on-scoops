@@ -632,9 +632,26 @@ export function createEditor(initialText, options = {}) {
     gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
       `<span class="editor-ln" data-line="${index + 1}">${index + 1}</span>`
     )).join('');
+    syncGutterHeights();
     applyLintMarkers();
     applyLintLineMarkers();
     applyQueuedArrangementToken();
+  }
+
+  function syncGutterHeights() {
+    const gutterLines = [...gutter.querySelectorAll('.editor-ln[data-line]')];
+    const editorLines = [...pre.querySelectorAll('.hl-line[data-line]')];
+    if (!pre.isConnected) {
+      gutterLines.forEach((lineEl) => {
+        lineEl.style.height = '';
+      });
+      return;
+    }
+    const count = Math.min(gutterLines.length, editorLines.length);
+    for (let i = 0; i < count; i += 1) {
+      const h = Math.max(1, editorLines[i].getBoundingClientRect().height);
+      gutterLines[i].style.height = `${h}px`;
+    }
   }
 
   function buildLintLineMap() {
@@ -1517,6 +1534,7 @@ export function createEditor(initialText, options = {}) {
     pre.scrollLeft = ta.scrollLeft;
     gutter.scrollTop = ta.scrollTop;
   });
+  window.addEventListener('resize', syncGutterHeights);
 
   ta.addEventListener('input', () => {
     pushHistoryEntry();
@@ -1783,14 +1801,15 @@ export function createEditor(initialText, options = {}) {
     updateSuggestions();
   });
 
-  history.entries = [buildHistoryEntry()];
-  history.index = 0;
-  sync();
-  emitCursorToken();
   wrap.appendChild(gutter);
   wrap.appendChild(pre);
   wrap.appendChild(ta);
   wrap.appendChild(tip);
+  history.entries = [buildHistoryEntry()];
+  history.index = 0;
+  sync();
+  emitCursorToken();
+  requestAnimationFrame(syncGutterHeights);
 
   return {
     el: wrap,

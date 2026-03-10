@@ -52,6 +52,7 @@ let midiLearnKeyHeld = false;
 let lintIssues = [];
 let lintMenuOpen = false;
 let suggestContextOpen = false;
+let lastCursorTokenLabel = 'Cursor: —';
 
 const Player = PlayerModule.default || PlayerModule;
 const p = window.p || new Player();
@@ -634,7 +635,14 @@ function labelCursorToken(token) {
 function setCursorTokenIndicator(token) {
   const el = document.getElementById('cursor-token-indicator');
   if (!el) return;
-  el.textContent = labelCursorToken(token);
+  const next = labelCursorToken(token);
+  const editorFocused = Boolean(editorApi && editorApi.textarea && document.activeElement === editorApi.textarea);
+  if (next === 'Cursor: —' && !editorFocused) {
+    el.textContent = lastCursorTokenLabel;
+    return;
+  }
+  el.textContent = next;
+  lastCursorTokenLabel = next;
 }
 
 function syncLintIndicator(report) {

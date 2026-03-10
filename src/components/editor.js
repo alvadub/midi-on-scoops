@@ -679,27 +679,29 @@ export function createEditor(initialText, options = {}) {
     const lineNums = gutter.querySelectorAll('.editor-ln[data-line]');
     lineNums.forEach((el) => {
       el.classList.remove('has-lint-error', 'has-lint-warning');
-      el.removeAttribute('title');
+      el.removeAttribute('data-lint-level');
+      el.removeAttribute('data-lint');
       const line = parseInt(el.dataset.line, 10);
       const info = lineMap.get(line);
       if (!info) return;
       if (info.level === 'error') el.classList.add('has-lint-error');
       else el.classList.add('has-lint-warning');
-      el.title = info.messages.join('\n');
+      el.dataset.lintLevel = info.level;
+      el.dataset.lint = info.messages.join('\n');
     });
 
     const lines = pre.querySelectorAll('.hl-line[data-line]');
     lines.forEach((el) => {
       el.classList.remove('has-lint-error', 'has-lint-warning');
       el.removeAttribute('data-lint-level');
-      el.removeAttribute('title');
+      el.removeAttribute('data-lint');
       const line = parseInt(el.dataset.line, 10) + 1;
       const info = lineMap.get(line);
       if (!info) return;
       if (info.level === 'error') el.classList.add('has-lint-error');
       else el.classList.add('has-lint-warning');
       el.dataset.lintLevel = info.level;
-      el.title = info.messages.join('\n');
+      el.dataset.lint = info.messages.join('\n');
     });
   }
 
@@ -1769,6 +1771,25 @@ export function createEditor(initialText, options = {}) {
   ta.addEventListener('mouseleave', () => {
     hideTooltip();
     clearScrubCursor();
+  });
+  gutter.addEventListener('mousemove', e => {
+    const lineEl = e.target && e.target.closest
+      ? e.target.closest('.editor-ln[data-lint-level][data-lint]')
+      : null;
+    if (!lineEl) {
+      hideTooltip();
+      return;
+    }
+    const line = parseInt(lineEl.dataset.line, 10);
+    const level = lineEl.dataset.lintLevel === 'error' ? 'ERROR' : 'WARN';
+    tipTitle.textContent = Number.isInteger(line) ? `Line ${line} · ${level}` : level;
+    tipBody.textContent = String(lineEl.dataset.lint || '').replace(/\n+/g, '  |  ');
+    tipStaff.innerHTML = '';
+    tipStaff.hidden = true;
+    placeTooltip(tip, e.clientX, e.clientY);
+  });
+  gutter.addEventListener('mouseleave', () => {
+    hideTooltip();
   });
 
   ta.addEventListener('blur', () => {

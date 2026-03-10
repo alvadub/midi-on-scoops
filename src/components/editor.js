@@ -100,9 +100,18 @@ function renderTokens(text) {
 }
 
 function splitComment(line) {
-  const idx = line.indexOf(';');
-  if (idx < 0) return [line, ''];
-  return [line.slice(0, idx), line.slice(idx)];
+  const value = String(line || '');
+  const semicolonIndex = value.indexOf(';');
+  const dashMatch = value.match(/\s--\s/);
+  const dashIndex = dashMatch && typeof dashMatch.index === 'number' && /\S/.test(value.slice(0, dashMatch.index))
+    ? dashMatch.index
+    : -1;
+
+  if (semicolonIndex < 0 && dashIndex < 0) return [value, ''];
+  if (semicolonIndex < 0) return [value.slice(0, dashIndex), value.slice(dashIndex)];
+  if (dashIndex < 0) return [value.slice(0, semicolonIndex), value.slice(semicolonIndex)];
+  const idx = Math.min(semicolonIndex, dashIndex);
+  return [value.slice(0, idx), value.slice(idx)];
 }
 
 function renderBase(base, arrangementState = null) {
@@ -412,8 +421,9 @@ function tokenAtCursor(text, cursorPos) {
   let lineEnd = src.indexOf('\n', pos);
   if (lineEnd < 0) lineEnd = src.length;
   const lineText = src.slice(lineStart, lineEnd);
-  const commentPos = src.indexOf(';', lineStart);
-  if (commentPos >= 0 && commentPos < lineEnd && pos >= commentPos) {
+  const [base, comment] = splitComment(lineText);
+  const commentPos = comment ? lineStart + base.length : -1;
+  if (commentPos >= 0 && pos >= commentPos) {
     const value = src.slice(commentPos, lineEnd);
     return { type: 'tok-comment', value, start: commentPos, end: lineEnd };
   }
@@ -430,6 +440,20 @@ function tokenAtCursor(text, cursorPos) {
         value: body,
         start: hashStart,
         end: bodyEnd,
+      };
+    }
+  }
+  const varDefMatch = lineText.match(/^(\s*)([%&][^\s]+)\b/);
+  if (varDefMatch) {
+    const tokenStart = lineStart + varDefMatch[1].length;
+    const tokenValue = varDefMatch[2];
+    const tokenEnd = tokenStart + tokenValue.length;
+    if (pos >= tokenStart && pos <= tokenEnd) {
+      return {
+        type: 'tok-var-def',
+        value: tokenValue,
+        start: tokenStart,
+        end: tokenEnd,
       };
     }
   }
@@ -1045,8 +1069,10 @@ export function createEditor(initialText, options = {}) {
     const lineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1;
     const lineEndRaw = src.indexOf('\n', pos);
     const lineEnd = lineEndRaw < 0 ? src.length : lineEndRaw;
-    const commentPos = src.indexOf(';', lineStart);
-    if (commentPos >= 0 && commentPos < lineEnd && pos >= commentPos) return null;
+    const lineText = src.slice(lineStart, lineEnd);
+    const [base, comment] = splitComment(lineText);
+    const commentPos = comment ? lineStart + base.length : -1;
+    if (commentPos >= 0 && pos >= commentPos) return null;
     let tokenStart = pos;
     let tokenEnd = pos;
 
@@ -1083,6 +1109,30 @@ export function createEditor(initialText, options = {}) {
     if (partial.text.startsWith('@')) return [];
     const before = ta.value.slice(0, partial.start).trimEnd();
     if (before.endsWith('<')) return [];
+    const defs = String(ta.value || '')
+      .split(/\r?\n/)
+      .map(raw => raw.replace(/;.*$/, ''))
+      .map(raw => raw.match(/^\s*([%&][^\s]+)\s+/))
+      .filter(Boolean)
+      .map(match => match[1]);
+    const uniqueDefs = [...new Set(defs)];
+    const buildVarOptions = (sigil) => {
+      const token = String(partial.text || '');
+      const prefix = token.charAt(0) === sigil ? token : sigil;
+      return uniqueDefs
+        .filter(name => name.charAt(0) === sigil)
+        .filter(name => name.toLowerCase().startsWith(prefix.toLowerCase()))
+        .map(name => ({ value: name, label: `${name} variable` }));
+    };
+    const lineBeforeToken = ta.value.slice(lineStart, partial.start).trim();
+    if (partial.text.startsWith('%') || partial.text === '%') {
+      if (!lineBeforeToken) return [];
+      return buildVarOptions('%');
+    }
+    if (partial.text.startsWith('&') || partial.text === '&') {
+      if (!lineBeforeToken) return [];
+      return buildVarOptions('&');
+    }
     const cls = classify(partial.text);
     if (cls === 'tok-channel' || partial.text.startsWith('#')) {
       return INSTRUMENT_OPTIONS;

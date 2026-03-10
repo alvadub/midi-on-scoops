@@ -18,6 +18,18 @@ function stripInlineComment(line) {
   return value.slice(0, Math.min(semicolonIndex, dashCommentIndex));
 }
 
+function splitDefinitionSuffixComment(line) {
+  const raw = String(line || '');
+  const semicolonIndex = raw.indexOf(';');
+  const scoped = semicolonIndex >= 0 ? raw.slice(0, semicolonIndex) : raw;
+  const dashCommentIndex = findSuffixDashCommentIndex(scoped);
+  if (dashCommentIndex < 0) return { code: scoped, comment: '' };
+  return {
+    code: scoped.slice(0, dashCommentIndex),
+    comment: scoped.slice(dashCommentIndex + 4).trim(),
+  };
+}
+
 export function extractDraftTempo(input) {
   const m = String(input || '').match(/^\s*;\s*tempo\s*:\s*(\d+(?:\.\d+)?)\s*$/im);
   if (!m) return null;
@@ -112,6 +124,22 @@ export function buildTrackLineMap(input, options = {}) {
     map.set(key, prev);
   });
   return map;
+}
+
+export function collectVariableDefinitions(input) {
+  const out = [];
+  const seen = new Set();
+  String(input || '').split(/\r?\n/).forEach((raw, idx) => {
+    const { code, comment } = splitDefinitionSuffixComment(raw);
+    const line = code.trim();
+    const match = line.match(/^\s*([%&][^\s]+)\s+/);
+    if (!match) return;
+    const name = match[1];
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    out.push({ name, line: idx + 1, comment });
+  });
+  return out;
 }
 
 export function applyLatestInputWins(context) {

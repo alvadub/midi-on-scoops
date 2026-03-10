@@ -12,6 +12,7 @@ import {
   extractDraftBankSelection,
   buildMixFromMerged,
   buildTrackLineMap,
+  collectVariableDefinitions,
   buildSectionTimeline as buildSectionTimelineFromSource,
   getSectionAtBeat as getSectionAtBeatFromTimeline,
   findTimelineIndex as findTimelineIndexFromTimeline,
@@ -53,6 +54,8 @@ let lintIssues = [];
 let lintMenuOpen = false;
 let suggestContextOpen = false;
 let lastCursorTokenLabel = 'Cursor: —';
+let lastCursorToken = null;
+let cursorMenuOpen = false;
 
 const Player = PlayerModule.default || PlayerModule;
 const p = window.p || new Player();
@@ -611,7 +614,7 @@ function labelCursorToken(token) {
     'tok-pattern': 'Pattern',
     'tok-note': 'Note',
     'tok-chord': 'Chord',
-    'tok-var-ref': 'Variable',
+    'tok-var-ref': 'Variable Use',
     'tok-var-def': 'Variable Def',
     'tok-repeat': 'Repeat',
     'tok-mode': 'Mode',
@@ -635,13 +638,18 @@ function labelCursorToken(token) {
 function setCursorTokenIndicator(token) {
   const el = document.getElementById('cursor-token-indicator');
   if (!el) return;
+  lastCursorToken = token || null;
   const next = labelCursorToken(token);
   const editorFocused = Boolean(editorApi && editorApi.textarea && document.activeElement === editorApi.textarea);
   if (next === 'Cursor: —' && !editorFocused) {
     el.textContent = lastCursorTokenLabel;
+    el.dataset.interactive = '0';
     return;
   }
   el.textContent = next;
+  const isVarUse = Boolean(token && token.type === 'tok-var-ref' && token.value && token.value !== '%');
+  el.dataset.interactive = isVarUse ? '1' : '0';
+  if (!isVarUse) closeCursorMenu();
   if (next !== 'Cursor: —') {
     lastCursorTokenLabel = next;
   }
@@ -703,7 +711,7 @@ function syncLintIndicator(report) {
 function syncContextToolState() {
   const el = document.getElementById('context-tool');
   if (!el) return;
-  el.classList.toggle('context-open', Boolean(suggestContextOpen || lintMenuOpen));
+  el.classList.toggle('context-open', Boolean(suggestContextOpen || lintMenuOpen || cursorMenuOpen));
 }
 
 function escHtml(value) {
@@ -830,8 +838,57 @@ function toggleLintMenu() {
   if (!lintIssues.length) return;
   const menu = document.getElementById('lint-menu');
   if (!menu) return;
+  closeCursorMenu();
   lintMenuOpen = !lintMenuOpen;
   menu.hidden = !lintMenuOpen;
+  syncContextToolState();
+}
+
+function closeCursorMenu() {
+  cursorMenuOpen = false;
+  const menu = document.getElementById('cursor-menu');
+  if (menu) menu.hidden = true;
+  syncContextToolState();
+}
+
+function renderCursorMenu() {
+  const menu = document.getElementById('cursor-menu');
+  if (!menu) return;
+  const token = lastCursorToken;
+  if (!(token && token.type === 'tok-var-ref' && token.value && token.value !== '%')) {
+    menu.innerHTML = '<li class="cursor-empty" aria-disabled="true">No variable usage selected</li>';
+    return;
+  }
+  const sigil = token.value.charAt(0);
+  const source = editorApi && typeof editorApi.getValue === 'function' ? editorApi.getValue() : '';
+  const defs = collectVariableDefinitions(source).filter(item => item.name.charAt(0) === sigil);
+  if (!defs.length) {
+    menu.innerHTML = '<li class="cursor-empty" aria-disabled="true">No matching variable definitions</li>';
+    return;
+  }
+  menu.innerHTML = defs.map((item) => {
+    const active = item.name === token.value ? '1' : '0';
+    const comment = item.comment
+      ? `<span class="cursor-item-comment">${escHtml(item.comment)}</span>`
+      : '';
+    return `<li class="cursor-item" data-var="${item.name}" data-line="${item.line}" data-active="${active}">
+      <span class="cursor-item-main">
+        <span class="cursor-item-var">${item.name}</span>
+        ${comment}
+      </span>
+      <span class="cursor-item-line">L${item.line}</span>
+    </li>`;
+  }).join('');
+}
+
+function toggleCursorMenu() {
+  const menu = document.getElementById('cursor-menu');
+  if (!menu) return;
+  if (!(lastCursorToken && lastCursorToken.type === 'tok-var-ref' && lastCursorToken.value && lastCursorToken.value !== '%')) return;
+  closeLintMenu();
+  if (!cursorMenuOpen) renderCursorMenu();
+  cursorMenuOpen = !cursorMenuOpen;
+  menu.hidden = !cursorMenuOpen;
   syncContextToolState();
 }
 
@@ -1407,7 +1464,11 @@ function createDOM(initialText, initialPreset) {
   const lintMenu = document.createElement('ul');
   lintMenu.id = 'lint-menu';
   lintMenu.hidden = true;
+  const cursorMenu = document.createElement('ul');
+  cursorMenu.id = 'cursor-menu';
+  cursorMenu.hidden = true;
   contextTool.appendChild(lintMenu);
+  contextTool.appendChild(cursorMenu);
   const topBadges = document.createElement('div');
   topBadges.id = 'top-badges';
 
@@ -1441,6 +1502,11 @@ function createDOM(initialText, initialPreset) {
     e.stopPropagation();
     toggleLintMenu();
   });
+  cursorTokenIndicator.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCursorMenu();
+  });
   lintMenu.addEventListener('click', e => {
     if (e.target && e.target.closest && e.target.closest('.lint-stack')) return;
     const item = e.target && e.target.closest ? e.target.closest('li.lint-item') : null;
@@ -1450,15 +1516,28 @@ function createDOM(initialText, initialPreset) {
     editorApi.jumpToLine(line);
     closeLintMenu();
   });
+  cursorMenu.addEventListener('click', e => {
+    const item = e.target && e.target.closest ? e.target.closest('li.cursor-item[data-line]') : null;
+    if (!item) return;
+    const line = parseInt(item.dataset.line, 10);
+    if (!(editorApi && Number.isInteger(line) && line > 0 && typeof editorApi.jumpToLine === 'function')) return;
+    editorApi.jumpToLine(line);
+    closeCursorMenu();
+  });
   document.addEventListener('click', e => {
-    if (!lintMenuOpen) return;
     const target = e.target;
-    if (target === lintIndicator) return;
-    if (lintMenu.contains(target)) return;
-    closeLintMenu();
+    if (lintMenuOpen) {
+      if (target !== lintIndicator && !lintMenu.contains(target)) closeLintMenu();
+    }
+    if (cursorMenuOpen) {
+      if (target !== cursorTokenIndicator && !cursorMenu.contains(target)) closeCursorMenu();
+    }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeLintMenu();
+    if (e.key === 'Escape') {
+      closeLintMenu();
+      closeCursorMenu();
+    }
   });
 
   statusbar.appendChild(presetLabel);

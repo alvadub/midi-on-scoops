@@ -102,9 +102,18 @@ function renderTokens(text) {
 }
 
 function splitComment(line) {
-  const idx = line.indexOf(';');
-  if (idx < 0) return [line, ''];
-  return [line.slice(0, idx), line.slice(idx)];
+  const value = String(line || '');
+  const semicolonIndex = value.indexOf(';');
+  const dashMatch = value.match(/\s--\s/);
+  const dashIndex = dashMatch && typeof dashMatch.index === 'number' && /\S/.test(value.slice(0, dashMatch.index))
+    ? dashMatch.index
+    : -1;
+
+  if (semicolonIndex < 0 && dashIndex < 0) return [value, ''];
+  if (semicolonIndex < 0) return [value.slice(0, dashIndex), value.slice(dashIndex)];
+  if (dashIndex < 0) return [value.slice(0, semicolonIndex), value.slice(semicolonIndex)];
+  const idx = Math.min(semicolonIndex, dashIndex);
+  return [value.slice(0, idx), value.slice(idx)];
 }
 
 function renderBase(base, arrangementState = null) {

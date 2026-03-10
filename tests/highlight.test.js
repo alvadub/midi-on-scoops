@@ -20,4 +20,12 @@ describe('highlight arrangement metadata', () => {
 
     expect(orders).to.deep.equal([0, 1, 2, 3]);
   });
+
+  it('renders suffix -- comments with comment styling', () => {
+    const html = highlight(`
+      %lead C4 D4 -- bright hook
+    `);
+
+    expect(html).to.include('<span class="tok-comment"> -- bright hook</span>');
+  });
 });

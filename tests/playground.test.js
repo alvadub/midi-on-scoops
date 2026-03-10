@@ -8,6 +8,7 @@ import {
   extractDraftKey,
   extractDraftBankSelection,
   buildTrackLineMap,
+  collectVariableDefinitions,
   applyLatestInputWins,
   buildArrangementDisplayExpansion,
   buildSectionTimeline,
@@ -62,6 +63,21 @@ describe('playground helpers', () => {
     const map = buildTrackLineMap(src);
     expect(map.get('0/lead')).to.deep.equal([2]);
     expect(map.get('33/bass')).to.deep.equal([4]);
+  });
+
+  it('collects variable definition comments for badge menus', () => {
+    const defs = collectVariableDefinitions(`
+      %lead C4 D4 -- bright hook
+      %bass C2 ; ignore semicolon comment
+      &swing x-xx -- late push
+      %lead E4 F4 -- duplicate should be ignored
+    `);
+
+    expect(defs).to.deep.equal([
+      { name: '%lead', line: 2, comment: 'bright hook' },
+      { name: '%bass', line: 3, comment: '' },
+      { name: '&swing', line: 4, comment: 'late push' },
+    ]);
   });
 
   it('builds track line map with channel aliases', () => {

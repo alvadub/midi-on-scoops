@@ -89,6 +89,25 @@ function stripInlineComment(line) {
   return line.slice(0, Math.min(semicolonIndex, dashCommentIndex));
 }
 
+function assertNormalizedVelocitySyntax(line) {
+  const tokens = String(line || '').trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length || tokens[0].charAt(0) !== '#') return;
+
+  let index = 1;
+  if (tokens[index] === '!' || tokens[index] === '+') index += 1;
+  const velocityToken = tokens[index];
+  if (!velocityToken) return;
+
+  // Legacy velocity shorthand forms are rejected in favor of plain numeric values.
+  if (
+    (velocityToken.includes('%') && velocityToken.indexOf('%') > 0)
+    || (velocityToken.includes('/') && velocityToken.indexOf('/') > 0)
+    || (velocityToken.includes('*') && velocityToken.indexOf('*') > 0)
+  ) {
+    throw new Error(`Deprecated velocity syntax '${velocityToken}'. Use plain numeric form like '0.75' or '96'`);
+  }
+}
+
 function cloneToken(token) {
   if (!token || typeof token !== 'object') return token;
   const cloned = { ...token };
@@ -344,6 +363,8 @@ export function parse(buffer, options = {}) {
     if (!line) return;
 
     try {
+      assertNormalizedVelocitySyntax(line);
+
       if (line.charAt() === '%') {
         const [name, ...value] = line.split(/\s+/);
 

@@ -157,14 +157,31 @@ describe('parser', () => {
   it('should extract values', () => {
     const sample = `
       # multiple
-      #1 2/3 4*5 67%
+      #1 0.66 20 85
     `;
 
     expect(parse(sample).tracks).to.eql({
       multiple: {
-        '#1': [{ values: [n(2 / 3), n(4 * 5), n(85.09)] }],
+        '#1': [{ values: [n(0.66), n(20), n(85)] }],
       },
     });
+  });
+
+  it('should reject legacy velocity shorthand formats', () => {
+    expect(() => parse(`
+      # groove
+      #1 50% x---
+    `)).to.throw("Deprecated velocity syntax '50%'");
+
+    expect(() => parse(`
+      # groove
+      #1 3/4 x---
+    `)).to.throw("Deprecated velocity syntax '3/4'");
+
+    expect(() => parse(`
+      # groove
+      #1 4*5 x---
+    `)).to.throw("Deprecated velocity syntax '4*5'");
   });
 
   it('should extract notes', () => {

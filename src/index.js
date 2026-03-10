@@ -49,6 +49,9 @@ let midiAccess = null;
 let midiLearn = null;
 let snapshotManager = null;
 let midiLearnKeyHeld = false;
+let lintIssues = [];
+let lintMenuOpen = false;
+let suggestContextOpen = false;
 
 const Player = PlayerModule.default || PlayerModule;
 const p = window.p || new Player();
@@ -280,11 +283,28 @@ function getData(input) {
   const channelAliases = typeof p.resolveChannelAliases === 'function'
     ? p.resolveChannelAliases(bankSelection)
     : (typeof p.getChannelAliases === 'function' ? p.getChannelAliases() : null);
+  const resolveInstrument = (value) => {
+    const n = parseInt(value, 10);
+    if (Number.isNaN(n)) return false;
+    try {
+      const info = n >= 2000
+        ? p.player.loader.drumInfo(n - 2000)
+        : p.player.loader.instrumentInfo(n);
+      return Boolean(info);
+    } catch (e) {
+      return false;
+    }
+  };
   const nextTrackLineMap = buildTrackLineMap(input, { channelAliases });
   try {
     lastContext = parse(input, { channelAliases });
     const merged = merge(lastContext);
-    syncLintIndicator(lintDub(input, { context: lastContext, merged, channelAliases }));
+    syncLintIndicator(lintDub(input, {
+      context: lastContext,
+      merged,
+      channelAliases,
+      resolveInstrument,
+    }));
     sectionTimeline = buildSectionTimelineFromSource(lastContext, merged, editorApi ? editorApi.getValue() : '');
     const defaultLoop = sectionTimeline.find(item => item.blockId && item.blockLive);
     defaultArrangementLoopBlockId = defaultLoop ? defaultLoop.blockId : null;
@@ -296,7 +316,10 @@ function getData(input) {
     lastGoodData = built;
     return built;
   } catch (e) {
-    syncLintIndicator(null);
+    syncLintIndicator(lintDub(input, {
+      channelAliases,
+      resolveInstrument,
+    }));
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
     return lastGoodData;
@@ -615,10 +638,15 @@ function setCursorTokenIndicator(token) {
 }
 
 function syncLintIndicator(report) {
+  if (editorApi && typeof editorApi.setLintReport === 'function') {
+    editorApi.setLintReport(report || null);
+  }
   const el = document.getElementById('lint-indicator');
   if (!el) return;
 
   if (!report) {
+    lintIssues = [];
+    renderLintMenu();
     el.textContent = 'Lint: —';
     el.dataset.state = 'idle';
     el.title = 'No lint report yet.';
@@ -630,6 +658,8 @@ function syncLintIndicator(report) {
   const issues = []
     .concat((report.errors || []).map(item => ({ ...item, level: 'error' })))
     .concat((report.warnings || []).map(item => ({ ...item, level: 'warn' })));
+  lintIssues = issues;
+  renderLintMenu();
   if (!issues.length) {
     el.title = 'No lint issues.';
   } else {
@@ -658,6 +688,47 @@ function syncLintIndicator(report) {
 
   el.textContent = 'Lint: ok';
   el.dataset.state = 'ok';
+}
+
+function syncContextToolState() {
+  const el = document.getElementById('context-tool');
+  if (!el) return;
+  el.classList.toggle('context-open', Boolean(suggestContextOpen || lintMenuOpen));
+}
+
+function closeLintMenu() {
+  lintMenuOpen = false;
+  const menu = document.getElementById('lint-menu');
+  if (menu) menu.hidden = true;
+  syncContextToolState();
+}
+
+function renderLintMenu() {
+  const menu = document.getElementById('lint-menu');
+  if (!menu) return;
+  if (!lintIssues.length) {
+    menu.innerHTML = '<li class="lint-empty" aria-disabled="true">No lint issues</li>';
+    if (lintMenuOpen) closeLintMenu();
+    return;
+  }
+
+  menu.innerHTML = lintIssues.map((item, idx) => {
+    const level = item.level === 'error' ? 'error' : 'warn';
+    const where = item.line ? `L${item.line}` : 'Global';
+    const rule = item.rule ? `[${item.rule}]` : '';
+    const text = `${where} ${rule} ${item.message}`.trim();
+    const lineAttr = item.line ? ` data-line="${item.line}"` : '';
+    return `<li class="lint-item lint-${level}" data-index="${idx}"${lineAttr} title="${text}">${text}</li>`;
+  }).join('');
+}
+
+function toggleLintMenu() {
+  if (!lintIssues.length) return;
+  const menu = document.getElementById('lint-menu');
+  if (!menu) return;
+  lintMenuOpen = !lintMenuOpen;
+  menu.hidden = !lintMenuOpen;
+  syncContextToolState();
 }
 
 function markDirty() {
@@ -1186,9 +1257,8 @@ function createDOM(initialText, initialPreset) {
     onCursorToken: setCursorTokenIndicator,
     getSuggestDockEl: () => document.getElementById('context-tool'),
     onSuggestVisibilityChange: isOpen => {
-      const el = document.getElementById('context-tool');
-      if (!el) return;
-      el.classList.toggle('context-open', Boolean(isOpen));
+      suggestContextOpen = Boolean(isOpen);
+      syncContextToolState();
     },
     onArrangementSectionClick: queueSectionLaunch,
     onInput: () => {
@@ -1230,6 +1300,10 @@ function createDOM(initialText, initialPreset) {
 
   const contextTool = document.createElement('div');
   contextTool.id = 'context-tool';
+  const lintMenu = document.createElement('ul');
+  lintMenu.id = 'lint-menu';
+  lintMenu.hidden = true;
+  contextTool.appendChild(lintMenu);
   const topBadges = document.createElement('div');
   topBadges.id = 'top-badges';
 
@@ -1257,6 +1331,31 @@ function createDOM(initialText, initialPreset) {
   toolbar.appendChild(topVisualizer);
   toolbar.appendChild(toolbarControls);
   bindTopVisualizer(topVisualizerCanvas);
+
+  lintIndicator.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleLintMenu();
+  });
+  lintMenu.addEventListener('click', e => {
+    const item = e.target && e.target.closest ? e.target.closest('li.lint-item') : null;
+    if (!item) return;
+    const line = parseInt(item.dataset.line, 10);
+    if (editorApi && Number.isInteger(line) && line > 0 && typeof editorApi.jumpToLine === 'function') {
+      editorApi.jumpToLine(line);
+    }
+    closeLintMenu();
+  });
+  document.addEventListener('click', e => {
+    if (!lintMenuOpen) return;
+    const target = e.target;
+    if (target === lintIndicator) return;
+    if (lintMenu.contains(target)) return;
+    closeLintMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLintMenu();
+  });
 
   statusbar.appendChild(presetLabel);
   statusbar.appendChild(beatDots);

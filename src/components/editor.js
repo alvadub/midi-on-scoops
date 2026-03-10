@@ -495,6 +495,7 @@ export function createEditor(initialText, options = {}) {
     token: null,
     dismissedToken: null,
   };
+  let lintReport = null;
   const HISTORY_LIMIT = 200;
   const history = {
     entries: [],
@@ -629,10 +630,60 @@ export function createEditor(initialText, options = {}) {
     pre.innerHTML = highlight(ta.value);
     const lineCount = String(ta.value).split(/\r?\n/).length;
     gutter.innerHTML = Array.from({ length: lineCount }, (_, index) => (
-      `<span class="editor-ln">${index + 1}</span>`
+      `<span class="editor-ln" data-line="${index + 1}">${index + 1}</span>`
     )).join('');
     applyLintMarkers();
+    applyLintLineMarkers();
     applyQueuedArrangementToken();
+  }
+
+  function buildLintLineMap() {
+    const map = new Map();
+    if (!lintReport) return map;
+
+    const push = (level, item) => {
+      if (!item || !Number.isInteger(item.line) || item.line < 1) return;
+      const line = item.line;
+      const existing = map.get(line) || { level: 'warning', messages: [] };
+      if (level === 'error') existing.level = 'error';
+      const prefix = item.rule ? `[${item.rule}] ` : '';
+      const text = `${level.toUpperCase()}: ${prefix}${item.message}`;
+      if (!existing.messages.includes(text)) existing.messages.push(text);
+      map.set(line, existing);
+    };
+
+    (lintReport.errors || []).forEach(item => push('error', item));
+    (lintReport.warnings || []).forEach(item => push('warning', item));
+    return map;
+  }
+
+  function applyLintLineMarkers() {
+    const lineMap = buildLintLineMap();
+    const lineNums = gutter.querySelectorAll('.editor-ln[data-line]');
+    lineNums.forEach((el) => {
+      el.classList.remove('has-lint-error', 'has-lint-warning');
+      el.removeAttribute('title');
+      const line = parseInt(el.dataset.line, 10);
+      const info = lineMap.get(line);
+      if (!info) return;
+      if (info.level === 'error') el.classList.add('has-lint-error');
+      else el.classList.add('has-lint-warning');
+      el.title = info.messages.join('\n');
+    });
+
+    const lines = pre.querySelectorAll('.hl-line[data-line]');
+    lines.forEach((el) => {
+      el.classList.remove('has-lint-error', 'has-lint-warning');
+      el.removeAttribute('data-lint-level');
+      el.removeAttribute('title');
+      const line = parseInt(el.dataset.line, 10) + 1;
+      const info = lineMap.get(line);
+      if (!info) return;
+      if (info.level === 'error') el.classList.add('has-lint-error');
+      else el.classList.add('has-lint-warning');
+      el.dataset.lintLevel = info.level;
+      el.title = info.messages.join('\n');
+    });
   }
 
   function buildHistoryEntry() {
@@ -862,6 +913,30 @@ export function createEditor(initialText, options = {}) {
     for (let i = 0; i < idx; i += 1) total += lines[i].length + 1;
     const clampedCol = Math.max(0, Math.min(lines[idx].length, col));
     return total + clampedCol;
+  }
+
+  function jumpToLine(lineNumber) {
+    const lines = ta.value.split('\n');
+    if (!lines.length) return;
+    const parsed = parseInt(lineNumber, 10);
+    if (!Number.isInteger(parsed) || parsed < 1) return;
+
+    const idx = Math.max(0, Math.min(lines.length - 1, parsed - 1));
+    const pos = offsetAt(lines, idx, 0);
+    ta.selectionStart = pos;
+    ta.selectionEnd = pos;
+    ta.focus({ preventScroll: true });
+
+    const lineEl = pre.querySelector(`.hl-line[data-line="${idx}"]`);
+    if (lineEl) {
+      const targetTop = Math.max(0, lineEl.offsetTop - Math.floor(ta.clientHeight * 0.35));
+      ta.scrollTop = targetTop;
+      pre.scrollTop = ta.scrollTop;
+      gutter.scrollTop = ta.scrollTop;
+    }
+
+    emitCursorToken();
+    updateSuggestions();
   }
 
   function toggleSelectionComments() {
@@ -1730,6 +1805,11 @@ export function createEditor(initialText, options = {}) {
     setActiveSectionByOrder,
     setActiveArrangementLoopBlock,
     setQueuedArrangementToken,
+    jumpToLine,
+    setLintReport: (report) => {
+      lintReport = report || null;
+      applyLintLineMarkers();
+    },
     setValue: value => {
       ta.value = value;
       ta.selectionStart = 0;

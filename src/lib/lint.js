@@ -73,7 +73,15 @@ function stripInlineComment(line) {
 
 function scanClipLineMap(source, opts = {}) {
   const clipLineMap = new Map();
+  const explicitClipCounts = new Map();
   const sectionNames = new Set();
+  const sectionLineMap = new Map();
+  const trackLineMap = new Map();
+  const trackHasClip = new Set();
+  const variableDefinitionLineMap = new Map();
+  const variableReferenceCounts = new Map();
+  const patternDefinitionLineMap = new Map();
+  const patternReferenceCounts = new Map();
   let track = null;
   let prefix = '';
   const counters = new Map();
@@ -84,16 +92,61 @@ function scanClipLineMap(source, opts = {}) {
 
     if (line.indexOf('# ') >= 0) {
       track = line.split(/\s+/).slice(1).join(' ');
+      if (track && !trackLineMap.has(track)) trackLineMap.set(track, nth + 1);
       prefix = '';
+      return;
+    }
+
+    if (line.charAt() === '%') {
+      const [name, ...rest] = line.split(/\s+/);
+      if (/^%[a-zA-Z_]\w*$/.test(name) && !variableDefinitionLineMap.has(name)) {
+        variableDefinitionLineMap.set(name, nth + 1);
+      }
+      rest.forEach((token) => {
+        if (/^%[a-zA-Z_]\w*$/.test(token)) {
+          variableReferenceCounts.set(token, (variableReferenceCounts.get(token) || 0) + 1);
+        }
+        if (/^&[a-zA-Z_]\w*$/.test(token)) {
+          patternReferenceCounts.set(token, (patternReferenceCounts.get(token) || 0) + 1);
+        }
+      });
+      return;
+    }
+
+    if (line.charAt() === '&') {
+      const [name, ...rest] = line.split(/\s+/);
+      if (/^&[a-zA-Z_]\w*$/.test(name) && !patternDefinitionLineMap.has(name)) {
+        patternDefinitionLineMap.set(name, nth + 1);
+      }
+      rest.forEach((token) => {
+        if (/^%[a-zA-Z_]\w*$/.test(token)) {
+          variableReferenceCounts.set(token, (variableReferenceCounts.get(token) || 0) + 1);
+        }
+        if (/^&[a-zA-Z_]\w*$/.test(token)) {
+          patternReferenceCounts.set(token, (patternReferenceCounts.get(token) || 0) + 1);
+        }
+      });
       return;
     }
 
     if (line.charAt() === '@') {
       const name = line.substr(1).split(/\s+/)[0];
       prefix = name || '';
-      if (prefix) sectionNames.add(prefix);
+      if (prefix) {
+        sectionNames.add(prefix);
+        if (!sectionLineMap.has(prefix)) sectionLineMap.set(prefix, nth + 1);
+      }
       return;
     }
+
+    line.split(/\s+/).forEach((token) => {
+      if (/^%[a-zA-Z_]\w*$/.test(token)) {
+        variableReferenceCounts.set(token, (variableReferenceCounts.get(token) || 0) + 1);
+      }
+      if (/^&[a-zA-Z_]\w*$/.test(token)) {
+        patternReferenceCounts.set(token, (patternReferenceCounts.get(token) || 0) + 1);
+      }
+    });
 
     if (!track) return;
     if (!/^#[^\s]+\b/.test(line)) return;
@@ -110,10 +163,72 @@ function scanClipLineMap(source, opts = {}) {
     const key = `${track}|${channel}`;
     const idx = counters.get(key) || 0;
     counters.set(key, idx + 1);
+    explicitClipCounts.set(key, (explicitClipCounts.get(key) || 0) + 1);
+    trackHasClip.add(track);
     clipLineMap.set(`${key}|${idx}`, nth + 1);
   });
 
-  return { clipLineMap, sectionNames };
+  return {
+    clipLineMap,
+    explicitClipCounts,
+    sectionNames,
+    sectionLineMap,
+    trackLineMap,
+    trackHasClip,
+    variableDefinitionLineMap,
+    variableReferenceCounts,
+    patternDefinitionLineMap,
+    patternReferenceCounts,
+  };
+}
+
+function inputSignature(clip, context) {
+  if (!clip || !clip.input) return null;
+  try {
+    return JSON.stringify(reduce(clip.input, context.data));
+  } catch (e) {
+    return null;
+  }
+}
+
+function scanInvalidTokenPrefixes(source) {
+  const warnings = [];
+  String(source || '').split(/\r?\n/).forEach((rawLine, nth) => {
+    const line = stripInlineComment(rawLine).trim();
+    if (!line) return;
+
+    const tokens = line.split(/\s+/);
+    tokens.forEach((token) => {
+      const pos = token.search(/[#@<%&>]/);
+      if (pos <= 0) return;
+      const prefix = token.slice(0, pos);
+      const symbol = token.charAt(pos);
+      let invalid = false;
+
+      if (symbol === '#') {
+        const noteLike = pos === 1 && /^[a-gA-G]$/.test(prefix) && /^\d/.test(token.slice(pos + 1));
+        invalid = !noteLike;
+      } else {
+        invalid = true;
+      }
+
+      if (!invalid) return;
+      warnings.push({
+        rule: 'invalid-token-prefix',
+        message: `Token '${token}' has invalid prefix '${prefix}' before '${symbol}'.`,
+        line: nth + 1,
+      });
+    });
+  });
+  return warnings;
+}
+
+function parseErrorLine(error) {
+  const text = String((error && error.message) || error || '');
+  const match = text.match(/\bat line\s+(\d+)\b/i);
+  if (!match) return null;
+  const line = parseInt(match[1], 10);
+  return Number.isInteger(line) && line > 0 ? line : null;
 }
 
 export function lintDub(source, opts = {}) {
@@ -124,6 +239,7 @@ export function lintDub(source, opts = {}) {
 
   let context = opts.context;
   let merged = opts.merged;
+  report.warnings.push(...scanInvalidTokenPrefixes(source));
 
   try {
     if (!context) context = parse(source);
@@ -131,13 +247,25 @@ export function lintDub(source, opts = {}) {
     report.errors.push({
       rule: 'parse-error',
       message: e && e.message ? e.message : 'Parse error',
-      line: null,
+      line: parseErrorLine(e),
     });
     return report;
   }
 
-  const { clipLineMap, sectionNames } = scanClipLineMap(source, opts);
+  const {
+    clipLineMap,
+    explicitClipCounts,
+    sectionNames,
+    sectionLineMap,
+    trackLineMap,
+    trackHasClip,
+    variableDefinitionLineMap,
+    variableReferenceCounts,
+    patternDefinitionLineMap,
+    patternReferenceCounts,
+  } = scanClipLineMap(source, opts);
   const expanded = buildArrangementDisplayExpansion(source);
+  const usedSections = new Set(expanded.map(item => item.name));
   expanded.forEach((item, idx) => {
     if (!sectionNames.has(item.name)) {
       report.errors.push({
@@ -147,11 +275,75 @@ export function lintDub(source, opts = {}) {
       });
     }
   });
+  if (expanded.length > 0) {
+    sectionNames.forEach((name) => {
+      if (usedSections.has(name)) return;
+      report.warnings.push({
+        rule: 'unused-section',
+        message: `Section '@${name}' is defined but never used in arrangement.`,
+        line: sectionLineMap.get(name) || null,
+      });
+    });
+  }
+
+  variableDefinitionLineMap.forEach((line, name) => {
+    if ((variableReferenceCounts.get(name) || 0) > 0) return;
+    report.warnings.push({
+      rule: 'unused-variable',
+      message: `Variable '${name}' is defined but never used.`,
+      line,
+    });
+  });
+
+  patternDefinitionLineMap.forEach((line, name) => {
+    if ((patternReferenceCounts.get(name) || 0) > 0) return;
+    report.warnings.push({
+      rule: 'unused-pattern-variable',
+      message: `Pattern variable '${name}' is defined but never used.`,
+      line,
+    });
+  });
+
+  Object.keys(context.tracks || {}).forEach((trackName) => {
+    if (trackHasClip.has(trackName)) return;
+    report.warnings.push({
+      rule: 'empty-track',
+      message: `Track '${trackName}' has no channel clips.`,
+      line: trackLineMap.get(trackName) || null,
+    });
+  });
 
   Object.entries(context.tracks || {}).forEach(([trackName, channels]) => {
     Object.entries(channels || {}).forEach(([channel, clips]) => {
+      const channelMatch = String(channel).match(/#(\d+)$/);
+      if (channelMatch && typeof opts.resolveInstrument === 'function') {
+        const program = parseInt(channelMatch[1], 10);
+        const isValid = opts.resolveInstrument(String(program));
+        if (!isValid) {
+          report.warnings.push({
+            rule: 'invalid-instrument',
+            message: `Track '${trackName}' channel '${channel}' uses unsupported instrument/program number '${program}'.`,
+            line: clipLineMap.get(`${trackName}|${channel}|0`) || trackLineMap.get(trackName) || null,
+          });
+        }
+      }
+
       const inputClips = (clips || []).filter(clip => clip && clip.input);
-      if (inputClips.length > 1 && inputClips.some(clip => !clip.merge)) {
+      const explicitCount = explicitClipCounts.get(`${trackName}|${channel}`) || 0;
+      const unmergedInputs = inputClips.filter(clip => !clip.merge);
+      const seenInputSignatures = new Set();
+      let hasDuplicateInput = false;
+      for (let i = 0; i < unmergedInputs.length; i += 1) {
+        const signature = inputSignature(unmergedInputs[i], context);
+        if (!signature) continue;
+        if (seenInputSignatures.has(signature)) {
+          hasDuplicateInput = true;
+          break;
+        }
+        seenInputSignatures.add(signature);
+      }
+
+      if (explicitCount > 1 && hasDuplicateInput) {
         const line = clipLineMap.get(`${trackName}|${channel}|0`) || null;
         report.warnings.push({
           rule: 'duplicate-input-clips',
@@ -166,10 +358,12 @@ export function lintDub(source, opts = {}) {
         const line = clipLineMap.get(`${trackName}|${channel}|${clipIndex}`) || null;
         let input;
         let stats;
+        let values = [];
+        let notes = [];
 
         try {
-          const values = clip.values ? reduce(clip.values, context.data) : [];
-          const notes = clip.data ? reduce(clip.data, context.data) : [];
+          values = clip.values ? reduce(clip.values, context.data) : [];
+          notes = clip.data ? reduce(clip.data, context.data) : [];
           input = flatten(reduce(clip.input, context.data, pack(values.slice(), notes.slice())));
           stats = countPatternStats(reduce(clip.input, context.data));
         } catch (e) {
@@ -181,7 +375,20 @@ export function lintDub(source, opts = {}) {
           return;
         }
 
-        const noteEvents = clip.data ? reduce(clip.data, context.data) : [];
+        const outOfRangeLevel = values.find(value => (
+          typeof value === 'number'
+          && Number.isFinite(value)
+          && (value < 0 || value > 127)
+        ));
+        if (typeof outOfRangeLevel === 'number') {
+          report.warnings.push({
+            rule: 'invalid-level',
+            message: `Track '${trackName}' '${channel}' has level/velocity '${outOfRangeLevel}' outside MIDI range 0..127.`,
+            line,
+          });
+        }
+
+        const noteEvents = notes;
         const noteCount = Array.isArray(noteEvents) ? noteEvents.length : 0;
 
         if (noteCount > stats.hits) {

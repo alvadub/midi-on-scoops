@@ -170,6 +170,35 @@ select {
 
 .editor-ln {
   display: block;
+  position: relative;
+  padding-right: 0.45em;
+}
+
+.editor-ln.has-lint-warning {
+  color: color-mix(in srgb, var(--text) 72%, #f4c35d);
+}
+
+.editor-ln.has-lint-error {
+  color: color-mix(in srgb, var(--text) 72%, var(--danger));
+}
+
+.editor-ln.has-lint-warning::before,
+.editor-ln.has-lint-error::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.3em;
+  width: 0.28em;
+  height: 1em;
+  border-radius: 0 4px 4px 0;
+}
+
+.editor-ln.has-lint-warning::before {
+  background: #f4c35d;
+}
+
+.editor-ln.has-lint-error::before {
+  background: var(--danger);
 }
 
 #editor {
@@ -192,6 +221,22 @@ select {
 .hl-line {
   display: block;
   width: 100%;
+}
+
+.hl-line.has-lint-warning {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #f4c35d 22%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+.hl-line.has-lint-error {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--danger) 24%, transparent) 0%,
+    transparent 55%
+  );
 }
 
 .hl-line:empty::before {
@@ -323,6 +368,7 @@ select {
   padding: 0.15em 0.55em;
   background: rgba(186, 202, 221, 0.1);
   color: #cad8e8;
+  cursor: pointer;
 }
 
 #lint-indicator[data-state="ok"] {
@@ -694,7 +740,9 @@ select {
 }
 
 .tok-arr-token.is-active-loop-block {
-  box-shadow: inset 0 -2px 0 rgba(78, 224, 223, 0.9);
+  background: color-mix(in srgb, #4ee0df 22%, transparent);
+  outline: 1px solid rgba(78, 224, 223, 0.85);
+  outline-offset: 1px;
 }
 
 .tok-arr-token.is-queued-section {
@@ -858,6 +906,54 @@ select {
   border: 1px solid color-mix(in srgb, var(--highlight) 35%, transparent);
   border-radius: 8px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+#lint-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 130;
+  min-width: max(20rem, 100%);
+  max-width: min(48rem, 78vw);
+  max-height: 18rem;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.25em;
+  background: rgba(12, 30, 48, 0.98);
+  border: 1px solid rgba(186, 202, 221, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+#lint-menu li {
+  padding: 0.35em 0.5em;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #cfe0f4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#lint-menu li.lint-error {
+  color: #ffb0b0;
+}
+
+#lint-menu li.lint-warn {
+  color: #ffd98a;
+}
+
+#lint-menu li:hover {
+  background: rgba(94, 118, 144, 0.28);
+}
+
+#lint-menu li.lint-empty,
+#lint-menu li.lint-empty:hover {
+  color: #9bb3ca;
+  background: transparent;
+  cursor: default;
+  font-style: italic;
 }
 
 #suggest-menu li {

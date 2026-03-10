@@ -112,7 +112,9 @@ const BILLY_JEAN = `; Billy Jean - Michael Jackson
 > A % B A B A
 `;
 
-const TETRIS = `
+const TETRIS = `; Tetris
+; tempo: 175
+
 %a E4 B3 C4 D4 C4 B3 A3
 %b A3 C4 E4 D4 C4 B3
 %c B3 C4 D4 E4 C4 A3 A3

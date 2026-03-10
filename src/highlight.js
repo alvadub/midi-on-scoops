@@ -107,7 +107,7 @@ function splitComment(line) {
   return [line.slice(0, idx), line.slice(idx)];
 }
 
-function renderBase(base) {
+function renderBase(base, arrangementState = null) {
   if (!base.trim()) return esc(base);
 
   if (/^\s*##\s+/.test(base)) {
@@ -140,7 +140,14 @@ function renderBase(base) {
     const tail = base.trimStart().slice(1);
     const lead = tail.match(/^\s*/)[0] || '';
     const body = tail.slice(lead.length);
-    const parsed = parseArrangementBody(body);
+    const parsed = parseArrangementBody(body, arrangementState ? {
+      orderOffset: arrangementState.orderOffset,
+      blockOffset: arrangementState.blockOffset,
+    } : undefined);
+    if (arrangementState) {
+      arrangementState.orderOffset = parsed.nextOrder;
+      arrangementState.blockOffset = parsed.nextBlock;
+    }
     let tokenIndex = 0;
     const rendered = (body.match(/\s+|\[|\]|[^\s\[\]]+/g) || [])
       .map(part => {
@@ -173,11 +180,15 @@ function renderBase(base) {
 }
 
 export function highlight(input) {
+  const arrangementState = {
+    orderOffset: 0,
+    blockOffset: 0,
+  };
   return String(input || '')
     .split(/\r?\n/)
     .map((line, lineNumber) => {
       const [base, comment] = splitComment(line);
-      const rendered = renderBase(base);
+      const rendered = renderBase(base, arrangementState);
       const content = !comment ? rendered : `${rendered}${span('tok-comment', comment)}`;
       return `<span class="hl-line" data-line="${lineNumber}">${content}</span>`;
     })

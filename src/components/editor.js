@@ -495,6 +495,12 @@ export function createEditor(initialText, options = {}) {
     token: null,
     dismissedToken: null,
   };
+  const HISTORY_LIMIT = 200;
+  const history = {
+    entries: [],
+    index: -1,
+    applying: false,
+  };
   const SUGGESTIONS_ENABLED = options.suggestions !== false;
   const MODE_CANDIDATES = ['major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'locrian'];
   const NOTE_CANDIDATES = 'ABCDEFG'.split('').flatMap(note => (
@@ -627,6 +633,71 @@ export function createEditor(initialText, options = {}) {
     )).join('');
     applyLintMarkers();
     applyQueuedArrangementToken();
+  }
+
+  function buildHistoryEntry() {
+    return {
+      value: ta.value,
+      start: ta.selectionStart,
+      end: ta.selectionEnd,
+    };
+  }
+
+  function pushHistoryEntry() {
+    if (history.applying) return;
+    const next = buildHistoryEntry();
+    const current = history.entries[history.index];
+
+    if (
+      current
+      && current.value === next.value
+      && current.start === next.start
+      && current.end === next.end
+    ) {
+      return;
+    }
+
+    if (history.index < history.entries.length - 1) {
+      history.entries.splice(history.index + 1);
+    }
+
+    history.entries.push(next);
+    if (history.entries.length > HISTORY_LIMIT) {
+      history.entries.shift();
+    }
+    history.index = history.entries.length - 1;
+  }
+
+  function runInputEffects() {
+    sync();
+    hideTooltip();
+    updateSuggestions();
+    if (!scrubState) emitCursorToken();
+    if (options.onInput) options.onInput(ta.value);
+  }
+
+  function applyHistoryEntry(entry) {
+    if (!entry) return;
+    history.applying = true;
+    ta.value = entry.value;
+    ta.selectionStart = entry.start;
+    ta.selectionEnd = entry.end;
+    history.applying = false;
+    runInputEffects();
+  }
+
+  function undoHistory() {
+    if (history.index <= 0) return false;
+    history.index -= 1;
+    applyHistoryEntry(history.entries[history.index]);
+    return true;
+  }
+
+  function redoHistory() {
+    if (history.index >= history.entries.length - 1) return false;
+    history.index += 1;
+    applyHistoryEntry(history.entries[history.index]);
+    return true;
   }
 
   function applyLintMarkers() {
@@ -819,11 +890,6 @@ export function createEditor(initialText, options = {}) {
 
     const nextValue = lines.join('\n');
     ta.value = nextValue;
-    sync();
-    hideTooltip();
-    updateSuggestions();
-    if (!scrubState) emitCursorToken();
-    if (options.onInput) options.onInput(ta.value);
 
     const nextLines = nextValue.split('\n');
     const newStart = offsetAt(nextLines, startLC.line, startLC.col);
@@ -833,6 +899,7 @@ export function createEditor(initialText, options = {}) {
 
     ta.selectionStart = newStart;
     ta.selectionEnd = Math.max(newStart, newEnd);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   function setActiveSection(sectionName, occurrence = null) {
@@ -1377,14 +1444,23 @@ export function createEditor(initialText, options = {}) {
   });
 
   ta.addEventListener('input', () => {
-    sync();
-    hideTooltip();
-    updateSuggestions();
-    if (!scrubState) emitCursorToken();
-    if (options.onInput) options.onInput(ta.value);
+    pushHistoryEntry();
+    runInputEffects();
   });
 
   ta.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+      const key = String(e.key || '').toLowerCase();
+      const wantsUndo = key === 'z' && !e.shiftKey;
+      const wantsRedo = (key === 'z' && e.shiftKey) || key === 'y';
+      if (wantsUndo || wantsRedo) {
+        e.preventDefault();
+        const handled = wantsUndo ? undoHistory() : redoHistory();
+        if (!handled) emitCursorToken();
+        return;
+      }
+    }
+
     if (isCommentToggleShortcut(e)) {
       e.preventDefault();
       toggleSelectionComments();
@@ -1632,6 +1708,8 @@ export function createEditor(initialText, options = {}) {
     updateSuggestions();
   });
 
+  history.entries = [buildHistoryEntry()];
+  history.index = 0;
   sync();
   emitCursorToken();
   wrap.appendChild(gutter);
@@ -1654,6 +1732,10 @@ export function createEditor(initialText, options = {}) {
     setQueuedArrangementToken,
     setValue: value => {
       ta.value = value;
+      ta.selectionStart = 0;
+      ta.selectionEnd = 0;
+      history.entries = [buildHistoryEntry()];
+      history.index = 0;
       sync();
       hideTooltip();
       hideSuggest();

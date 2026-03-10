@@ -1,10 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-import { exec } from 'child_process';
-import fs from 'fs-extra';
 import './_setup.js';
 import { flatten, zip } from '../src/lib/utils.js';
-import { build, merge, pack } from '../src/lib/mixup.js';
+import { merge, pack } from '../src/lib/mixup.js';
 import { parse, reduce } from '../src/lib/parser.js';
 import { isNote, isChord } from '../src/lib/tokenize.js';
 
@@ -30,23 +28,6 @@ function t(value, extra) {
 
 function k(values, notes = []) {
   return { send: values, notes };
-}
-
-function play(midi, bpm, length) {
-  const out = '/tmp/test.mid';
-
-  fs.outputFileSync(out, build(midi, bpm, length), 'binary');
-
-  return new Promise(ok => {
-    exec(`timidity ${out}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-      }
-      console.log(`stdout: ${stdout}`);
-      console.log(`stderr: ${stderr}`);
-      ok();
-    });
-  });
 }
 
 describe('tokenize', () => {
@@ -630,60 +611,4 @@ describe('remix', () => {
       { v: 0 },
     ]);
   });
-});
-
-describe('midi', () => {
-  it.skip('should encode output', async () => {
-    const midi = merge(parse(`
-      # piano
-        @A
-          #1 115 --x- --x- --x- --x- Cm_4 % % %
-
-      ## bass
-        @A
-          #1 112 x-x- x-x- x-x- x-x- C3 minor ..5>3
-
-      > A % % %
-    `));
-
-    const f = g => {
-      const o = { v: g[0] };
-      if (g[1]) o.n = g[1];
-      return o;
-    };
-    const c = ['C4', 'Eb4', 'G4'];
-    const l = 112;
-
-    expect(midi[0][0]).to.eql([
-      ['1', 'piano', [
-        [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0], [0], [0], [l + 3, c], [0],
-      ].map(f)],
-      ['1', 'bass', [
-        [l, 'C3'], [0], [l, 'D3'], [0], [l, 'Eb3'], [0], [l, 'F3'], [0], [l, 'G3'], [0], [l, 'F3'], [0], [l, 'Eb3'], [0], [l, 'D3'], [0],
-      ].map(f)],
-    ]);
-
-    expect(midi[0][1]).to.eql(midi[0][0]);
-
-    await play(midi, 90, 16);
-  }).timeout(60000);
-
-  it.skip('should play billy jean', async () => {
-    await play(merge(parse(`
-      %F a3|c#4|f#4
-      %G b3|d#4|g#4
-      %A c#4|e4|a4
-
-      # synth
-        @A
-          #1 115 x--- --x- ---- ---- x--- --x- ---- ---- %F %G %A %G
-
-      ## bass
-        %c f#2 c#2 e2 f#2 e2 c#2 b1 c#2
-        @A
-          #2 112 x-x- x-x- x-x- x-x- x-x- x-x- x-x- x-x- %c %
-
-      > A
-    `)), 116, 16);
-  }).timeout(60000);
 });

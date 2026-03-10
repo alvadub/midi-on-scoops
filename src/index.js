@@ -704,6 +704,90 @@ function syncContextToolState() {
   el.classList.toggle('context-open', Boolean(suggestContextOpen || lintMenuOpen));
 }
 
+function escHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function lintHint(rule) {
+  const hints = {
+    'parse-error': 'Fix this parse error first. Most downstream lint issues depend on successful parsing.',
+    'unknown-section': 'Add the missing @section or remove/rename the arrangement token.',
+    'invalid-token-prefix': 'Structural tokens should not be prefixed; use the bare token.',
+    'missing-pulses': 'Add more hit pulses (x) or reduce note/chord count.',
+    'orphan-sustain': "Use '_' only after a prior 'x' hit in the same pattern.",
+    'invalid-level': 'Velocity/level values should stay between 0 and 127.',
+    'duplicate-input-clips': "Use explicit merge operators '!' or '+' when layering/replacing clips.",
+    'unused-variable': 'Remove the variable or reference it from a clip/arrangement.',
+    'unused-pattern-variable': 'Remove the pattern variable or use it in channel input.',
+    'empty-track': 'Add at least one channel clip under this track.',
+    'merge-error': 'Check section inheritance, arrangement, and channel data consistency.',
+  };
+  return hints[rule] || 'Review this issue and related tokens in the highlighted line.';
+}
+
+function inferDiagnosticToken(issue, lineText) {
+  const quoted = String(issue.message || '').match(/'([^']+)'/);
+  if (!quoted) return null;
+  const token = quoted[1];
+  return token && lineText.includes(token) ? token : null;
+}
+
+function inferDiagnosticColumn(issue, lineText, token) {
+  if (Number.isInteger(issue.column) && issue.column > 0) return issue.column;
+  if (!token) return null;
+  const idx = lineText.indexOf(token);
+  return idx >= 0 ? idx + 1 : null;
+}
+
+function buildDiagnosticSnippet(source, lineNumber, column, token) {
+  if (!Number.isInteger(lineNumber) || lineNumber < 1) return '';
+  const lines = String(source || '').split(/\r?\n/);
+  const idx = lineNumber - 1;
+  const start = Math.max(0, idx - 1);
+  const end = Math.min(lines.length - 1, idx + 1);
+  const width = String(end + 1).length;
+  const out = [];
+  for (let i = start; i <= end; i += 1) {
+    const prefix = `${String(i + 1).padStart(width, ' ')} | `;
+    out.push(`${prefix}${lines[i] || ''}`);
+    if (i === idx && Number.isInteger(column) && column > 0) {
+      const caretPad = ' '.repeat(prefix.length + Math.max(0, column - 1));
+      const markLen = token ? Math.max(1, Math.min(12, token.length)) : 1;
+      out.push(`${caretPad}${'^'.padEnd(markLen, '~')}`);
+    }
+  }
+  return out.join('\n');
+}
+
+function formatLintDiagnostic(issue, source) {
+  const level = issue.level === 'error' ? 'ERROR' : 'WARN';
+  const where = Number.isInteger(issue.line) ? `Line ${issue.line}` : 'Global';
+  const rule = issue.rule || 'lint';
+  const lineText = Number.isInteger(issue.line)
+    ? (String(source || '').split(/\r?\n/)[issue.line - 1] || '')
+    : '';
+  const token = inferDiagnosticToken(issue, lineText);
+  const column = inferDiagnosticColumn(issue, lineText, token);
+  const location = Number.isInteger(column) ? `${where}:${column}` : where;
+  const snippet = buildDiagnosticSnippet(source, issue.line, column, token);
+  const hint = lintHint(rule);
+  return {
+    level,
+    levelClass: issue.level === 'error' ? 'error' : 'warn',
+    location,
+    rule,
+    message: String(issue.message || ''),
+    hint,
+    snippet,
+    stack: issue.stack ? String(issue.stack) : '',
+    line: issue.line,
+  };
+}
+
 function closeLintMenu() {
   lintMenuOpen = false;
   const menu = document.getElementById('lint-menu');
@@ -714,6 +798,7 @@ function closeLintMenu() {
 function renderLintMenu() {
   const menu = document.getElementById('lint-menu');
   if (!menu) return;
+  const source = editorApi && typeof editorApi.getValue === 'function' ? editorApi.getValue() : '';
   if (!lintIssues.length) {
     menu.innerHTML = '<li class="lint-empty" aria-disabled="true">No lint issues</li>';
     if (lintMenuOpen) closeLintMenu();
@@ -721,12 +806,21 @@ function renderLintMenu() {
   }
 
   menu.innerHTML = lintIssues.map((item, idx) => {
-    const level = item.level === 'error' ? 'error' : 'warn';
-    const where = item.line ? `L${item.line}` : 'Global';
-    const rule = item.rule ? `[${item.rule}]` : '';
-    const text = `${where} ${rule} ${item.message}`.trim();
-    const lineAttr = item.line ? ` data-line="${item.line}"` : '';
-    return `<li class="lint-item lint-${level}" data-index="${idx}"${lineAttr} title="${text}">${text}</li>`;
+    const diag = formatLintDiagnostic(item, source);
+    const lineAttr = Number.isInteger(diag.line) ? ` data-line="${diag.line}"` : '';
+    const stackHtml = diag.stack
+      ? `<details class="lint-stack"><summary>Stack trace</summary><pre>${escHtml(diag.stack)}</pre></details>`
+      : '';
+    const snippetHtml = diag.snippet
+      ? `<pre class="lint-snippet">${escHtml(diag.snippet)}</pre>`
+      : '';
+    return `<li class="lint-item lint-${diag.levelClass}" data-index="${idx}"${lineAttr}>
+      <div class="lint-head"><span class="lint-level">${escHtml(diag.level)}</span><span class="lint-location">${escHtml(diag.location)}</span><span class="lint-rule">[${escHtml(diag.rule)}]</span></div>
+      <div class="lint-message">${escHtml(diag.message)}</div>
+      <div class="lint-hint">${escHtml(diag.hint)}</div>
+      ${snippetHtml}
+      ${stackHtml}
+    </li>`;
   }).join('');
 }
 
@@ -1346,12 +1440,12 @@ function createDOM(initialText, initialPreset) {
     toggleLintMenu();
   });
   lintMenu.addEventListener('click', e => {
+    if (e.target && e.target.closest && e.target.closest('.lint-stack')) return;
     const item = e.target && e.target.closest ? e.target.closest('li.lint-item') : null;
     if (!item) return;
     const line = parseInt(item.dataset.line, 10);
-    if (editorApi && Number.isInteger(line) && line > 0 && typeof editorApi.jumpToLine === 'function') {
-      editorApi.jumpToLine(line);
-    }
+    if (!(editorApi && Number.isInteger(line) && line > 0 && typeof editorApi.jumpToLine === 'function')) return;
+    editorApi.jumpToLine(line);
     closeLintMenu();
   });
   document.addEventListener('click', e => {

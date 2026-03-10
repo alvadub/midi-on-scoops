@@ -248,6 +248,7 @@ export function lintDub(source, opts = {}) {
       rule: 'parse-error',
       message: e && e.message ? e.message : 'Parse error',
       line: parseErrorLine(e),
+      stack: e && e.stack ? String(e.stack) : null,
     });
     return report;
   }
@@ -371,6 +372,7 @@ export function lintDub(source, opts = {}) {
             rule: 'clip-reduce-failed',
             message: `Unable to evaluate clip in '${trackName}' '${channel}': ${e.message}`,
             line,
+            stack: e && e.stack ? String(e.stack) : null,
           });
           return;
         }
@@ -427,6 +429,7 @@ export function lintDub(source, opts = {}) {
           rule: 'merge-error',
           message: e && e.message ? e.message : 'Merge error',
           line: null,
+          stack: e && e.stack ? String(e.stack) : null,
         });
       }
     }

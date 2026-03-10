@@ -17,7 +17,7 @@
     "dev": "npm run build -- -w",
     "dist": "npm run build -- -q",
     "check": "eslint 'src/**/*.{js,pug}'",
-    "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
+    "build": "mortero --esm -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
     "test": "npm run test:unit --",
     "dub:lint": "node bin/dub-lint.js",
     "test:unit": "node japaFile.js",
@@ -53,8 +53,7 @@
     "live-server": "^1.2.2",
     "midi-writer-js": "^3.2.1",
     "mortero": "^0.0.126",
-    "pug": "^3.0.3",
-    "scribbletune": "^5.5.4"
+    "pug": "^3.0.3"
   },
   "dependencies": {
     "fs-extra": "^11.3.4",

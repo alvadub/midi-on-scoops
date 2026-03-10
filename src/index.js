@@ -2,7 +2,10 @@ import { scale } from 'harmonics';
 import * as PlayerModule from './components/player.js';
 import {
   parse,
-  merge,
+  reduce,
+} from './lib/parser.js';
+import { merge } from './lib/mixup.js';
+import {
   extractDraftTempo,
   extractDraftBars,
   extractDraftKey,
@@ -13,9 +16,8 @@ import {
   getSectionAtBeat as getSectionAtBeatFromTimeline,
   findTimelineIndex as findTimelineIndexFromTimeline,
   getMaxPatternSlots as getMaxPatternSlotsFromContext,
-} from './lib/index.js';
+} from './lib/playground.js';
 import { lintDub } from './lib/lint.js';
-import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
 import { createEditor } from './components/editor.js';
 import { createMixer } from './components/mixer.js';

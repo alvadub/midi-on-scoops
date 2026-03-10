@@ -1,4 +1,11 @@
-import { classify, highlight } from '../highlight.js';
+import * as highlightModule from '../highlight.js';
+
+const classify = highlightModule.classify
+  || (highlightModule.default && highlightModule.default.classify)
+  || (() => null);
+const highlight = highlightModule.highlight
+  || (highlightModule.default && highlightModule.default.highlight)
+  || (value => String(value || ''));
 
 const DIATONIC = { c: 0, d: 1, e: 2, f: 3, g: 4, a: 5, b: 6 };
 const E4_DIATONIC = 4 * 7 + 2;

@@ -1,4 +1,3 @@
-import * as scribbletunePkg from 'scribbletune';
 import { scale, inlineChord } from 'harmonics';
 
 import { isProgression, transform } from './tokenize.js';
@@ -6,10 +5,42 @@ import { buildArrangementMain } from './arrangement.js';
 import { repeat, clone } from './utils.js';
 import { resolveChannelToken } from './channels.js';
 
-const getChordsByProgression = (
-  scribbletunePkg.getChordsByProgression
-  || (scribbletunePkg.default && scribbletunePkg.default.getChordsByProgression)
-);
+const ROMAN_TO_DEGREE = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+};
+
+function parseProgressionToken(token) {
+  const raw = String(token || '').trim();
+  const normalized = raw.replace(/°$/, '').toUpperCase();
+  const degree = ROMAN_TO_DEGREE[normalized];
+  if (!degree) throw new Error(`Invalid progression symbol '${raw}'`);
+  if (raw.endsWith('°')) return { degree, quality: 'm7b5' };
+  if (raw === raw.toUpperCase()) return { degree, quality: 'M' };
+  return { degree, quality: 'm' };
+}
+
+function buildProgressionChords(base, progression) {
+  const notes = scale(base);
+  if (!Array.isArray(notes) || notes.length < 3) {
+    throw new Error(`Unable to resolve progression from '${base}'`);
+  }
+
+  const tokens = String(progression || '').trim().split(/\s+/).filter(isProgression);
+  return tokens.map((token) => {
+    const { degree, quality } = parseProgressionToken(token);
+    const root = notes[degree - 1];
+    const match = String(root || '').match(/^([A-Ga-g][#b]?)(-?\d+)$/);
+    if (!match) throw new Error(`Invalid root note '${root}' for progression '${token}'`);
+    const [, pitchClass, octave] = match;
+    return inlineChord(`${pitchClass}${quality}_${octave}`);
+  });
+}
 
 function parseDegreeToken(token) {
   if (/^\d+$/.test(token)) return [parseInt(token, 10)];
@@ -249,7 +280,7 @@ export function reduce(input, context, callback) {
 
         if (a[a.length - 1] === '++') a.pop();
 
-        memo.push(getChordsByProgression(a.join(' '), b.join(' ')).split(' ').map(x => fn(inlineChord(x))));
+        memo.push(buildProgressionChords(a.join(' '), b.join(' ')).map(chord => fn(chord)));
       } else {
         memo.push(fn(scale(item)));
       }

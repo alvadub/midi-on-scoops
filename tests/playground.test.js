@@ -1,7 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-const { expect } = require('chai');
-const {
+import { expect } from 'chai';
+import { parse } from '../src/lib/parser.js';
+import {
   extractDraftTempo,
   extractDraftBars,
   extractDraftKey,
@@ -13,8 +14,7 @@ const {
   getSectionAtBeat,
   findTimelineIndex,
   getMaxPatternSlots,
-  parse,
-} = require('../build/main.cjs');
+} from '../src/lib/playground.js';
 
 describe('playground helpers', () => {
   it('extracts and clamps draft header values', () => {

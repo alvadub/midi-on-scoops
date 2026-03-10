@@ -1,4 +1,4 @@
-import { classify, highlight } from '../highlight';
+import { classify, highlight } from '../highlight.js';
 
 const DIATONIC = { c: 0, d: 1, e: 2, f: 3, g: 4, a: 5, b: 6 };
 const E4_DIATONIC = 4 * 7 + 2;

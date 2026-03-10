@@ -1,8 +1,9 @@
-const jsmidgen = require('jsmidgen');
+import { createRequire } from 'module';
+import jsmidgen from 'jsmidgen';
+import fs from 'fs-extra';
+import path from 'path';
 
-const fs = require('fs-extra');
-const path = require('path');
-
+const require = createRequire(import.meta.url);
 const { utils, convert } = require('../dist/midi-on-scoops.cjs');
 
 function save(file, data) {
@@ -132,7 +133,7 @@ function write(tracks, options, fileName, outputDir, outputBundle) {
   return files;
 }
 
-module.exports = ast => {
+export default ast => {
   const map = convert(ast);
 
   return {

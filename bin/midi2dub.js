@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const { note } = require('tonal-midi');
+import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import tonalMidi from 'tonal-midi';
+
+const { note } = tonalMidi;
 
 function readVarLen(buffer, offset) {
   let value = 0;
@@ -506,7 +509,7 @@ function main(argv) {
   }
 }
 
-if (require.main === module) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     main(process.argv);
   } catch (e) {
@@ -515,7 +518,7 @@ if (require.main === module) {
   }
 }
 
-module.exports = {
+export {
   parseMidi,
   toDub,
 };

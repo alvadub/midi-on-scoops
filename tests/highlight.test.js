@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-expressions */
 
-const { expect } = require('chai');
-const { highlight } = require('../build/highlight.js');
+import { expect } from 'chai';
+import { highlight } from '../src/highlight.js';
 
 describe('highlight arrangement metadata', () => {
   it('keeps arrangement token order across multiple > lines', () => {

@@ -1,20 +1,9 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-
-function loadLib() {
-  try {
-    return require('../build/main.cjs.js');
-  } catch (e) {
-    try {
-      return require('../dist/midi-on-scoops.cjs');
-    } catch (_e) {
-      process.stderr.write('Unable to load built library. Run `npm run build` first.\n');
-      process.exit(2);
-    }
-  }
-}
+import fs from 'fs';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import { lintDub } from '../src/lib/index.js';
 
 function readFile(file) {
   const filepath = path.resolve(process.cwd(), file);
@@ -33,8 +22,8 @@ function formatIssue(level, issue) {
   return `${level}${pos}${rule} ${issue.message}`;
 }
 
-function lintOne(lib, target, strict) {
-  const report = lib.lintDub(target.source);
+function lintOne(target, strict) {
+  const report = lintDub(target.source);
   const header = `${target.name}: ${report.errors.length} error(s), ${report.warnings.length} warning(s)\n`;
   process.stdout.write(header);
   report.errors.forEach(item => process.stdout.write(`  ${formatIssue('error', item)}\n`));
@@ -46,7 +35,6 @@ function lintOne(lib, target, strict) {
 }
 
 function main() {
-  const lib = loadLib();
   const args = process.argv.slice(2);
   const strict = args.includes('--strict');
   const files = args.filter(arg => arg !== '--strict');
@@ -61,10 +49,12 @@ function main() {
 
   let failed = false;
   targets.forEach(target => {
-    if (lintOne(lib, target, strict)) failed = true;
+    if (lintOne(target, strict)) failed = true;
   });
 
   process.exit(failed ? 1 : 0);
 }
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

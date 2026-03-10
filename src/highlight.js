@@ -1,4 +1,4 @@
-import { parseArrangementBody } from './lib/arrangement';
+import { parseArrangementBody } from './lib/arrangement.js';
 
 function esc(value) {
   return String(value)

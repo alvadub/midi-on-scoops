@@ -1,4 +1,4 @@
-import { scale } from 'harmonics';
+import harmonics from 'harmonics';
 import Player from './components/player.js';
 import {
   parse,
@@ -13,7 +13,7 @@ import {
   getSectionAtBeat as getSectionAtBeatFromTimeline,
   findTimelineIndex as findTimelineIndexFromTimeline,
   getMaxPatternSlots as getMaxPatternSlotsFromContext,
-} from './lib';
+} from './lib/index.js';
 import { lintDub } from './lib/lint.js';
 import { reduce } from './lib/parser.js';
 import { blockAtCursor } from './lib/blocks.js';
@@ -22,6 +22,8 @@ import { createMixer } from './components/mixer.js';
 import { MidiAccess, msgNorm, msgType, msgValue } from './lib/midi.js';
 import { MidiLearn } from './components/midi-learn.js';
 import { SnapshotManager } from './lib/snapshots.js';
+
+const { scale } = harmonics;
 
 let tempo = 146;
 let bars = 16;

@@ -1,5 +1,7 @@
-import { Utils } from 'midi-writer-js';
+import midiWriter from 'midi-writer-js';
 import { DEFAULT_CHANNEL_ALIASES, normalizeChannelAliases } from '../lib/channels.js';
+
+const { Utils } = midiWriter;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const FONT_LOAD_TIMEOUT_MS = 4500;

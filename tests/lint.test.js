@@ -1,5 +1,5 @@
-const { expect } = require('chai');
-const { lintDub } = require('../build/main.cjs');
+import { expect } from 'chai';
+import { lintDub } from '../src/lib/lint.js';
 
 describe('lint', () => {
   it('reports unknown sections in arrangement', () => {

@@ -1,14 +1,14 @@
-export { merge } from './mixup';
-export { parse } from './parser';
-export * from './channels';
-export { compressDub } from './compress';
-export * from './utils';
-export * from './mixup';
-export * from './parser';
-export * from './tokenize';
-export * from './euclidean';
+export { merge } from './mixup.js';
+export { parse } from './parser.js';
+export * from './channels.js';
+export { compressDub } from './compress.js';
+export * from './utils.js';
+export * from './mixup.js';
+export * from './parser.js';
+export * from './tokenize.js';
+export * from './euclidean.js';
 export * from './lint.js';
-export { parseArrangementBody, buildArrangementMain } from './arrangement';
+export { parseArrangementBody, buildArrangementMain } from './arrangement.js';
 export {
   extractDraftTempo,
   extractDraftBars,
@@ -22,4 +22,4 @@ export {
   getSectionAtBeat,
   findTimelineIndex,
   getMaxPatternSlots,
-} from './playground';
+} from './playground.js';

@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-expressions */
 
-const { expect } = require('chai');
-const { reduce } = require('../build/main.cjs');
+import { expect } from 'chai';
+import { reduce } from '../src/lib/parser.js';
 
 describe('reduce', () => {
   const context = {

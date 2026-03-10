@@ -1,6 +1,7 @@
-const { expect } = require('chai');
-
-const { compressDub, parse, merge } = require('../build/main.cjs');
+import { expect } from 'chai';
+import { compressDub } from '../src/lib/compress.js';
+import { parse } from '../src/lib/parser.js';
+import { merge } from '../src/lib/mixup.js';
 
 function normalize(value) {
   return String(value).replace(/\r/g, '').trim();

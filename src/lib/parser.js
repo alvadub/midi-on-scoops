@@ -1,10 +1,13 @@
-import { getChordsByProgression } from 'scribbletune/src/progression';
-import { scale, inlineChord } from 'harmonics';
+import scribbletune from 'scribbletune';
+import harmonics from 'harmonics';
 
-import { isProgression, transform } from './tokenize';
-import { buildArrangementMain } from './arrangement';
-import { repeat, clone } from './utils';
-import { resolveChannelToken } from './channels';
+import { isProgression, transform } from './tokenize.js';
+import { buildArrangementMain } from './arrangement.js';
+import { repeat, clone } from './utils.js';
+import { resolveChannelToken } from './channels.js';
+
+const { scale, inlineChord } = harmonics;
+const { getChordsByProgression } = scribbletune;
 
 function parseDegreeToken(token) {
   if (/^\d+$/.test(token)) return [parseInt(token, 10)];

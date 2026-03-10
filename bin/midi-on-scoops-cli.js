@@ -1,12 +1,12 @@
-const fs = require('fs');
-const path = require('path');
-const wargs = require('wargs');
-const watch = require('node-watch');
-const keypress = require('keypress');
-const spawn = require('child_process').spawn;
+import fs from 'fs';
+import path from 'path';
+import wargs from 'wargs';
+import watch from 'node-watch';
+import keypress from 'keypress';
+import { spawn } from 'child_process';
 
-const { parse, compressDub } = require('../dist/midi-on-scoops.cjs');
-const builder = require('./builder');
+import { parse, compressDub } from '../src/lib/index.js';
+import builder from './builder.js';
 
 const children = [];
 const argv = wargs(process.argv.slice(2), {

@@ -1,14 +1,12 @@
 /* eslint-disable no-unused-expressions */
 
-const { exec } = require('child_process');
-const fs = require('fs-extra');
-const { expect } = require('chai');
-
-const {
-  mix, merge, build, flatten, zip,
-  parse, reduce, pack,
-  isNote, isChord,
-} = require('../build/main.cjs');
+import { exec } from 'child_process';
+import fs from 'fs-extra';
+import { expect } from 'chai';
+import { flatten, zip } from '../src/lib/utils.js';
+import { build, merge, pack } from '../src/lib/mixup.js';
+import { parse, reduce } from '../src/lib/parser.js';
+import { isNote, isChord } from '../src/lib/tokenize.js';
 
 function p(value) {
   return { type: 'pattern', value };

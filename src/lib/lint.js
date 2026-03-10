@@ -1,9 +1,9 @@
-import { parse, reduce } from './parser';
-import { merge, pack } from './mixup';
-import { split } from './tokenize';
-import { flatten } from './utils';
-import { buildArrangementDisplayExpansion } from './playground';
-import { resolveChannelToken } from './channels';
+import { parse, reduce } from './parser.js';
+import { merge, pack } from './mixup.js';
+import { split } from './tokenize.js';
+import { flatten } from './utils.js';
+import { buildArrangementDisplayExpansion } from './playground.js';
+import { resolveChannelToken } from './channels.js';
 
 function deepVisit(node, fn) {
   if (Array.isArray(node)) {

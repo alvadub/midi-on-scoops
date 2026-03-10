@@ -1,6 +1,6 @@
-import { parse } from './parser';
-import { merge } from './mixup';
-import { transform } from './tokenize';
+import { parse } from './parser.js';
+import { merge } from './mixup.js';
+import { transform } from './tokenize.js';
 
 const DEFAULT_OPTIONS = {
   aggressive: false,

@@ -1,6 +1,7 @@
 {
   "name": "midi-on-scoops",
   "version": "0.0.0",
+  "type": "module",
   "description": "MIDI/DAW for the DUB enthusiast!",
   "author": "Alvaro Cabrera <pateketrueke@gmail.com> (https://soypache.co)",
   "_main": "dist/midi-on-scoops.cjs.js",
@@ -17,7 +18,7 @@
     "dist": "npm run build -- -q",
     "check": "eslint 'src/**/*.{js,pug,svelte}'",
     "build": "mortero -dX'{lib,components}' -ecss.less -I.gitignore -p8081 -spublic",
-    "mocha": "NODE_ENV=test _mocha -c  --exit --verbose --recursive",
+    "mocha": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test ./node_modules/.bin/mocha --exit --verbose --recursive",
     "test": "npm run test:unit --",
     "dub:lint": "node bin/dub-lint.js",
     "pretest": "npm run dist",

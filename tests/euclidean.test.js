@@ -1,7 +1,8 @@
 /* eslint-disable no-unused-expressions */
 
-const { expect } = require('chai');
-const { transform, euclidean } = require('../build/main.cjs');
+import { expect } from 'chai';
+import { transform } from '../src/lib/tokenize.js';
+import { euclidean } from '../src/lib/euclidean.js';
 
 describe('euclidean rhythm', () => {
   it('builds classic euclidean patterns', () => {

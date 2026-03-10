@@ -1,8 +1,11 @@
-import { Utils } from 'midi-writer-js';
-import { File, Track } from 'jsmidgen';
-import { flatten } from './utils';
-import { split, isPattern } from './tokenize';
-import { reduce } from './parser';
+import midiWriter from 'midi-writer-js';
+import jsmidgen from 'jsmidgen';
+import { flatten } from './utils.js';
+import { split, isPattern } from './tokenize.js';
+import { reduce } from './parser.js';
+
+const { Utils } = midiWriter;
+const { File, Track } = jsmidgen;
 
 const DEFAULT = Symbol('@main');
 

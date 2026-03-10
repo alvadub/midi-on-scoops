@@ -1,5 +1,5 @@
-import { parseArrangementBody } from './arrangement';
-import { resolveChannelToken } from './channels';
+import { parseArrangementBody } from './arrangement.js';
+import { resolveChannelToken } from './channels.js';
 
 function findSuffixDashCommentIndex(line) {
   const match = String(line || '').match(/\s--\s/);

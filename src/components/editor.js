@@ -1391,6 +1391,25 @@ export function createEditor(initialText, options = {}) {
       return;
     }
 
+    if (e.key === '[' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const selected = ta.value.slice(start, end);
+      const wrapped = `[${selected}]`;
+      ta.value = `${ta.value.slice(0, start)}${wrapped}${ta.value.slice(end)}`;
+      if (start === end) {
+        const nextPos = start + 1;
+        ta.selectionStart = nextPos;
+        ta.selectionEnd = nextPos;
+      } else {
+        ta.selectionStart = start + 1;
+        ta.selectionEnd = end + 1;
+      }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+
     if (!suggestState.open) return;
     if (document.activeElement !== suggestInput) return;
     if (e.key === 'ArrowDown') {

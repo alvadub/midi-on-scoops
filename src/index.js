@@ -35,6 +35,7 @@ let statusResetTimer = null;
 let editorApi = null;
 let mixerApi = null;
 let lastContext = null;
+let lastGoodData = [];
 let trackLineMap = new Map();
 let lastFlashedBeatIndex = -1;
 let sectionTimeline = [];
@@ -279,7 +280,7 @@ function getData(input) {
   const channelAliases = typeof p.resolveChannelAliases === 'function'
     ? p.resolveChannelAliases(bankSelection)
     : (typeof p.getChannelAliases === 'function' ? p.getChannelAliases() : null);
-  trackLineMap = buildTrackLineMap(input, { channelAliases });
+  const nextTrackLineMap = buildTrackLineMap(input, { channelAliases });
   try {
     lastContext = parse(input, { channelAliases });
     const merged = merge(lastContext);
@@ -291,18 +292,14 @@ function getData(input) {
       activeArrangementLoopBlockId = null;
     }
     const built = buildMixFromMerged(merged);
-
+    trackLineMap = nextTrackLineMap;
+    lastGoodData = built;
     return built;
   } catch (e) {
-    lastContext = null;
     syncLintIndicator(null);
-    sectionTimeline = [];
-    defaultArrangementLoopBlockId = null;
-    activeArrangementLoopBlockId = null;
-    arrangementLoopDisabled = false;
     console.error('Parse error:', e);
     showError(e.message || 'Parse error');
-    return [];
+    return lastGoodData;
   }
 }
 

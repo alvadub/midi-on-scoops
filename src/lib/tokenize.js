@@ -10,6 +10,7 @@ export const RE_MODE = /^(?![ivIV]{1,3})[a-z]{2,}/;
 export const RE_PROG = /^[ivIV]{1,3}°?$/;
 export const RE_TRIM = /\.+$/;
 export const RE_DEGREE = /^\d+(?:\.\.\d+)?$/;
+export const RE_PATTERN_REF = /^&[a-zA-Z_]\w*$/;
 
 const CACHE = {};
 
@@ -203,6 +204,11 @@ export function transform(expression) {
         add('param', cur);
       }
 
+      return prev;
+    }
+
+    if (RE_PATTERN_REF.test(cur)) {
+      add('pattern_ref', cur);
       return prev;
     }
 

@@ -22,6 +22,7 @@ function classify(token) {
   if (token === '<') return 'tok-inherit';
   if (token === '%') return 'tok-var-ref';
   if (token.charAt(0) === '%') return 'tok-var-ref';
+  if (token.charAt(0) === '&') return 'tok-var-ref';
   if (/^x\d+$/.test(token)) return 'tok-repeat';
   if (/^[x_\-[\]]+$/.test(token)) return 'tok-pattern';
   if (/^(?:[a-zA-Z_]\w*)?\(\d+\s*,\s*\d+(?:\s*,\s*-?\d+)?\)$/.test(token)) return 'tok-pattern';
@@ -155,8 +156,8 @@ function renderBase(base, arrangementState = null) {
       .join('');
     return `${indent}${span('tok-arrangement', '>')}${esc(lead)}${rendered}`;
   }
-  if (/^\s*%[^\s]+\s+/.test(base)) {
-    return base.replace(/^(\s*)(%[^\s]+)(\s*)(.*)$/, (_, i, v, s, rest) => `${esc(i)}${span('tok-var-def', v, { var: v })}${esc(s)}${renderTokens(rest)}`);
+  if (/^\s*[%&][^\s]+\s+/.test(base)) {
+    return base.replace(/^(\s*)([%&][^\s]+)(\s*)(.*)$/, (_, i, v, s, rest) => `${esc(i)}${span('tok-var-def', v, { var: v })}${esc(s)}${renderTokens(rest)}`);
   }
   if (/^\s*#\d+/.test(base)) {
     let velocityTagged = false;

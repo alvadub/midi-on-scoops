@@ -178,6 +178,7 @@ describe('tokenizer', () => {
       tok('note', 'f2', { repeat: 2 }),
     ]);
     expect(transform('%Am % % %')).to.deep.equal([tok('param', '%Am', { repeat: 4 })]);
+    expect(transform('&kick %')).to.deep.equal([tok('pattern_ref', '&kick', { repeat: 2 })]);
   });
 
   it('throws when ++ is missing progression symbols', () => {

@@ -89,6 +89,43 @@ function stripInlineComment(line) {
   return line.slice(0, Math.min(semicolonIndex, dashCommentIndex));
 }
 
+function cloneToken(token) {
+  if (!token || typeof token !== 'object') return token;
+  const cloned = { ...token };
+  if (Array.isArray(token.value)) cloned.value = [...token.value];
+  return cloned;
+}
+
+function expandPatternRefs(tokens, patterns, stack = []) {
+  return tokens.reduce((out, token) => {
+    if (!token || token.type !== 'pattern_ref') {
+      out.push(cloneToken(token));
+      return out;
+    }
+
+    const name = token.value;
+    if (stack.includes(name)) {
+      throw new Error(`Circular pattern expression for '${name}'`);
+    }
+
+    const target = patterns[name];
+    if (!target) {
+      throw new Error(`Missing pattern expression for '${name}'`);
+    }
+
+    const expanded = expandPatternRefs(target, patterns, [...stack, name]);
+    const repeats = token.repeat && token.repeat > 1 ? token.repeat : 1;
+
+    for (let i = 0; i < repeats; i += 1) {
+      expanded.forEach((item) => {
+        out.push(cloneToken(item));
+      });
+    }
+
+    return out;
+  }, []);
+}
+
 export function reduce(input, context, callback) {
   if (!Array.isArray(input)) return input;
 
@@ -295,6 +332,7 @@ export function parse(buffer, options = {}) {
   const tracks = {};
   const main = [];
   const data = {};
+  const patternData = {};
   const trackPatternSlots = {};
 
   let channel = null;
@@ -311,6 +349,12 @@ export function parse(buffer, options = {}) {
 
         if (value.length > 0) {
           data[name] = transform(value.join(' '));
+        }
+      } else if (line.charAt() === '&') {
+        const [name, ...value] = line.split(/\s+/);
+
+        if (value.length > 0) {
+          patternData[name] = transform(value.join(' '));
         }
       } else if (line.indexOf('# ') >= 0) {
         if (track) {
@@ -343,7 +387,7 @@ export function parse(buffer, options = {}) {
 
         data[name] = transform(value.join(':').trim());
       } else {
-        const ticks = transform(line);
+        const ticks = expandPatternRefs(transform(line), patternData);
 
         if (!ticks[0] || ticks[0].type !== 'channel') {
           if (!channel) throw new TypeError(`Missing channel, given '${line}'`);

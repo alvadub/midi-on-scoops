@@ -90,6 +90,43 @@ describe('parser', () => {
     });
   });
 
+  it('should expand pattern variables on channel lines', () => {
+    const sample = `
+      &kick x--- --x-
+      # drums
+      #1 &kick C4 D4
+    `;
+
+    expect(parse(sample).tracks).to.eql({
+      drums: {
+        '#1': [{
+          data: [t('C4'), t('D4')],
+          input: [p('x---'), p('--x-')],
+        }],
+      },
+    });
+  });
+
+  it('should throw on missing pattern variable references', () => {
+    const sample = `
+      # drums
+      #1 &missing C4
+    `;
+
+    expect(() => parse(sample)).to.throw("Missing pattern expression for '&missing'");
+  });
+
+  it('should throw on circular pattern variable references', () => {
+    const sample = `
+      &a &b
+      &b &a
+      # drums
+      #1 &a C4
+    `;
+
+    expect(() => parse(sample)).to.throw("Circular pattern expression for '&a'");
+  });
+
   it('should extract channels', () => {
     const sample = `
       # drums

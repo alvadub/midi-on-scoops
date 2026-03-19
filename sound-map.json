@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "drums": {
+    "#2001": { "kind": "kick", "label": "Kick" },
+    "#2004": { "kind": "snare", "label": "Snare" },
+    "#2028": { "kind": "snare", "label": "Snare/Clap" },
+    "#2035": { "kind": "hat", "label": "Hi-Hat" },
+    "#2081": { "kind": "hat", "label": "Ride/Hi-Hat" },
+    "#2123": { "kind": "perc", "label": "Percussion" }
+  },
+  "instruments": {
+    "393": { "family": "bass", "fallbackWave": "square", "label": "Bass" },
+    "518": { "family": "lead", "fallbackWave": "triangle", "label": "Lead" }
+  },
+  "aliases": {
+    "drums": {
+      "bd": "#2001",
+      "kick": "#2001",
+      "sd": "#2004",
+      "sn": "#2004",
+      "snare": "#2004",
+      "cp": "#2028",
+      "clap": "#2028",
+      "hh": "#2035",
+      "hat": "#2035",
+      "oh": "#2081",
+      "ride": "#2081",
+      "perc": "#2123"
+    },
+    "instruments": {
+      "piano": "#0",
+      "epiano": "#4",
+      "organ": "#16",
+      "guitar": "#24",
+      "bass": "#33",
+      "strings": "#48",
+      "brass": "#61",
+      "choir": "#52",
+      "lead": "#80",
+      "pad": "#88",
+      "fx": "#98",
+      "synth": "#94"
+    }
+  },
+  "banks": {
+    "default": {
+      "aliases": {}
+    },
+    "tr808": {
+      "aliases": {
+        "drums": {
+          "bd": "#2001",
+          "kick": "#2001",
+          "sd": "#2004",
+          "sn": "#2004",
+          "snare": "#2004",
+          "cp": "#2028",
+          "clap": "#2028",
+          "hh": "#2035",
+          "hat": "#2035",
+          "oh": "#2081",
+          "ride": "#2081",
+          "perc": "#2123"
+        }
+      }
+    },
+    "gm": {
+      "aliases": {
+        "instruments": {
+          "piano": "#0",
+          "epiano": "#4",
+          "organ": "#16",
+          "guitar": "#24",
+          "bass": "#33",
+          "strings": "#48",
+          "brass": "#61",
+          "choir": "#52",
+          "lead": "#80",
+          "pad": "#88",
+          "fx": "#98",
+          "synth": "#94"
+        }
+      }
+    }
+  },
+  "keywordHints": {
+    "kick": ["kick", "bass drum", "bd"],
+    "snare": ["snare", "rim", "clap"],
+    "hat": ["hat", "hi-hat", "hihat", "cymbal", "ride", "crash", "shaker", "tamb"],
+    "perc": ["perc", "tom", "conga", "bongo", "cowbell", "clave"]
+  }
+}
